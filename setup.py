@@ -1,9 +1,9 @@
 from setuptools import setup, find_packages
 setup(
     name="docserv",
-    version="0.1",
+    version="0.1.4",
     packages=find_packages(),
-    scripts=['docserv.py', 'docserv-build.py'],
+    scripts=['bin/docserv', 'bin/docserv-build'],
     install_requires=[],
     package_data={
         '': ['*.rst']
@@ -14,11 +14,6 @@ setup(
     license="GPL-2.0-or-later",
     keywords="DAPS build documentation",
     url="http://github.com/SUSEdoc/",
-    project_urls={
-        "Bug Tracker": "http://github.com/SUSEdoc/docserv/issues",
-        "Documentation": "http://github.com/SUSEdoc/docserv/wiki",
-        "Source Code": "http://github.com/SUSEdoc/docserv",
-    },
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Topic :: Documentation',

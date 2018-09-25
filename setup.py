@@ -18,7 +18,7 @@ setup(
         "Bug Tracker": "http://github.com/SUSEdoc/docserv/issues",
         "Documentation": "http://github.com/SUSEdoc/docserv/wiki",
         "Source Code": "http://github.com/SUSEdoc/docserv",
-    }
+    },
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Topic :: Documentation',

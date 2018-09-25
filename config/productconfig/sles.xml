@@ -10,18 +10,39 @@
     + "unsupported": build, publish with note "not supported anymore,
       please upgrade"
   -->
-  
 
-  <product>SUSE Linux Enterprise Server</product>
-  <productshort>SLES</productshort>
+  <product>
+    <name>SUSE Linux Enterprise Server</name>
+    <shortname>SLES</shortname>
+    <maintainers>
+      <contact>sknorr@suse.de</contact>
+      <contact>sseebergelverfeldt@suse.com</contact>
+    </maintainers>
 
-  <productdesc>
-    <!-- This is HTML -->
-    <p>
-      This product will lose control of you and help you live free.
-      SLES is so glad to have you.
-    </p>
-  </productdesc>
+    <defaultblurb lang="en">
+      <!-- This is restricted HTML (p, em, strong, span, super, sub, code, pre, a, ul/li, ol/li) -->
+      <p>
+        This product will lose control of you and help you live free.
+        SLES is so glad to have you and your evil curls.
+      </p>
+    </blurb>
+
+    <blurb lang="fr">
+      <p>
+        Ce produit ne peut pas obtenir la contrôle de vous, mais le vous aidez
+        a vivir libre. SLES est très heureux de vous avoir et d'avoir vos
+        cheveux chevalier.
+      </p>
+    </blurb>
+
+    <blurb lang="de">
+      <p>
+        Dieses Produkt hat die Kontrolle über Sie bereits verloren und will
+        Ihnen helfen, lieber libre zu leben. SLES ist verzückt, dass Sie ihm
+        und seinen bösartigen Lockrufen gefolgt sind.
+      </p>
+    </blurb>
+  </product>
 
   <docset id="15ga">
     <version>15</version>

@@ -16,7 +16,7 @@ indir=$1
 cd $indir
 
 for file in *.xml; do
-  [[ $(xmllint --noout --noent $file) ]] && out "$outdir/$file is not well-formed."
+  [[ $(2>&1 xmllint --noout --noent $file) ]] && out "$indir/$file is not well-formed."
 done
 
 outfile='<?xml version="1.0" encoding="UTF-8"?>\n<docservconfig>\n\n'
@@ -27,6 +27,8 @@ for file in *.xml; do
 done
 
 outfile+='\n</docservconfig>\n'
+
+cd -
 
 if [[ $2 ]]; then
   echo -e "$outfile" > $2

@@ -4,7 +4,8 @@ After=multi-user.target
 
 [Service]
 Type=idle
-ExecStart=/usr/bin/python3 /usr/sbin/docserv.py
+Environment="SCRIPT_ARGS=%I"
+ExecStart=/usr/bin/docserv $SCRIPT_ARGS
 EnvironmentFile=/etc/docserv/environment
 User=docserv
 

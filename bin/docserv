@@ -6,120 +6,118 @@ import subprocess
 import shlex
 import datetime
 import os
-import _thread
+import sys
+import threading
 import queue
 import socket
+import configparser
+import logging
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
 my_env = os.environ
 
-builds_json = '/srv/www/docserv/htdocs/builds.json'
-received_items = queue.Queue()
-queued_docs = queue.Queue()
-building_docs = queue.Queue()
-finished_docs = queue.Queue()
+class Documentation:
+    def __init__(self, path):
+        read_conf_dir(path)
 
+    def read_conf_dir(self, path):
+        pass
 
-def build( section ):
-    cmd = '/suse/lxbuch/doc/daps-autobuild/daps-autobuild --config /suse/lxbuch/doc/daps-autobuild/daps-autobuild_docserv.xml --schema /suse/lxbuch/doc/daps-autobuild/daps-autobuild.rnc --notify --sections %s' % section
-    cmd = shlex.split(cmd)
-    #print(cmd)
-    s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    s.communicate()[0]
-    rc = s.returncode
-    return int(rc)
+class Docserv:
+    def __init__(self, argv):
+        self.build_queue = queue.Queue()
+        self.cur_builds_queue = queue.Queue()
+        self.config = {}
+        self.parse_config(argv)
+    
+    def parse_config(self, argv):
+        config = configparser.ConfigParser()
+        if len(argv) == 1:
+            argv[1] = "docserv"
+        logger.info("Reading /etc/docserv/%s.ini" % argv[1])
+        config.read("/etc/docserv/%s.ini" % argv[1])
+        self.config['build'] =                  {}
+        self.config['build']['repo_dir'] =      config['build']['repo_dir']
+        self.config['build']['templdate_dir'] = config['build']['template_dir']
+        self.config['build']['config_dir'] =    config['build']['config_dir']
+        self.config['server'] =                 {}
+        self.config['server']['host'] =         config['server']['host']
+        self.config['server']['port'] =         config['server']['port']
 
-def get_json():
-    f = open( builds_json, 'r' )
-    builds = json.load( f )
-    return builds
-    f.close()
+    def start(self):
+        # start everything
+        thread_receive = threading.Thread(target=self.listen)
+        thread_receive.start()
+        thread_builds = []
+        for i in range(0,os.cpu_count()):
+            logger.info("Starting build thread %i" % i)
+            thread_builds.append(threading.Thread(target=self.build))
+            thread_builds[i].start()
+        # to have a clean shutdown, wait for all threads to finish
+        thread_receive.join()
+        for i in range(0,os.cpu_count()):
+            thread_builds[i].join()
 
-def put_json( data ):
-    #print(data)
-    f = open( builds_json, 'w' )
-    f.write( json.dumps( data ) )
-    f.close()
-    return True
+    def build(self):
+        while( True ):
+            """
+            section = self.queued_docs.get(block=True, timeout=None)
+            building_docs.put(section)
+            timestamp = False
+            if build(section) == 0:
+                timestamp = time.strftime( '%Y-%m-%d %H:%M:%S' )
+            finished_docs.put((section, timestamp))
+            cmd = '/suse/lxbuch/doc/daps-autobuild/daps-autobuild --config /suse/lxbuch/doc/daps-autobuild/daps-autobuild_docserv.xml --schema /suse/lxbuch/doc/daps-autobuild/daps-autobuild.rnc --notify --sections %s' % section
+            cmd = shlex.split(cmd)
+            s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            s.communicate()[0]
+            rc = s.returncode
+            cmd = '/suse/lxbuch/doc/portwinestain/portwinestain'
+            cmd = shlex.split(cmd)
+            s = subprocess.Popen(cmd)
+            s.wait()
+            """
+            time.sleep(1000)
 
-def doc_socket( a ):
-    print("Opening socket")
-    s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    host = 'localhost'
-    port = int(20005)
-    s.bind((host,port))
-    s.listen(1)
-    while( True ):
-        conn, addr = s.accept()
-        data = conn.recv(4096)
-        data = data.decode("utf-8")
-        print("received "+data)
-        received_items.put(data)
-    s.close()
+    def listen(self):
+        server_address = (self.config['server']['host'], int(self.config['server']['port']))
+        self.rest = ThreadedRESTServer(server_address, RESTServer, self.build_queue, self.cur_builds_queue)
+        try:
+            self.rest.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        self.rest.server_close()
 
-def json_handler( a ):
-    print("Started JSON handler")
-    builds = get_json()
-    builds = clear_json( builds )
-    #print(builds)
-    new_jobs = True
-    while( True ):
-        need_put = False
-        if not received_items.empty():
-            rec = received_items.get(False)
-            if rec in builds and builds[rec]['queued'] == False and new_jobs:
-                print("queuing "+rec)
-                builds[rec]['queued'] = True
-                queued_docs.put(rec)
-                need_put = True
-            if "releasethehostageorpaydearly" == rec:
-                new_jobs = False
-                while not queued_docs.empty():
-                    queued_docs.get()
-            if "grabthebooty" == rec:
-                new_jobs = True
-                builds = get_json()
-                builds = clear_json( builds )
-        if not building_docs.empty():
-            item = building_docs.get()
-            print("building "+item)
-            builds[item]['building'] = True
-            builds[item]['queued'] = False
-            need_put = True
+class RESTServer(BaseHTTPRequestHandler):
+    def _set_headers(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+    def do_GET(self):
+        _set_headers()
+        self.wfile.write(bytes("<p>You accessed path: %s</p>" % self.path, "utf-8"))
+    def do_POST(self):
+        content_length = int(self.headers['Content-Length'])
+        post_data = self.rfile.read(content_length)
+        _set_headers()
+        client.close()
 
-        if not finished_docs.empty():
-            item, timestamp = finished_docs.get()
-            print("finished "+item)
-            builds[item]['building'] = False
-            if timestamp != False:
-                builds[item]['last_build'] = timestamp
-            need_put = True
-        if need_put and new_jobs:
-            put_json( builds )
-        time.sleep(0.05)
+class ThreadedRESTServer(ThreadingMixIn, HTTPServer):
+    def __init__(self, server_address, RequestHandlerClass, build_queue, cur_builds_queue, bind_and_activate=True):
+        HTTPServer.__init__(self, server_address, RequestHandlerClass, bind_and_activate)
+        logger.info("Starting HTTP server on %s:%i" % server_address)
+        self.build_queue = build_queue
+        self.cur_builds_queue = cur_builds_queue
 
-def clear_json( builds ):
-    for section in builds:
-        builds[section]['building'] = False
-        builds[section]['queued'] = False
-    return builds
+logger = logging.getLogger('docserv')
+logger.setLevel(logging.DEBUG)
 
-def main():
-    _thread.start_new_thread( json_handler, (1, ) )
-    _thread.start_new_thread( doc_socket, (1, ) )
-    while( True ):
-        section = queued_docs.get(block=True, timeout=None)
-        building_docs.put(section)
-        timestamp = False
-        if build(section) == 0:
-            timestamp = time.strftime( '%Y-%m-%d %H:%M:%S' )
-        finished_docs.put((section, timestamp))
-        cmd = '/suse/lxbuch/doc/portwinestain/portwinestain'
-        cmd = shlex.split(cmd)
-        #print(cmd)
-        s = subprocess.Popen(cmd)
-        s.wait()
-        print("done")
-
-global builds
+ch = logging.StreamHandler(sys.stdout)
+ch.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+ch.setFormatter(formatter)
+logger.addHandler(ch)
 
 if __name__ == "__main__":
-    main()
+    docserv = Docserv(sys.argv)
+    docserv.start()

@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<productindex id="sles" lifecycle="supported">
+  <!-- ID can be used for build commands, HTML IDs, etc. -->
+  <!-- active="yes"/"no" configures whether  -->
+  <!-- lifecycle="unpublished"/"beta"/"supported"/"unsupported":
+    + "unpublished": Don't build, don't mention on overview page
+    + "beta": Build (draft and beta warning by default), don't mention on
+      overview page
+    + "supported": Build, publish normally
+    + "unsupported": build, publish with note "not supported anymore,
+      please upgrade"
+  -->
+  
+
+  <product>SUSE Linux Enterprise Server</product>
+  <productshort>SLES</productshort>
+
+  <productdesc>
+    <!-- This is HTML -->
+    <p>
+      This product will lose control of you and help you live free.
+      SLES is so glad to have you.
+    </p>
+  </productdesc>
+
+  <docset id="15ga">
+    <version>15</version>
+
+    <builddocs>
+
+      <vcs type="git">
+        <repo>https://github.com/SUSE/doc-sle</repo>
+        <checkoutdir>doc-sle</checkoutdir>
+          <!-- checkoutdir is assumed to be located directly under the
+          <repodir/> configured in docserv.xml -->
+      </vcs>
+
+      <default lang="en">
+        <branch>develop</branch>
+        <subdir>.</subdir>
+
+        <!-- MAXIMALIST (<styleroot>/<param>) COMPILATION (i.e. w/ <subdeliverables/>) DELIVERABLE EXAMPLE -->
+        <deliverable remarks="no" draft="no" meta="no">
+          <dc>DC-SLES-all</dc>
+          <format>html</format>
+          <styleroot>/.../.../...</styleroot>
+            <!-- Styleroot is totally optional. -->
+          <param name="foo.bar">1</param>
+            <!-- Automatically forwarded to DAPS as "-stringparam"s. -->
+          <subdeliverable id="book.admin"/>
+          <subdeliverable id="book.gnomeuser"/>
+            <!-- Subdeliverables contain the IDs of books we link to from the
+            overview page; if there are no subdeliverables, we instead link
+            to "index.html" -->
+            <!-- We assume that we can find the names of books out via a
+            script. Configuring them here becomes much less feasible as soon
+            as you have multiple languages. -->
+        </deliverable>
+
+        <!-- MINIMALIST INDIVIDUAL DELIVERABLE EXAMPLES -->
+        <deliverable>
+          <dc>DC-SLES-admin</dc>
+          <format>single-html pdf epub</format>
+        </deliverable>
+        <deliverable>
+          <!-- Minimalist individual deliverable -->
+          <dc>DC-SLES-gnomeuser</dc>
+          <format>single-html pdf epub</format>
+        </deliverable>
+
+      </default>
+
+      <!-- For translations, we assume the same deliverables as for the
+      original language, exceptions are noted within the <untranslated>
+      element. However, we probably still need to build these untranslated deliverables. -->
+      <translation lang="de">
+        <branch>maint/sle15</branch>
+        <subdir>sles/de</subdir>
+        <untranslated>
+          <deliverable>
+            <dc>DC-SLES-all</dc>
+            <subdeliverable id="book.gnomeuser"/>
+          </deliverable>
+          <deliverable>
+            <dc>DC-SLES-gnomeuser</dc>
+          </deliverable>
+        </untranslated>
+      </translation>
+
+      <translation lang="fr">
+        <branch>maint/sle15</branch>
+        <subdir>sles/fr</subdir>
+        <untranslated/>
+      </translation>
+
+    </builddocs>
+
+    <extralinks>
+      <link href="https://.../...">Release Notes</link>
+      <link href="https://.../...">SUSE Best Practices</link>
+      <link href="https://.../...">SUSE Evil Curls 2018 Documentation</link>
+    </extralinks>
+
+  </docset>
+
+  <docset id="11sp4">
+    <version>11 SP4</version>
+
+    <builddocs>
+
+      <vcs type="svn">
+        <repo>https://svn.opensuse.org/viewvc/opensuse-doc/trunk/documents/sle/</repo>
+        <checkoutdir>svn-sle</checkoutdir>
+      </vcs>
+
+      <default lang="en">
+        <branch/>
+          <!-- In SVN, branches are directories - so we should just use
+          <subdir/> and ignore whatever is in the <branch/> element. -->
+        <subdir>en/attic</subdir>
+
+        <!-- MAXIMALIST (<styleroot>/<param>) COMPILATION (i.e. w/ <subdeliverables/>) DELIVERABLE EXAMPLE -->
+        <deliverable remarks="no" draft="no" meta="no">
+          <dc>DC-SLES-all</dc>
+          <format>html</format>
+          <styleroot>/.../.../...</styleroot>
+          <param name="foo.bar">1</param>
+          <subdeliverable id="book.admin"/>
+          <subdeliverable id="book.gnomeuser"/>
+        </deliverable>
+
+        <!-- MINIMALIST INDIVIDUAL DELIVERABLE EXAMPLES -->
+        <deliverable>
+          <dc>DC-SLES-admin</dc>
+          <format>single-html pdf epub</format>
+        </deliverable>
+        <deliverable>
+          <!-- Minimalist individual deliverable -->
+          <dc>DC-SLES-gnomeuser</dc>
+          <format>single-html pdf epub</format>
+        </deliverable>
+
+      </default>
+
+      <translation lang="de">
+        <branch/>
+        <subdir>trans/attic/sles/de</subdir>
+        <untranslated>
+          <deliverable>
+            <dc>DC-SLES-all</dc>
+            <subdeliverable id="book.gnomeuser"/>
+          </deliverable>
+          <deliverable>
+            <dc>DC-SLES-gnomeuser</dc>
+          </deliverable>
+        </untranslated>
+      </translation>
+
+      <translation lang="fr">
+        <branch/>
+        <subdir>trans/attic/sles/de</subdir>
+        <untranslated/>
+      </translation>
+
+    </builddocs>
+
+    <extralinks>
+      <link href="https://.../...">Release Notes</link>
+      <link href="https://.../...">SUSE Best Practices</link>
+    </extralinks>
+
+  </docset>
+
+
+</productindex>

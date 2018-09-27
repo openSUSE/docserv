@@ -19,28 +19,60 @@ my_env = os.environ
 
 class Documentation:
     def __init__(self, doc_params, config):
-        self.validate(doc_params)
-        self.doc_params = doc_params
-        read_conf_dir()
+        if self.validate(doc_params, config):
+            self.doc_params = doc_params
+            self.config = config
+            self.initialized = True
+            for target in doc_params['targets']:
+                if not self.read_conf_dir(target):
+                    self.initialized = False
+            return
+        self.initialized = False
 
-    def read_conf_dir(self, path):
+    def read_conf_dir(self, target):
+        # validate with sknorrs magic bash script
+        cmd = '/usr/bin/docserv-stitch %s' % self.config['targets'][target]['config_dir']
+        logger.debug("Stitching %s" % cmd)
+        cmd = shlex.split(cmd)
+        s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        s.communicate()[0]
+        rc = int(s.returncode)
+        if rc == 0:
+            logger.debug("Stitching of %s successful" % self.config['targets'][target]['config_dir'])
+        else:
+            logger.warning("Stitching of %s failed!" % self.config['targets'][target]['config_dir'])
+        # then read all files into an xml tree
         pass
 
-    def validate_doc_params(self):
+    def validate(self, item, config):
         # item = {'docs': [{'docset': '15ga', 'lang': 'en', 'product': 'sles'}],'targets': ['external']}
-        if not isinstance(item, list):
+        logger.debug("Validation: %s" % json.dumps(item))
+        if not isinstance(item, dict):
+            logger.warning("Validation: Is not a dict")
             return False
-        if not isinstance(item['targets']):
+        if not isinstance(item['targets'], list):
+            logger.warning("Validation: targets is not a list")
             return False
-        if not isinstance(item['docs']):
+        if not isinstance(item['docs'], list):
+            logger.warning("Validation: docs is not a list")
             return False
         for doc in item['docs']:
-            if not isinstance(doc['docset'],str):
+            if not isinstance(doc['docset'], str):
+                logger.warning("Validation: docset is not a string")
                 return False
-            if not isinstance(doc['lang'],str):
+            if not isinstance(doc['lang'], str):
+                logger.warning("Validation: lang is not a string")
                 return False
-            if not isinstance(doc['product'],str):
+            if not isinstance(doc['product'], str):
+                logger.warning("Validation: product is not a string")
                 return False
+        for target in item['targets']:
+            if target in config['targets']:
+                pass
+            else:
+                logger.warning("Validation: target %s does not exist" % target)
+                return False
+        logger.debug("Valid doc: %s" % json.dumps(doc))
         return True
 
 
@@ -135,8 +167,7 @@ class Docserv:
             s.wait()
             """
             if not self.end_end_all.empty(): return True
-            time.sleep(1)
-            
+            time.sleep(10)
 
     def listen(self):
         server_address = (self.config['server']['host'], int(self.config['server']['port']))
@@ -158,8 +189,10 @@ class RESTServer(BaseHTTPRequestHandler):
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
-        logger.info("Queueing %s" % str(post_data.decode("utf-8")))
-        self.server.waiting_for_build.put(json.loads(post_data))
+        data = json.loads(post_data)
+        for doc in data:
+            logger.info("Queueing %s" % json.dumps(doc))
+            self.server.waiting_for_build.put(doc)
         self._set_headers()
 
 class ThreadedRESTServer(ThreadingMixIn, HTTPServer):

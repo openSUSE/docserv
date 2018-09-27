@@ -12,22 +12,25 @@ import queue
 import socket
 import configparser
 import logging
+import signal
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 my_env = os.environ
 
 class Documentation:
-    def __init__(self, path):
-        read_conf_dir(path)
+    def __init__(self, config_path, target_path):
+        read_conf_dir(config_path)
 
     def read_conf_dir(self, path):
         pass
 
 class Docserv:
     def __init__(self, argv):
-        self.build_queue = queue.Queue()
-        self.cur_builds_queue = queue.Queue()
-        self.config = {}
+        self.waiting_for_build = queue.Queue()
+        self.currently_building = queue.Queue()
+        self.end_end_all = queue.Queue()
+        self.waiting_for_build.put("foo")
+        self.currently_building.put("baz")
         self.parse_config(argv)
     
     def parse_config(self, argv):
@@ -36,27 +39,37 @@ class Docserv:
             argv[1] = "docserv"
         logger.info("Reading /etc/docserv/%s.ini" % argv[1])
         config.read("/etc/docserv/%s.ini" % argv[1])
+        self.config = {}
         self.config['build'] =                  {}
         self.config['build']['repo_dir'] =      config['build']['repo_dir']
         self.config['build']['templdate_dir'] = config['build']['template_dir']
         self.config['build']['config_dir'] =    config['build']['config_dir']
+        self.config['build']['max_threads'] =   int(config['build']['max_threads'])
         self.config['server'] =                 {}
         self.config['server']['host'] =         config['server']['host']
-        self.config['server']['port'] =         config['server']['port']
+        self.config['server']['port'] =         int(config['server']['port'])
 
     def start(self):
         # start everything
-        thread_receive = threading.Thread(target=self.listen)
-        thread_receive.start()
-        thread_builds = []
-        for i in range(0,os.cpu_count()):
-            logger.info("Starting build thread %i" % i)
-            thread_builds.append(threading.Thread(target=self.build))
-            thread_builds[i].start()
-        # to have a clean shutdown, wait for all threads to finish
-        thread_receive.join()
-        for i in range(0,os.cpu_count()):
-            thread_builds[i].join()
+        try:
+            thread_receive = threading.Thread(target=self.listen)
+            thread_receive.start()
+            thread_builds = []
+            for i in range(0,min([os.cpu_count(), self.config['build']['max_threads']])):
+                logger.info("Starting build thread %i" % i)
+                thread_builds.append(threading.Thread(target=self.build))
+                thread_builds[i].start()
+            # to have a clean shutdown, wait for all threads to finish
+            thread_receive.join()
+        except KeyboardInterrupt:
+            self.exit()
+        for thread_build in thread_builds:
+            thread_build.join()
+
+    def exit(self):
+        logger.info("Exiting now")
+        self.end_end_all.put("now")
+        self.rest.shutdown()
 
     def build(self):
         while( True ):
@@ -77,16 +90,14 @@ class Docserv:
             s = subprocess.Popen(cmd)
             s.wait()
             """
-            time.sleep(1000)
+            time.sleep(10)
+            if not self.end_end_all.empty(): return True
 
     def listen(self):
         server_address = (self.config['server']['host'], int(self.config['server']['port']))
-        self.rest = ThreadedRESTServer(server_address, RESTServer, self.build_queue, self.cur_builds_queue)
-        try:
-            self.rest.serve_forever()
-        except KeyboardInterrupt:
-            pass
-        self.rest.server_close()
+        self.rest = ThreadedRESTServer(server_address, RESTServer, self.waiting_for_build, self.currently_building)
+        self.rest.serve_forever()
+        return True
 
 class RESTServer(BaseHTTPRequestHandler):
     def _set_headers(self):
@@ -94,20 +105,24 @@ class RESTServer(BaseHTTPRequestHandler):
         self.send_header('Content-type', 'application/json')
         self.end_headers()
     def do_GET(self):
-        _set_headers()
-        self.wfile.write(bytes("<p>You accessed path: %s</p>" % self.path, "utf-8"))
+        self._set_headers()
+        output = {}
+        output['waiting_for_build'] = [] if self.server.waiting_for_build.empty() else list(self.server.waiting_for_build.queue)
+        output['currently_building'] = [] if self.server.currently_building.empty() else list(self.server.currently_building.queue)
+        self.wfile.write(bytes(json.dumps(output), "utf-8"))
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
-        _set_headers()
-        client.close()
+        logger.info("Queueing %s" % str(post_data.decode("utf-8")))
+        self.server.waiting_for_build
+        self._set_headers()
 
 class ThreadedRESTServer(ThreadingMixIn, HTTPServer):
-    def __init__(self, server_address, RequestHandlerClass, build_queue, cur_builds_queue, bind_and_activate=True):
+    def __init__(self, server_address, RequestHandlerClass, waiting_for_build, currently_building, bind_and_activate=True):
         HTTPServer.__init__(self, server_address, RequestHandlerClass, bind_and_activate)
         logger.info("Starting HTTP server on %s:%i" % server_address)
-        self.build_queue = build_queue
-        self.cur_builds_queue = cur_builds_queue
+        self.waiting_for_build = waiting_for_build
+        self.currently_building = currently_building
 
 logger = logging.getLogger('docserv')
 logger.setLevel(logging.DEBUG)

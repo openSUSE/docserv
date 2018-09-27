@@ -18,19 +18,37 @@ from socketserver import ThreadingMixIn
 my_env = os.environ
 
 class Documentation:
-    def __init__(self, config_path, target_path):
-        read_conf_dir(config_path)
+    def __init__(self, doc_params, config):
+        self.validate(doc_params)
+        self.doc_params = doc_params
+        read_conf_dir()
 
     def read_conf_dir(self, path):
         pass
+
+    def validate_doc_params(self):
+        # item = {'docs': [{'docset': '15ga', 'lang': 'en', 'product': 'sles'}],'targets': ['external']}
+        if not isinstance(item, list):
+            return False
+        if not isinstance(item['targets']):
+            return False
+        if not isinstance(item['docs']):
+            return False
+        for doc in item['docs']:
+            if not isinstance(doc['docset'],str):
+                return False
+            if not isinstance(doc['lang'],str):
+                return False
+            if not isinstance(doc['product'],str):
+                return False
+        return True
+
 
 class Docserv:
     def __init__(self, argv):
         self.waiting_for_build = queue.Queue()
         self.currently_building = queue.Queue()
         self.end_end_all = queue.Queue()
-        self.waiting_for_build.put("foo")
-        self.currently_building.put("baz")
         self.parse_config(argv)
     
     def parse_config(self, argv):
@@ -39,15 +57,28 @@ class Docserv:
             argv[1] = "docserv"
         logger.info("Reading /etc/docserv/%s.ini" % argv[1])
         config.read("/etc/docserv/%s.ini" % argv[1])
+        LOGLEVELS = {0: logging.WARNING,
+             1: logging.INFO,
+             2: logging.DEBUG,
+        }
         self.config = {}
-        self.config['build'] =                  {}
-        self.config['build']['repo_dir'] =      config['build']['repo_dir']
-        self.config['build']['templdate_dir'] = config['build']['template_dir']
-        self.config['build']['config_dir'] =    config['build']['config_dir']
-        self.config['build']['max_threads'] =   int(config['build']['max_threads'])
         self.config['server'] =                 {}
+        self.config['server']['loglevel'] =     int(config['server']['loglevel'])
+        logger.setLevel(LOGLEVELS[self.config['server']['loglevel']])
         self.config['server']['host'] =         config['server']['host']
         self.config['server']['port'] =         int(config['server']['port'])
+        self.config['server']['repo_dir'] =     config['server']['repo_dir']
+        self.config['server']['max_threads'] =  int(config['server']['max_threads'])
+        self.config['targets'] =                {}
+        for section in config.sections():
+            if not str(section).startswith("target_"):
+                continue
+            self.config['targets'][config[section]['name']] =                  {}
+            self.config['targets'][config[section]['name']]['type'] =          config[section]['type']
+            self.config['targets'][config[section]['name']]['templdate_dir'] = config[section]['template_dir']
+            self.config['targets'][config[section]['name']]['active'] =        config[section]['active']
+            self.config['targets'][config[section]['name']]['target_repo'] =   config[section]['target_repo']
+            self.config['targets'][config[section]['name']]['config_dir'] =    config[section]['config_dir']
 
     def start(self):
         # start everything
@@ -55,9 +86,9 @@ class Docserv:
             thread_receive = threading.Thread(target=self.listen)
             thread_receive.start()
             thread_builds = []
-            for i in range(0,min([os.cpu_count(), self.config['build']['max_threads']])):
+            for i in range(0,min([os.cpu_count(), self.config['server']['max_threads']])):
                 logger.info("Starting build thread %i" % i)
-                thread_builds.append(threading.Thread(target=self.build))
+                thread_builds.append(threading.Thread(target=self.build, args=(i,)))
                 thread_builds[i].start()
             # to have a clean shutdown, wait for all threads to finish
             thread_receive.join()
@@ -71,8 +102,21 @@ class Docserv:
         self.end_end_all.put("now")
         self.rest.shutdown()
 
-    def build(self):
+    def get_item(self):
+        try:
+            build_item = self.waiting_for_build.get(block=False)
+        except queue.Empty:
+            return None
+        return build_item
+
+    def build(self, thread_id):
         while( True ):
+            build_item = self.get_item()
+            if build_item is not None:
+                logger.debug("Thread %i: Got item" % thread_id)
+                doc = Documentation(build_item, self.config)
+            else:
+                logger.debug("Thread %i: No item" % thread_id)
             """
             section = self.queued_docs.get(block=True, timeout=None)
             building_docs.put(section)
@@ -90,8 +134,9 @@ class Docserv:
             s = subprocess.Popen(cmd)
             s.wait()
             """
-            time.sleep(10)
             if not self.end_end_all.empty(): return True
+            time.sleep(1)
+            
 
     def listen(self):
         server_address = (self.config['server']['host'], int(self.config['server']['port']))
@@ -114,7 +159,7 @@ class RESTServer(BaseHTTPRequestHandler):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
         logger.info("Queueing %s" % str(post_data.decode("utf-8")))
-        self.server.waiting_for_build
+        self.server.waiting_for_build.put(json.loads(post_data))
         self._set_headers()
 
 class ThreadedRESTServer(ThreadingMixIn, HTTPServer):
@@ -125,7 +170,6 @@ class ThreadedRESTServer(ThreadingMixIn, HTTPServer):
         self.currently_building = currently_building
 
 logger = logging.getLogger('docserv')
-logger.setLevel(logging.DEBUG)
 
 ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)

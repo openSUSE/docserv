@@ -173,17 +173,18 @@ class Docserv:
         try:
             thread_receive = threading.Thread(target=self.listen)
             thread_receive.start()
-            thread_builds = []
+            workers = []
             for i in range(0,min([os.cpu_count(), self.config['server']['max_threads']])):
                 logger.info("Starting build thread %i" % i)
-                thread_builds.append(threading.Thread(target=self.build, args=(i,)))
-                thread_builds[i].start()
+                worker = threading.Thread(target=self.worker, args=(i,))
+                worker.start()
+                workers.append(worker)
             # to have a clean shutdown, wait for all threads to finish
             thread_receive.join()
         except KeyboardInterrupt:
             self.exit()
-        for thread_build in thread_builds:
-            thread_build.join()
+        for worker in workers:
+            worker.join()
 
     def exit(self):
         logger.info("Exiting now")
@@ -214,7 +215,7 @@ class Docserv:
                     self.lock_currently_building.release()
                     return deliverable
 
-    def build(self, thread_id):
+    def worker(self, thread_id):
         while( True ):
             # 1. parse input from rest api and put the instance of the doc class on the currently building queue
             build_instruction = self.get_build_instruction()

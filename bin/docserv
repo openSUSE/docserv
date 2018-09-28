@@ -29,6 +29,7 @@ class Deliverable:
         self.dc_file = dc_file             # DC file name is required for docker/daps
         self.build_format = build_format   # build format (html, single html, pdf, epub) is a required daps parameter
         self.target = target               # rsync target server/directory
+        logger.debug("Created deliverable: %s %s %s %s %s %s %s %s" % (repo_dir, temp_repo_dir, remote_repo, branch, language, dc_file, build_format, target))
 
     def run(self):
         # use doc_params and read build details from XML tree
@@ -52,7 +53,7 @@ class Deliverable:
         # 5. rsync result to local versioned directory
         # 6. rsync result to doc server
         #    target: [target (prefix)]/language/product_id/docset_id/format/[DC-file without dc[.pdf/epub or folder if html]]/index.html
-        pass
+        logger.debug("Building deliverable" % thread_id)
 
 class Documentation:
     def __init__(self, build_instruction, config):
@@ -122,27 +123,34 @@ class Documentation:
         return True
 
     def get_repo(self, build_doc):
-        for repo in xml_root.find("//productindex[@id='%s']/docset[@id='%s']/builddocs/git/remote" % (build_doc['product'], build_doc['docset'])):
-            return repo.text
+        xml_root = self.tree.getroot()
+        repo = xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/builddocs/git/remote" % (build_doc['product'], build_doc['docset']))
+        return repo.text
 
     def generate_deliverables(self):
-        config_stuff = []
         xml_root = self.tree.getroot()
-        for build_doc in self.config['docs']:
+        for build_doc in self.build_instruction['docs']:
             remote_repo = self.get_repo(build_doc)
-            for xml_deliverable in xml_root.findall("//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/deliverable" % (build_doc['product'], build_doc['docset'], build_doc['lang'])):
-                for build_format in xml_deliverable.findall("//format"):
+            for xml_deliverable in xml_root.findall(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/deliverable" % (build_doc['product'], build_doc['docset'], build_doc['lang'])):
+                for build_format in xml_deliverable.findall(".//format"):
+                    logger.debug("build format: "+build_format.text)
                     for target in self.config['targets']:
+                        logger.debug("target: "+target)
+                        xml_root = self.tree.getroot()
+                        branch = xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/branch" % (build_doc['product'], build_doc['docset'], build_doc['lang'])).text
+                        print(branch)
                         deliverable = Deliverable(  self.config['server']['repo_dir'],
-                                                    self.config['server']['selftemp_repo_dir'],
+                                                    self.config['server']['temp_repo_dir'],
                                                     remote_repo,
-                                                    xml_root.find("//productindex[@id='%s']/docset[@id='%s']/branch").text,
+                                                    branch,
                                                     build_doc['lang'],
-                                                    xml_deliverable.find("//dc").text,
+                                                    xml_deliverable.find(".//dc").text,
                                                     build_format.text,
                                                     target
-                                                 )
-                self.deliverables.put(deliverable)
+                                                        )
+                        logger.debug("Putting deliverable")
+                        self.deliverables.put(deliverable)
+                        logger.debug("Deliverable queue size: %i" % self.deliverables.qsize())
         # after all deliverables are generated, we don't need the xml tree anymore
         self.tree = None
 
@@ -166,14 +174,15 @@ class Docserv:
         }
         try:
             self.config = {}
-            self.config['server'] =                 {}
-            self.config['server']['loglevel'] =     int(config['server']['loglevel'])
+            self.config['server'] =                  {}
+            self.config['server']['loglevel'] =      int(config['server']['loglevel'])
             logger.setLevel(LOGLEVELS[self.config['server']['loglevel']])
-            self.config['server']['host'] =         config['server']['host']
-            self.config['server']['port'] =         int(config['server']['port'])
-            self.config['server']['repo_dir'] =     config['server']['repo_dir']
-            self.config['server']['max_threads'] =  int(config['server']['max_threads'])
-            self.config['targets'] =                {}
+            self.config['server']['host'] =          config['server']['host']
+            self.config['server']['port'] =          int(config['server']['port'])
+            self.config['server']['repo_dir'] =      config['server']['repo_dir']
+            self.config['server']['temp_repo_dir'] = config['server']['temp_repo_dir']
+            self.config['server']['max_threads'] =   int(config['server']['max_threads'])
+            self.config['targets'] =                 {}
             for section in config.sections():
                 if not str(section).startswith("target_"):
                     continue
@@ -221,13 +230,16 @@ class Docserv:
         if self.lock_currently_building.acquire():
             try:
                 doc = self.currently_building.get(False)
+                logger.debug("retrieved a doc")
             except queue.Empty:
                 self.lock_currently_building.release()
                 return None
             else:
                 try:
-                    deliverable = doc.deliverables.get()
+                    deliverable = doc.deliverables.get(False)
+                    logger.debug("retrieved a deliverable")
                 except queue.Empty:
+                    self.lock_currently_building.release()
                     return None
                 else:
                     self.currently_building.put(doc)
@@ -239,8 +251,9 @@ class Docserv:
             # 1. parse input from rest api and put the instance of the doc class on the currently building queue
             build_instruction = self.get_build_instruction()
             if build_instruction is not None:
-                logger.debug("Thread %i: Got item" % thread_id)
+                logger.debug("Thread %i: Received input from REST API" % thread_id)
                 doc = Documentation(build_instruction, self.config)
+                doc.generate_deliverables()
                 self.currently_building.put(doc)
             else:
                 pass

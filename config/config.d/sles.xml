@@ -60,12 +60,16 @@
         <!-- MINIMALIST INDIVIDUAL DELIVERABLE EXAMPLES -->
         <deliverable>
           <dc>DC-SLES-admin</dc>
-          <format>single-html pdf epub</format>
+          <format>single-html</format>
+          <format>pdf</format>
+          <format>epub</format>
         </deliverable>
         <deliverable>
           <!-- Minimalist individual deliverable -->
           <dc>DC-SLES-gnomeuser</dc>
-          <format>single-html pdf epub</format>
+          <format>single-html</format>
+          <format>pdf</format>
+          <format>epub</format>
         </deliverable>
 
       </language>
@@ -132,12 +136,16 @@
         <!-- MINIMALIST INDIVIDUAL DELIVERABLE EXAMPLES -->
         <deliverable>
           <dc>DC-SLES-admin</dc>
-          <format>single-html pdf epub</format>
+          <format>single-html</format>
+          <format>pdf</format>
+          <format>epub</format>
         </deliverable>
         <deliverable>
           <!-- Minimalist individual deliverable -->
           <dc>DC-SLES-gnomeuser</dc>
-          <format>single-html pdf epub</format>
+          <format>single-html</format>
+          <format>pdf</format>
+          <format>epub</format>
         </deliverable>
 
       </default>

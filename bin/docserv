@@ -20,13 +20,15 @@ from xml.etree import ElementTree
 my_env = os.environ
 
 class Deliverable:
-    def __init__(self, remote_repo, branch, language, dc_file, build_type, target):
-        self.remote_repo = remote_repo  # the path to the remote repo determines the local directory name for it
-        self.branch = branch            # branch name to use, defines translation and version
-        self.language = language        # language defines folder on target server
-        self.dc_file = dc_file          # DC file name is required for docker/daps
-        self.build_type = build_type    # build type (html, single html, pdf, epub) is a required daps parameter
-        self.target = target            # rsync target server/directory
+    def __init__(self, repo_dir, temp_repo_dir, remote_repo, branch, language, dc_file, build_format, target):
+        self.repo_dir = repo_dir           # directory where to cache repositories
+        self.temp_repo_dir = temp_repo_dir # direcory to which to clone the locally cached repo
+        self.remote_repo = remote_repo     # the path to the remote repo determines the local directory name for it
+        self.branch = branch               # branch name to use, defines translation and version
+        self.language = language           # language defines folder on target server
+        self.dc_file = dc_file             # DC file name is required for docker/daps
+        self.build_format = build_format   # build format (html, single html, pdf, epub) is a required daps parameter
+        self.target = target               # rsync target server/directory
 
     def run(self):
         # use doc_params and read build details from XML tree
@@ -117,13 +119,28 @@ class Documentation:
         logger.debug("Valid build instruction: %s" % json.dumps(build_instruction))
         return True
 
+    def get_repo(self, build_doc):
+        for repo in xml_root.findall(".//productindex[@id='%s']/docset[@id='%s']/builddocs/vcs[@type='git']/repo" % (build_doc['product'], build_doc['docset']))
+            return repo.text
+
     def generate_deliverables(self):
         config_stuff = []
         xml_root = self.tree.getroot()
-        # do something with input and xml
-        for repeats in config_stuff:
-            deliverable = Deliverable(remote_repo, branch, language, dc_file, build_type, target)
-            self.deliverables.put(deliverable)
+        for build_doc in self.config['docs']:
+            remote_repo = self.get_repo(build_doc)
+            for xml_deliverable in xml_root.findall(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/deliverable" % (build_doc['product'], build_doc['docset'], build_doc['lang'])):
+                for build_format in xml_deliverable.findall("//format")
+                    for target in self.config['targets']:
+                        deliverable = Deliverable(  self.config['server']['repo_dir'],
+                                                    self.config['server']['selftemp_repo_dir'],
+                                                    remote_repo,
+                                                    xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/branch").text,
+                                                    build_doc['lang'],
+                                                    xml_deliverable.find("//dc").text,
+                                                    build_format.text,
+                                                    target
+                                                 )
+                self.deliverables.put(deliverable)
         # after all deliverables are generated, we don't need the xml tree anymore
         self.tree = None
 
@@ -234,6 +251,8 @@ class Docserv:
 
             # 3. end thread if sigint
             if not self.end_end_all.empty(): return True
+
+            # 4. wait for a short while, then repeat
             time.sleep(0.1)
 
     def listen(self):

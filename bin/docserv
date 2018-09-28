@@ -13,26 +13,66 @@ import socket
 import configparser
 import logging
 import signal
+import tempfile
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
+from xml.etree import ElementTree
 my_env = os.environ
 
+class Deliverable:
+    def __init__(self, remote_repo, branch, language, dc_file, build_type, target):
+        self.remote_repo = remote_repo  # the path to the remote repo determines the local directory name for it
+        self.branch = branch            # branch name to use, defines translation and version
+        self.language = language        # language defines folder on target server
+        self.dc_file = dc_file          # DC file name is required for docker/daps
+        self.build_type = build_type    # build type (html, single html, pdf, epub) is a required daps parameter
+        self.target = target            # rsync target server/directory
+
+    def run(self):
+        # use doc_params and read build details from XML tree
+        # then create a list of build jobs from build_instruction
+        # To build something, we require:
+        # - source git repository
+        # - build language
+        # - for each product/docset/deliverable we've got a
+        #   - git branch
+        #   - build format (html, pdf, epub, single html)
+        #   - DC file
+        # we generate a list with the following bash commands for execution per deliverable and format
+        # 1. clone a remote repository into the repo_dir or update
+        #    git clone remote to (stringify remote name)
+        #    git fetch branch-name
+        #    git reset --hard origin/branch-name
+        # 2. create an additional local tmp clone of the repo (preferably only the required branch)
+        #    git clone /repodir/repo /tmp/repoclone
+        # 3. check out the required branch in the cloned repo
+        # 4. daps-docker command, result to tmp dir
+        # 5. rsync result to local versioned directory
+        # 6. rsync result to doc server
+        pass
+
 class Documentation:
-    def __init__(self, doc_params, config):
-        if self.validate(doc_params, config):
-            self.doc_params = doc_params
+    def __init__(self, build_instruction, config):
+        self.deliverables = queue.Queue()
+        if self.validate(build_instruction, config):
+            self.build_instruction = build_instruction
             self.config = config
             self.initialized = True
-            for target in doc_params['targets']:
+            for target in build_instruction['targets']:
                 if not self.read_conf_dir(target):
                     self.initialized = False
             return
         self.initialized = False
 
+    def to_string(self):
+        # generate json stuff
+
     def read_conf_dir(self, target):
         # validate with sknorrs magic bash script
-        cmd = '/usr/bin/docserv-stitch %s' % self.config['targets'][target]['config_dir']
-        logger.debug("Stitching %s" % cmd)
+        tmp_handle, tmp_filename = tempfile.mkstemp(text=True)
+        logger.info("Stitching XML config directory to %s" % tmp_filename)
+        cmd = '/usr/bin/docserv-stitch %s %s' % (self.config['targets'][target]['config_dir'], tmp_filename)
+        logger.debug("Stitching command: %s" % cmd)
         cmd = shlex.split(cmd)
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         s.communicate()[0]
@@ -41,22 +81,24 @@ class Documentation:
             logger.debug("Stitching of %s successful" % self.config['targets'][target]['config_dir'])
         else:
             logger.warning("Stitching of %s failed!" % self.config['targets'][target]['config_dir'])
+            return False
         # then read all files into an xml tree
-        pass
+        self.tree = ElementTree.parse(tmp_filename)
 
-    def validate(self, item, config):
-        # item = {'docs': [{'docset': '15ga', 'lang': 'en', 'product': 'sles'}],'targets': ['external']}
-        logger.debug("Validation: %s" % json.dumps(item))
-        if not isinstance(item, dict):
+
+    def validate(self, build_instruction, config):
+        # build_instruction = {'docs': [{'docset': '15ga', 'lang': 'en', 'product': 'sles'}],'targets': ['external']}
+        logger.debug("Validation: %s" % json.dumps(build_instruction))
+        if not isinstance(build_instruction, dict):
             logger.warning("Validation: Is not a dict")
             return False
-        if not isinstance(item['targets'], list):
+        if not isinstance(build_instruction['targets'], list):
             logger.warning("Validation: targets is not a list")
             return False
-        if not isinstance(item['docs'], list):
+        if not isinstance(build_instruction['docs'], list):
             logger.warning("Validation: docs is not a list")
             return False
-        for doc in item['docs']:
+        for doc in build_instruction['docs']:
             if not isinstance(doc['docset'], str):
                 logger.warning("Validation: docset is not a string")
                 return False
@@ -66,20 +108,30 @@ class Documentation:
             if not isinstance(doc['product'], str):
                 logger.warning("Validation: product is not a string")
                 return False
-        for target in item['targets']:
+        for target in build_instruction['targets']:
             if target in config['targets']:
                 pass
             else:
                 logger.warning("Validation: target %s does not exist" % target)
                 return False
-        logger.debug("Valid doc: %s" % json.dumps(doc))
+        logger.debug("Valid build instruction: %s" % json.dumps(build_instruction))
         return True
 
+    def generate_deliverables(self):
+        config_stuff = []
+        xml_root = self.tree.getroot()
+        # do something with input and xml
+        for repeats in config_stuff:
+            deliverable = Deliverable(remote_repo, branch, language, dc_file, build_type, target)
+            self.deliverables.put(deliverable)
+        # after all deliverables are generated, we don't need the xml tree anymore
+        self.tree = None
 
 class Docserv:
     def __init__(self, argv):
         self.waiting_for_build = queue.Queue()
         self.currently_building = queue.Queue()
+        self.lock_currently_building = threading.Lock()
         self.end_end_all = queue.Queue()
         self.parse_config(argv)
     
@@ -93,24 +145,28 @@ class Docserv:
              1: logging.INFO,
              2: logging.DEBUG,
         }
-        self.config = {}
-        self.config['server'] =                 {}
-        self.config['server']['loglevel'] =     int(config['server']['loglevel'])
-        logger.setLevel(LOGLEVELS[self.config['server']['loglevel']])
-        self.config['server']['host'] =         config['server']['host']
-        self.config['server']['port'] =         int(config['server']['port'])
-        self.config['server']['repo_dir'] =     config['server']['repo_dir']
-        self.config['server']['max_threads'] =  int(config['server']['max_threads'])
-        self.config['targets'] =                {}
-        for section in config.sections():
-            if not str(section).startswith("target_"):
-                continue
-            self.config['targets'][config[section]['name']] =                  {}
-            self.config['targets'][config[section]['name']]['type'] =          config[section]['type']
-            self.config['targets'][config[section]['name']]['templdate_dir'] = config[section]['template_dir']
-            self.config['targets'][config[section]['name']]['active'] =        config[section]['active']
-            self.config['targets'][config[section]['name']]['target_repo'] =   config[section]['target_repo']
-            self.config['targets'][config[section]['name']]['config_dir'] =    config[section]['config_dir']
+        try:
+            self.config = {}
+            self.config['server'] =                 {}
+            self.config['server']['loglevel'] =     int(config['server']['loglevel'])
+            logger.setLevel(LOGLEVELS[self.config['server']['loglevel']])
+            self.config['server']['host'] =         config['server']['host']
+            self.config['server']['port'] =         int(config['server']['port'])
+            self.config['server']['repo_dir'] =     config['server']['repo_dir']
+            self.config['server']['max_threads'] =  int(config['server']['max_threads'])
+            self.config['targets'] =                {}
+            for section in config.sections():
+                if not str(section).startswith("target_"):
+                    continue
+                self.config['targets'][config[section]['name']] =                  {}
+                self.config['targets'][config[section]['name']]['type'] =          config[section]['type']
+                self.config['targets'][config[section]['name']]['templdate_dir'] = config[section]['template_dir']
+                self.config['targets'][config[section]['name']]['active'] =        config[section]['active']
+                self.config['targets'][config[section]['name']]['target_repo'] =   config[section]['target_repo']
+                self.config['targets'][config[section]['name']]['config_dir'] =    config[section]['config_dir']
+        except KeyError:
+            logger.warning("Invalid configuration file. Exiting.")
+            sys.exit(1)
 
     def start(self):
         # start everything
@@ -134,40 +190,50 @@ class Docserv:
         self.end_end_all.put("now")
         self.rest.shutdown()
 
-    def get_item(self):
+    def get_build_instruction(self):
         try:
-            build_item = self.waiting_for_build.get(block=False)
+            build_instruction = self.waiting_for_build.get(block=False)
         except queue.Empty:
             return None
-        return build_item
+        return build_instruction
+
+    def get_deliverable(self):
+        if self.lock_currently_building.acquire():
+            try:
+                doc = self.currently_building.get(False)
+            except queue.Empty:
+                self.lock_currently_building.release()
+                return None
+            else:
+                try:
+                    deliverable = doc.deliverables.get()
+                except queue.Empty:
+                    return None
+                else:
+                    self.currently_building.put(doc)
+                    self.lock_currently_building.release()
+                    return deliverable
 
     def build(self, thread_id):
         while( True ):
-            build_item = self.get_item()
-            if build_item is not None:
+            # 1. parse input from rest api and put the instance of the doc class on the currently building queue
+            build_instruction = self.get_build_instruction()
+            if build_instruction is not None:
                 logger.debug("Thread %i: Got item" % thread_id)
-                doc = Documentation(build_item, self.config)
+                doc = Documentation(build_instruction, self.config)
+                self.currently_building.put(doc)
             else:
-                logger.debug("Thread %i: No item" % thread_id)
-            """
-            section = self.queued_docs.get(block=True, timeout=None)
-            building_docs.put(section)
-            timestamp = False
-            if build(section) == 0:
-                timestamp = time.strftime( '%Y-%m-%d %H:%M:%S' )
-            finished_docs.put((section, timestamp))
-            cmd = '/suse/lxbuch/doc/daps-autobuild/daps-autobuild --config /suse/lxbuch/doc/daps-autobuild/daps-autobuild_docserv.xml --schema /suse/lxbuch/doc/daps-autobuild/daps-autobuild.rnc --notify --sections %s' % section
-            cmd = shlex.split(cmd)
-            s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            s.communicate()[0]
-            rc = s.returncode
-            cmd = '/suse/lxbuch/doc/portwinestain/portwinestain'
-            cmd = shlex.split(cmd)
-            s = subprocess.Popen(cmd)
-            s.wait()
-            """
+                pass
+                
+            # 2. get doc from currently_building queue and then a deliverable from doc.
+            #    after that, put doc back on the currently building queue. unless it was
+            #    the last deliverable.
+            deliverable = self.get_deliverable()
+            deliverable.run()
+
+            # 3. end thread if sigint
             if not self.end_end_all.empty(): return True
-            time.sleep(10)
+            time.sleep(0.1)
 
     def listen(self):
         server_address = (self.config['server']['host'], int(self.config['server']['port']))
@@ -203,10 +269,11 @@ class ThreadedRESTServer(ThreadingMixIn, HTTPServer):
         self.currently_building = currently_building
 
 logger = logging.getLogger('docserv')
+logger.setLevel(logging.INFO)
 
 ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 

@@ -22,7 +22,7 @@ my_env = os.environ
 class Deliverable:
     def __init__(self, repo_dir, temp_repo_dir, remote_repo, branch, language, dc_file, build_format, target):
         self.repo_dir = repo_dir           # directory where to cache repositories
-        self.temp_repo_dir = temp_repo_dir # direcory to which to clone the locally cached repo
+        self.temp_repo_dir = temp_repo_dir # directory to which to clone the locally cached repo
         self.remote_repo = remote_repo     # the path to the remote repo determines the local directory name for it
         self.branch = branch               # branch name to use, defines translation and version
         self.language = language           # language defines folder on target server
@@ -51,6 +51,7 @@ class Deliverable:
         # 4. daps-docker command, result to tmp dir
         # 5. rsync result to local versioned directory
         # 6. rsync result to doc server
+        #    target: [target (prefix)]/language/product_id/docset_id/format/[DC-file without dc[.pdf/epub or folder if html]]/index.html
         pass
 
 class Documentation:
@@ -68,6 +69,7 @@ class Documentation:
 
     def to_string(self):
         # generate json stuff
+        pass
 
     def read_conf_dir(self, target):
         # validate with sknorrs magic bash script
@@ -120,7 +122,7 @@ class Documentation:
         return True
 
     def get_repo(self, build_doc):
-        for repo in xml_root.findall(".//productindex[@id='%s']/docset[@id='%s']/builddocs/vcs[@type='git']/repo" % (build_doc['product'], build_doc['docset']))
+        for repo in xml_root.find("//productindex[@id='%s']/docset[@id='%s']/builddocs/git/remote" % (build_doc['product'], build_doc['docset'])):
             return repo.text
 
     def generate_deliverables(self):
@@ -128,13 +130,13 @@ class Documentation:
         xml_root = self.tree.getroot()
         for build_doc in self.config['docs']:
             remote_repo = self.get_repo(build_doc)
-            for xml_deliverable in xml_root.findall(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/deliverable" % (build_doc['product'], build_doc['docset'], build_doc['lang'])):
-                for build_format in xml_deliverable.findall("//format")
+            for xml_deliverable in xml_root.findall("//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/deliverable" % (build_doc['product'], build_doc['docset'], build_doc['lang'])):
+                for build_format in xml_deliverable.findall("//format"):
                     for target in self.config['targets']:
                         deliverable = Deliverable(  self.config['server']['repo_dir'],
                                                     self.config['server']['selftemp_repo_dir'],
                                                     remote_repo,
-                                                    xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/branch").text,
+                                                    xml_root.find("//productindex[@id='%s']/docset[@id='%s']/branch").text,
                                                     build_doc['lang'],
                                                     xml_deliverable.find("//dc").text,
                                                     build_format.text,
@@ -247,7 +249,8 @@ class Docserv:
             #    after that, put doc back on the currently building queue. unless it was
             #    the last deliverable.
             deliverable = self.get_deliverable()
-            deliverable.run()
+            if deliverable is not None:
+                deliverable.run()
 
             # 3. end thread if sigint
             if not self.end_end_all.empty(): return True

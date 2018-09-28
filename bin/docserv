@@ -32,28 +32,53 @@ class Deliverable:
         logger.debug("Created deliverable: %s %s %s %s %s %s %s %s" % (repo_dir, temp_repo_dir, remote_repo, branch, language, dc_file, build_format, target))
 
     def run(self, thread_id):
-        # use doc_params and read build details from XML tree
-        # then create a list of build jobs from build_instruction
-        # To build something, we require:
-        # - source git repository
-        # - build language
-        # - for each product/docset/deliverable we've got a
-        #   - git branch
-        #   - build format (html, pdf, epub, single html)
-        #   - DC file
-        # we generate a list with the following bash commands for execution per deliverable and format
-        # 1. clone a remote repository into the repo_dir or update
-        #    git clone remote to (stringify remote name)
-        #    git fetch branch-name
-        #    git reset --hard origin/branch-name
-        # 2. create an additional local tmp clone of the repo (preferably only the required branch)
-        #    git clone /repodir/repo /tmp/repoclone
-        # 3. check out the required branch in the cloned repo
-        # 4. daps-docker command, result to tmp dir
-        # 5. rsync result to local versioned directory
-        # 6. rsync result to doc server
-        #    target: [target (prefix)]/language/product_id/docset_id/format/[DC-file without dc[.pdf/epub or folder if html]]/index.html
-        logger.debug("Thrad %i: Building deliverable" % thread_id)
+        logger.debug("Thread %i: Building deliverable" % thread_id)
+
+        commands = {}
+        expected_ret_val = {}
+
+        # 1. Clone locally cached repository, does nothing if exists
+        local_repo_cache_dir = self.repo_dir + '/' + self.url_to_dir_name(self.remote_repo)
+        commands[0] = "git clone %s %s" % (self.remote_repo, local_repo_cache_dir)
+        expected_ret_val[0] = None
+        
+        # 2. update locally cached repo
+        commands[1] = "(cd %s ; git pull --all)" % local_repo_cache_dir
+        expected_ret_val[1] = 0
+
+        # 3. Create local copy in temp build dir
+        local_repo_build_dir = self.temp_repo_dir + '/' + self.url_to_dir_name(self.remote_repo)
+        commands[2] = "git clone -l --single-branch --branch %s %s %s" % (self.branch, local_repo_cache_dir, local_repo_build_dir)
+        expected_ret_val[2] = 0
+
+        tmp_build_target = tempfile.mkdtemp()
+        # 4. Run daps in the docker container, copy results to a build target directory
+        commands[3] = "docker exec FOOOOOOOO %s" % (tmp_build_target)
+        expected_ret_val[3] = 0
+
+        # 5. rsync build target directory to local versioning folder
+        commands[4] = "rsync %s %s" % (tmp_build_target, )
+        expected_ret_val[3] = 0 
+
+        # 6. rsync built target directory with web server
+        # [target (prefix)]/language/product_id/docset_id/format/[DC-file without dc[.pdf/epub or folder if html]]/index.html
+        commands[5] = "rsync %s %s" % (tmp_build_target, )
+        expected_ret_val[3] = 0
+
+        for cmd, ret_val in zip(commands, expected_ret_val):
+            logger.debug("Executing build command: %s" % cmd)
+            cmd = shlex.split(cmd)
+            s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            s.communicate()[0]
+            if not ret_val == int(s.returncode):
+                debug.warning("Build failed!")
+
+    def url_to_dir_name(self, url):
+        # create something like https_github_com_SUSE_doc_sle from https://github.com/SUSE/doc-sle
+        replace = "/\\-.,:;#+`´{}()[]!\"§$%&"
+        for char in replace:
+            url = str(url).replace(char, '_')
+
 
 class Documentation:
     def __init__(self, build_instruction, config):

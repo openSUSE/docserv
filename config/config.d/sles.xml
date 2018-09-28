@@ -35,7 +35,7 @@
           <repodir/> configured in docserv.xml -->
       </vcs>
 
-      <default lang="en">
+      <language code="en" default="yes">
         <branch>develop</branch>
         <subdir>.</subdir>
 
@@ -68,12 +68,12 @@
           <format>single-html pdf epub</format>
         </deliverable>
 
-      </default>
+      </language>
 
       <!-- For translations, we assume the same deliverables as for the
       original language, exceptions are noted within the <untranslated>
       element. However, we probably still need to build these untranslated deliverables. -->
-      <translation lang="de">
+      <translation code="de">
         <branch>maint/sle15</branch>
         <subdir>sles/de</subdir>
         <untranslated>
@@ -87,7 +87,7 @@
         </untranslated>
       </translation>
 
-      <translation lang="fr">
+      <translation code="fr">
         <branch>maint/sle15</branch>
         <subdir>sles/fr</subdir>
         <untranslated/>

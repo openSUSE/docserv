@@ -80,7 +80,7 @@ class Deliverable:
             url = str(url).replace(char, '_')
 
 
-class Documentation:
+class DocConfParser:
     def __init__(self, build_instruction, config):
         self.deliverables = queue.Queue()
         if self.validate(build_instruction, config):
@@ -270,7 +270,7 @@ class Docserv:
             build_instruction = self.get_build_instruction()
             if build_instruction is not None:
                 logger.debug("Thread %i: Received input from REST API" % thread_id)
-                doc = Documentation(build_instruction, self.config)
+                doc = DocConfParser(build_instruction, self.config)
                 doc.generate_deliverables()
                 self.currently_building.put(doc)
             else:

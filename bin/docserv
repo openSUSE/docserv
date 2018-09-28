@@ -31,7 +31,7 @@ class Deliverable:
         self.target = target               # rsync target server/directory
         logger.debug("Created deliverable: %s %s %s %s %s %s %s %s" % (repo_dir, temp_repo_dir, remote_repo, branch, language, dc_file, build_format, target))
 
-    def run(self):
+    def run(self, thread_id):
         # use doc_params and read build details from XML tree
         # then create a list of build jobs from build_instruction
         # To build something, we require:
@@ -53,7 +53,7 @@ class Deliverable:
         # 5. rsync result to local versioned directory
         # 6. rsync result to doc server
         #    target: [target (prefix)]/language/product_id/docset_id/format/[DC-file without dc[.pdf/epub or folder if html]]/index.html
-        logger.debug("Building deliverable" % thread_id)
+        logger.debug("Thrad %i: Building deliverable" % thread_id)
 
 class Documentation:
     def __init__(self, build_instruction, config):
@@ -133,12 +133,9 @@ class Documentation:
             remote_repo = self.get_repo(build_doc)
             for xml_deliverable in xml_root.findall(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/deliverable" % (build_doc['product'], build_doc['docset'], build_doc['lang'])):
                 for build_format in xml_deliverable.findall(".//format"):
-                    logger.debug("build format: "+build_format.text)
                     for target in self.config['targets']:
-                        logger.debug("target: "+target)
                         xml_root = self.tree.getroot()
                         branch = xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/branch" % (build_doc['product'], build_doc['docset'], build_doc['lang'])).text
-                        print(branch)
                         deliverable = Deliverable(  self.config['server']['repo_dir'],
                                                     self.config['server']['temp_repo_dir'],
                                                     remote_repo,
@@ -148,9 +145,7 @@ class Documentation:
                                                     build_format.text,
                                                     target
                                                         )
-                        logger.debug("Putting deliverable")
                         self.deliverables.put(deliverable)
-                        logger.debug("Deliverable queue size: %i" % self.deliverables.qsize())
         # after all deliverables are generated, we don't need the xml tree anymore
         self.tree = None
 
@@ -230,14 +225,12 @@ class Docserv:
         if self.lock_currently_building.acquire():
             try:
                 doc = self.currently_building.get(False)
-                logger.debug("retrieved a doc")
             except queue.Empty:
                 self.lock_currently_building.release()
                 return None
             else:
                 try:
                     deliverable = doc.deliverables.get(False)
-                    logger.debug("retrieved a deliverable")
                 except queue.Empty:
                     self.lock_currently_building.release()
                     return None
@@ -263,7 +256,7 @@ class Docserv:
             #    the last deliverable.
             deliverable = self.get_deliverable()
             if deliverable is not None:
-                deliverable.run()
+                deliverable.run(thread_id)
 
             # 3. end thread if sigint
             if not self.end_end_all.empty(): return True

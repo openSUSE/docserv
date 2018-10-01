@@ -14,10 +14,49 @@ import configparser
 import logging
 import signal
 import tempfile
+import string
+import random
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 from xml.etree import ElementTree
 my_env = os.environ
+
+global gitLocks, gitLocksLock
+gitLocks = {}
+gitLocksLock = threading.Lock()
+
+def resource_to_filename(url):
+    # create something like https_github_com_SUSE_doc_sle from https://github.com/SUSE/doc-sle
+    replace = "/\\-.,:;#+`´{}()[]!\"§$%&"
+    for char in replace:
+        url = str(url).replace(char, '_')
+    return url
+
+class RepoLock:
+    global gitLocks
+    def __init__(self, repo_dir, thread_id=99):
+        self.resource_name = resource_to_filename(repo_dir)
+        if self.resource_name not in gitLocks:
+            gitLocksLock.acquire()
+            gitLocks[self.resource_name] = threading.Lock()
+            gitLocksLock.release()
+        self.acquired = False
+        self.thread_id = thread_id
+
+    def acquire(self, blocking=True):
+        logger.debug("Thread %i: Acquiring lock %s." % (self.thread_id, self.resource_name))
+        if gitLocks[self.resource_name].acquire(blocking):
+            self.acquired = True
+            logger.debug("Thread %i: Acquired lock %s." % (self.thread_id, self.resource_name))
+            return True
+        return False
+
+    def release(self):
+        if self.acquired:
+            gitLocks[self.resource_name].release()
+            self.acquired = False
+            logger.debug("Thread %i: Released lock %s." % (self.thread_id, self.resource_name))
+        
 
 class Deliverable:
     def __init__(self, repo_dir, temp_repo_dir, remote_repo, branch, language, dc_file, build_format, target, product_id, docset_id):
@@ -38,54 +77,65 @@ class Deliverable:
         commands = {}
 
         # 1. Clone locally cached repository, does nothing if exists
-        local_repo_cache_dir = self.repo_dir + '/' + self.url_to_dir_name(self.remote_repo)
+        local_repo_cache_dir = os.path.join(self.repo_dir, resource_to_filename(self.remote_repo))
         commands[0] = {}
         commands[0]['cmd'] = "git clone %s %s" % (self.remote_repo, local_repo_cache_dir)
         commands[0]['ret_val'] = None
+        commands[0]['repo_lock'] = local_repo_cache_dir
         
         # 2. update locally cached repo
         commands[1] = {}
-        commands[1]['cmd'] = "git pull --all --git-dir %s" % local_repo_cache_dir
+        commands[1]['cmd'] = "git -C %s pull --all " % local_repo_cache_dir
         commands[1]['ret_val'] = 0
+        commands[1]['repo_lock'] = local_repo_cache_dir
 
         # 3. Create local copy in temp build dir
-        local_repo_build_dir = self.temp_repo_dir + '/' + self.url_to_dir_name(self.remote_repo)
+        local_repo_build_dir = os.path.join(self.temp_repo_dir, ''.join(random.choices(string.ascii_uppercase + string.digits, k=12)))
         commands[2] = {}
-        commands[2]['cmd'] = "git clone -l --single-branch --branch %s %s %s" % (self.branch, local_repo_cache_dir, local_repo_build_dir)
+        commands[2]['cmd'] = "git clone --single-branch --branch %s %s %s" % (self.branch, local_repo_cache_dir, local_repo_build_dir)
         commands[2]['ret_val'] = 0
+        commands[2]['repo_lock'] = None
 
         # 4. Run daps in the docker container, copy results to a build target directory
         tmp_build_target = tempfile.mkdtemp()
+        dc_full_path = os.path.join(local_repo_build_dir, self.dc_file)
         commands[3] = {}
-        commands[3]['cmd'] = "docker exec FOOOOOOOO %s" % (tmp_build_target)
+        commands[3]['cmd'] = "/usr/bin/daps2docker %s %s" % (dc_full_path, tmp_build_target)
         commands[3]['ret_val'] = 0
+        commands[3]['repo_lock'] = None
 
         # 5. rsync build target directory to local versioning folder
         commands[4] = {}
-        commands[4]['cmd'] = "rsync %s %s" % (tmp_build_target, "/somedir/")
+        commands[4]['cmd'] = "rsync %s %s" % (tmp_build_target, "/dev/null")
         commands[4]['ret_val'] = 0
+        commands[4]['repo_lock'] = None
 
         # 6. rsync built target directory with web server
-        deploy_target = self.target + '/' + self.language + '/' + self.product_id + '/' + self.docset_id + '/' + self.build_format
+        deploy_target = self.target + os.path.join(self.language, self.product_id, self.docset_id, self.build_format)
         commands[5] = {}
         commands[5]['cmd'] = "rsync %s %s" % (tmp_build_target, deploy_target)
         commands[5]['ret_val'] = 0
+        commands[5]['repo_lock'] = None
 
-        for i in range(0,6):
-            logger.debug("Thread %i: %s" % (thread_id, commands[i]['cmd']))
+        # 6. free used (RAM) disk space
+        commands[6] = {}
+        commands[6]['cmd'] = "rm -rf %s" % local_repo_build_dir
+        commands[6]['ret_val'] = 0
+        commands[6]['repo_lock'] = None
+
+        for i in range(0,7):
             cmd = shlex.split(commands[i]['cmd'])
+            if commands[i]['repo_lock'] is not None:
+                git_lock = RepoLock(commands[i]['repo_lock'], thread_id)
+                git_lock.acquire()
+            logger.debug("Thread %i: %s" % (thread_id, commands[i]['cmd']))
             s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             s.communicate()[0]
-            if not commands[i]['ret_val'] == int(s.returncode):
-                debug.warning("Build failed!")
-
-    def url_to_dir_name(self, url):
-        # create something like https_github_com_SUSE_doc_sle from https://github.com/SUSE/doc-sle
-        replace = "/\\-.,:;#+`´{}()[]!\"§$%&"
-        for char in replace:
-            url = str(url).replace(char, '_')
-        return url
-
+            logger.debug("Thread %i: done" % (thread_id))
+            git_lock.release()
+            if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
+                logger.warning("Build failed! Unexpected return value %i for '%s'" % (s.returncode, commands[i]['cmd']) )
+                return False
 
 class DocConfParser:
     def __init__(self, build_instruction, config):
@@ -93,10 +143,10 @@ class DocConfParser:
         if self.validate(build_instruction, config):
             self.build_instruction = build_instruction
             self.config = config
-            self.initialized = True
+            self.tree = {}
             for target in build_instruction['targets']:
-                if not self.read_conf_dir(target):
-                    self.initialized = False
+                self.read_conf_dir(target)
+            self.initialized = True
             return
         self.initialized = False
 
@@ -105,6 +155,9 @@ class DocConfParser:
         pass
 
     def read_conf_dir(self, target):
+        if not self.config['targets'][target]['active'] == "yes":
+            logger.debug("Target %s not active." % target)
+            return False
         # validate with sknorrs magic bash script
         tmp_handle, tmp_filename = tempfile.mkstemp(text=True)
         logger.info("Stitching XML config directory to %s" % tmp_filename)
@@ -120,7 +173,7 @@ class DocConfParser:
             logger.warning("Stitching of %s failed!" % self.config['targets'][target]['config_dir'])
             return False
         # then read all files into an xml tree
-        self.tree = ElementTree.parse(tmp_filename)
+        self.tree[target] = ElementTree.parse(tmp_filename)
 
 
     def validate(self, build_instruction, config):
@@ -154,19 +207,21 @@ class DocConfParser:
         logger.debug("Valid build instruction: %s" % json.dumps(build_instruction))
         return True
 
-    def get_repo(self, build_doc):
-        xml_root = self.tree.getroot()
+    def get_repo(self, build_doc, xml_root):
         repo = xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/builddocs/git/remote" % (build_doc['product'], build_doc['docset']))
         return repo.text
 
     def generate_deliverables(self):
-        xml_root = self.tree.getroot()
-        for build_doc in self.build_instruction['docs']:
-            remote_repo = self.get_repo(build_doc)
-            for xml_deliverable in xml_root.findall(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/deliverable" % (build_doc['product'], build_doc['docset'], build_doc['lang'])):
-                for build_format in xml_deliverable.findall(".//format"):
-                    for target in self.config['targets']:
-                        xml_root = self.tree.getroot()
+        if self.initialized == False:
+            return True
+        for target, tree in self.tree.items():
+            xml_root = tree.getroot()
+            for build_doc in self.build_instruction['docs']:
+                remote_repo = self.get_repo(build_doc, xml_root)
+                for xml_deliverable in xml_root.findall(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/deliverable" % (build_doc['product'], build_doc['docset'], build_doc['lang'])):
+                    for build_format in xml_deliverable.findall(".//format"):
+                        target_value = self.config['targets'][target]['target_path']
+                        xml_root = tree.getroot()
                         branch = xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/branch" % (build_doc['product'], build_doc['docset'], build_doc['lang'])).text
                         deliverable = Deliverable(  self.config['server']['repo_dir'],
                                                     self.config['server']['temp_repo_dir'],
@@ -175,13 +230,13 @@ class DocConfParser:
                                                     build_doc['lang'],
                                                     xml_deliverable.find(".//dc").text,
                                                     build_format.text,
-                                                    target,
+                                                    target_value,
                                                     build_doc['product'],
                                                     build_doc['docset']
                                                         )
                         self.deliverables.put(deliverable)
-        # after all deliverables are generated, we don't need the xml tree anymore
-        self.tree = None
+            # after all deliverables are generated, we don't need the xml tree anymore
+            self.tree = None
 
 class Docserv:
     def __init__(self, argv):
@@ -194,9 +249,11 @@ class Docserv:
     def parse_config(self, argv):
         config = configparser.ConfigParser()
         if len(argv) == 1:
-            argv[1] = "docserv"
-        logger.info("Reading /etc/docserv/%s.ini" % argv[1])
-        config.read("/etc/docserv/%s.ini" % argv[1])
+            config_file = "docserv"
+        else:
+            config_file = argv[1]
+        logger.info("Reading /etc/docserv/%s.ini" % config_file)
+        config.read("/etc/docserv/%s.ini" % config_file)
         LOGLEVELS = {0: logging.WARNING,
              1: logging.INFO,
              2: logging.DEBUG,
@@ -219,7 +276,7 @@ class Docserv:
                 self.config['targets'][config[section]['name']]['type'] =          config[section]['type']
                 self.config['targets'][config[section]['name']]['templdate_dir'] = config[section]['template_dir']
                 self.config['targets'][config[section]['name']]['active'] =        config[section]['active']
-                self.config['targets'][config[section]['name']]['target_repo'] =   config[section]['target_repo']
+                self.config['targets'][config[section]['name']]['target_path'] =   config[section]['target_path']
                 self.config['targets'][config[section]['name']]['config_dir'] =    config[section]['config_dir']
         except KeyError:
             logger.warning("Invalid configuration file. Exiting.")

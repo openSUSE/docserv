@@ -28,14 +28,11 @@
 
     <builddocs>
 
-      <vcs type="git">
-        <repo>https://github.com/SUSE/doc-sle</repo>
-        <checkoutdir>doc-sle</checkoutdir>
-          <!-- checkoutdir is assumed to be located directly under the
-          <repodir/> configured in docserv.xml -->
-      </vcs>
+      <git>
+        <remote>https://github.com/SUSE/doc-sle</remote>
+      </git>
 
-      <default lang="en">
+      <language code="en-us" default="yes">
         <branch>develop</branch>
         <subdir>.</subdir>
 
@@ -60,20 +57,24 @@
         <!-- MINIMALIST INDIVIDUAL DELIVERABLE EXAMPLES -->
         <deliverable>
           <dc>DC-SLES-admin</dc>
-          <format>single-html pdf epub</format>
+          <format>single-html</format>
+          <format>pdf</format>
+          <format>epub</format>
         </deliverable>
         <deliverable>
           <!-- Minimalist individual deliverable -->
           <dc>DC-SLES-gnomeuser</dc>
-          <format>single-html pdf epub</format>
+          <format>single-html</format>
+          <format>pdf</format>
+          <format>epub</format>
         </deliverable>
 
-      </default>
+      </language>
 
       <!-- For translations, we assume the same deliverables as for the
       original language, exceptions are noted within the <untranslated>
       element. However, we probably still need to build these untranslated deliverables. -->
-      <translation lang="de">
+      <language code="de-de">
         <branch>maint/sle15</branch>
         <subdir>sles/de</subdir>
         <untranslated>
@@ -85,13 +86,13 @@
             <dc>DC-SLES-gnomeuser</dc>
           </deliverable>
         </untranslated>
-      </translation>
+      </language>
 
-      <translation lang="fr">
+      <language code="fr-fr">
         <branch>maint/sle15</branch>
         <subdir>sles/fr</subdir>
         <untranslated/>
-      </translation>
+      </language>
 
     </builddocs>
 
@@ -108,12 +109,11 @@
 
     <builddocs>
 
-      <vcs type="svn">
-        <repo>https://svn.opensuse.org/viewvc/opensuse-doc/trunk/documents/sle/</repo>
-        <checkoutdir>svn-sle</checkoutdir>
-      </vcs>
+      <git>
+        <remote>https://github.com/SUSE/doc-sle</remote>
+      </git>
 
-      <default lang="en">
+      <language code="en-us">
         <branch/>
           <!-- In SVN, branches are directories - so we should just use
           <subdir/> and ignore whatever is in the <branch/> element. -->
@@ -132,17 +132,21 @@
         <!-- MINIMALIST INDIVIDUAL DELIVERABLE EXAMPLES -->
         <deliverable>
           <dc>DC-SLES-admin</dc>
-          <format>single-html pdf epub</format>
+          <format>single-html</format>
+          <format>pdf</format>
+          <format>epub</format>
         </deliverable>
         <deliverable>
           <!-- Minimalist individual deliverable -->
           <dc>DC-SLES-gnomeuser</dc>
-          <format>single-html pdf epub</format>
+          <format>single-html</format>
+          <format>pdf</format>
+          <format>epub</format>
         </deliverable>
 
-      </default>
+      </language>
 
-      <translation lang="de">
+      <language code="de-de">
         <branch/>
         <subdir>trans/attic/sles/de</subdir>
         <untranslated>
@@ -154,13 +158,13 @@
             <dc>DC-SLES-gnomeuser</dc>
           </deliverable>
         </untranslated>
-      </translation>
+      </language>
 
-      <translation lang="fr">
+      <language code="fr-fr">
         <branch/>
         <subdir>trans/attic/sles/de</subdir>
         <untranslated/>
-      </translation>
+      </language>
 
     </builddocs>
 

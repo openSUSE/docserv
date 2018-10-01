@@ -100,7 +100,7 @@ class Deliverable:
         tmp_build_target = tempfile.mkdtemp()
         dc_full_path = os.path.join(local_repo_build_dir, self.dc_file)
         commands[3] = {}
-        commands[3]['cmd'] = "/usr/bin/daps2docker %s %s" % (dc_full_path, tmp_build_target)
+        commands[3]['cmd'] = "/usr/bin/daps2docker -o %s %s %s" % (tmp_build_target, dc_full_path, self.build_format)
         commands[3]['ret_val'] = 0
         commands[3]['repo_lock'] = None
 

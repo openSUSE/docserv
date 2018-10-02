@@ -76,7 +76,7 @@ class Deliverable:
         logger.info("Thread %i: Building deliverable" % thread_id)
         commands = {}
 
-        # 1. Clone locally cached repository, does nothing if exists
+        # Clone locally cached repository, does nothing if exists
         n = 0
         local_repo_cache_dir = os.path.join(self.repo_dir, resource_to_filename(self.remote_repo))
         commands[n] = {}
@@ -84,14 +84,14 @@ class Deliverable:
         commands[n]['ret_val'] = None
         commands[n]['repo_lock'] = local_repo_cache_dir
         
-        # 2. update locally cached repo
+        # update locally cached repo
         n += 1
         commands[n] = {}
         commands[n]['cmd'] = "git -C %s pull --all " % local_repo_cache_dir
         commands[n]['ret_val'] = 0
         commands[n]['repo_lock'] = local_repo_cache_dir
 
-        # 3. Create local copy in temp build dir
+        # Create local copy in temp build dir
         n += 1
         local_repo_build_dir = os.path.join(self.temp_repo_dir, ''.join(random.choices(string.ascii_uppercase + string.digits, k=12)))
         commands[n] = {}
@@ -99,16 +99,44 @@ class Deliverable:
         commands[n]['ret_val'] = 0
         commands[n]['repo_lock'] = None
 
-        # 4. Run daps in the docker container, copy results to a build target directory
+        # Write XSLT parameters to temp file
+        n += 1
+        xslt_params_file = tempfile.mkstemp(text=True)
+        xslt_params = ""
+        commands[n] = {}
+        commands[n]['cmd'] = "echo \"%s\" > %s" % (xslt_params, xslt_params_file)
+        commands[n]['ret_val'] = 0
+        commands[n]['repo_lock'] = None
+
+        # Write daps parameters to temp file
+        n += 1
+        daps_params_file = tempfile.mkstemp(text=True)
+        daps_params = "%s %s" % (
+                                    "--remarks" if self.target['remarks'] == "yes" else "",
+                                    "--draft" if self.target['draft'] == "yes" else ""
+                                )
+        commands[n] = {}
+        commands[n]['cmd'] = "echo \"%s\" > %s" % (daps_params, daps_params_file)
+        commands[n]['ret_val'] = 0
+        commands[n]['repo_lock'] = None
+
+        # Run daps in the docker container, copy results to a build target directory
         n += 1
         tmp_build_target = tempfile.mkdtemp()
         dc_full_path = os.path.join(local_repo_build_dir, self.dc_file)
         commands[n] = {}
-        commands[n]['cmd'] = "/usr/bin/daps2docker -o %s %s %s" % (tmp_build_target, dc_full_path, self.build_format)
+        commands[n]['cmd'] = "/usr/bin/d2d_runner -v=0 -x %s -d %s -o %s -i %s -f %s %s" % (
+                                                xslt_params_file,     # -x
+                                                daps_params_file,     # -d
+                                                tmp_build_target,     # -o
+                                                local_repo_build_dir, # -i
+                                                self.build_format,    # -f
+                                                self.dc_file          # last param
+                                                )
         commands[n]['ret_val'] = 0
         commands[n]['repo_lock'] = None
 
-        # 5. rsync build target directory to backup path
+        # rsync build target directory to backup path
         n += 1
         backup_target = self.target['backup_path'] + os.path.join(self.language, self.product_id, self.docset_id, self.build_format)
         commands[n] = {}
@@ -116,7 +144,7 @@ class Deliverable:
         commands[n]['ret_val'] = 0
         commands[n]['repo_lock'] = None
 
-        # 6. rsync built target directory with web server
+        # rsync built target directory with web server
         n += 1
         deploy_target = self.target['target_path'] + os.path.join(self.language, self.product_id, self.docset_id, self.build_format)
         commands[n] = {}
@@ -124,7 +152,7 @@ class Deliverable:
         commands[n]['ret_val'] = 0
         commands[n]['repo_lock'] = None
 
-        # 6. free used (RAM) disk space
+        # free used (RAM) disk space
         n += 1
         commands[n] = {}
         commands[n]['cmd'] = "rm -rf %s" % local_repo_build_dir
@@ -139,7 +167,6 @@ class Deliverable:
             logger.debug("Thread %i: %s" % (thread_id, commands[i]['cmd']))
             s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             s.communicate()[0]
-            logger.debug("Thread %i: done" % (thread_id))
             git_lock.release()
             if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
                 logger.warning("Build failed! Unexpected return value %i for '%s'" % (s.returncode, commands[i]['cmd']) )

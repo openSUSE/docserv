@@ -178,18 +178,15 @@ class DocConfParser:
         if self.validate(build_instruction, config):
             self.build_instruction = build_instruction
             self.config = config
-            self.tree = {}
-            for target in build_instruction['targets']:
-                self.read_conf_dir(target)
-            self.initialized = True
-            return
-        self.initialized = False
+            self.read_conf_dir()
+        return
 
     def to_string(self):
         # generate json stuff
         pass
 
-    def read_conf_dir(self, target):
+    def read_conf_dir(self):
+        target = build_instruction['target']
         if not self.config['targets'][target]['active'] == "yes":
             logger.debug("Target %s not active." % target)
             return False
@@ -208,7 +205,7 @@ class DocConfParser:
             logger.warning("Stitching of %s failed!" % self.config['targets'][target]['config_dir'])
             return False
         # then read all files into an xml tree
-        self.tree[target] = ElementTree.parse(tmp_filename)
+        self.tree = ElementTree.parse(tmp_filename)
 
 
     def validate(self, build_instruction, config):
@@ -217,28 +214,18 @@ class DocConfParser:
         if not isinstance(build_instruction, dict):
             logger.warning("Validation: Is not a dict")
             return False
-        if not isinstance(build_instruction['targets'], list):
-            logger.warning("Validation: targets is not a list")
+        if not isinstance(build_instruction['docset'], str):
+            logger.warning("Validation: docset is not a string")
             return False
-        if not isinstance(build_instruction['docs'], list):
-            logger.warning("Validation: docs is not a list")
+        if not isinstance(build_instruction['lang'], str):
+            logger.warning("Validation: lang is not a string")
             return False
-        for doc in build_instruction['docs']:
-            if not isinstance(doc['docset'], str):
-                logger.warning("Validation: docset is not a string")
-                return False
-            if not isinstance(doc['lang'], str):
-                logger.warning("Validation: lang is not a string")
-                return False
-            if not isinstance(doc['product'], str):
-                logger.warning("Validation: product is not a string")
-                return False
-        for target in build_instruction['targets']:
-            if target in config['targets']:
-                pass
-            else:
-                logger.warning("Validation: target %s does not exist" % target)
-                return False
+        if not isinstance(build_instruction['product'], str):
+            logger.warning("Validation: product is not a string")
+            return False
+        if not isinstance(build_instruction['target'], str):
+            logger.warning("Validation: target is not a string")
+            return False
         logger.debug("Valid build instruction: %s" % json.dumps(build_instruction))
         return True
 
@@ -247,29 +234,27 @@ class DocConfParser:
         return repo.text
 
     def generate_deliverables(self):
-        if self.initialized == False:
-            return True
-        for target, tree in self.tree.items():
-            xml_root = tree.getroot()
-            for build_doc in self.build_instruction['docs']:
-                remote_repo = self.get_repo(build_doc, xml_root)
-                for xml_deliverable in xml_root.findall(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/deliverable" % (build_doc['product'], build_doc['docset'], build_doc['lang'])):
-                    for build_format in xml_deliverable.findall(".//format"):
-                        target_config = self.config['targets'][target]
-                        xml_root = tree.getroot()
-                        branch = xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/branch" % (build_doc['product'], build_doc['docset'], build_doc['lang'])).text
-                        deliverable = Deliverable(  self.config['server']['repo_dir'],
-                                                    self.config['server']['temp_repo_dir'],
-                                                    remote_repo,
-                                                    branch,
-                                                    build_doc['lang'],
-                                                    xml_deliverable.find(".//dc").text,
-                                                    build_format.text,
-                                                    target_config,
-                                                    build_doc['product'],
-                                                    build_doc['docset']
-                                                        )
-                        self.deliverables.put(deliverable)
+        target = build_instruction['target']
+        xml_root = self.tree.getroot()
+        for build_doc in self.build_instruction['docs']:
+            remote_repo = self.get_repo(build_doc, xml_root)
+            for xml_deliverable in xml_root.findall(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/deliverable" % (build_doc['product'], build_doc['docset'], build_doc['lang'])):
+                for build_format in xml_deliverable.findall(".//format"):
+                    target_config = self.config['targets'][target]
+                    xml_root = tree.getroot()
+                    branch = xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/branch" % (build_doc['product'], build_doc['docset'], build_doc['lang'])).text
+                    deliverable = Deliverable(  self.config['server']['repo_dir'],
+                                                self.config['server']['temp_repo_dir'],
+                                                remote_repo,
+                                                branch,
+                                                build_doc['lang'],
+                                                xml_deliverable.find(".//dc").text,
+                                                build_format.text,
+                                                target_config,
+                                                build_doc['product'],
+                                                build_doc['docset']
+                                                    )
+                    self.deliverables.put(deliverable)
             # after all deliverables are generated, we don't need the xml tree anymore
             self.tree = None
 
@@ -413,11 +398,12 @@ class RESTServer(BaseHTTPRequestHandler):
         self.wfile.write(bytes(json.dumps(output), "utf-8"))
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
+        # [{"docset": "15ga", "lang": "en-us", "product": "sles", "target": "external"}. ]
         post_data = self.rfile.read(content_length)
-        data = json.loads(post_data)
-        for doc in data:
-            logger.info("Queueing %s" % json.dumps(doc))
-            self.server.waiting_for_build.put(doc)
+        build_jobs = json.loads(post_data)
+        for job in build_jobs:
+            logger.info("Queueing %s" % json.dumps(job))
+            self.server.waiting_for_build.put(job)
         self._set_headers()
 
 class ThreadedRESTServer(ThreadingMixIn, HTTPServer):

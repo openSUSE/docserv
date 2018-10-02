@@ -3,10 +3,10 @@ setup(
     name="docserv",
     version="0.1.4",
     packages=find_packages(),
-    scripts=['bin/docserv', 'bin/docserv-build'],
+    scripts=['bin/docserv', 'bin/docserv-stitch'],
     install_requires=[],
     package_data={
-        '': ['*.rst']
+        '': ['config/docserv.ini', 'config/config.d/sles.xml', 'systemd/docserv.service']
     },
     author="SUSE Documentation Team",
     author_email="doc-team@suse.com",
@@ -22,5 +22,6 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
     ]
 )

@@ -70,60 +70,68 @@ class Deliverable:
         self.target = target               # rsync target server/directory
         self.product_id = product_id
         self.docset_id = docset_id
-        logger.debug("Created deliverable: %s %s %s %s %s %s %s %s" % (repo_dir, temp_repo_dir, remote_repo, branch, language, dc_file, build_format, target))
+        logger.debug("Created deliverable: %s %s %s %s %s %s" % (remote_repo, branch, language, dc_file, build_format, target['target_path']))
 
     def run(self, thread_id):
         logger.info("Thread %i: Building deliverable" % thread_id)
         commands = {}
 
         # 1. Clone locally cached repository, does nothing if exists
+        n = 0
         local_repo_cache_dir = os.path.join(self.repo_dir, resource_to_filename(self.remote_repo))
-        commands[0] = {}
-        commands[0]['cmd'] = "git clone %s %s" % (self.remote_repo, local_repo_cache_dir)
-        commands[0]['ret_val'] = None
-        commands[0]['repo_lock'] = local_repo_cache_dir
+        commands[n] = {}
+        commands[n]['cmd'] = "git clone %s %s" % (self.remote_repo, local_repo_cache_dir)
+        commands[n]['ret_val'] = None
+        commands[n]['repo_lock'] = local_repo_cache_dir
         
         # 2. update locally cached repo
-        commands[1] = {}
-        commands[1]['cmd'] = "git -C %s pull --all " % local_repo_cache_dir
-        commands[1]['ret_val'] = 0
-        commands[1]['repo_lock'] = local_repo_cache_dir
+        n += 1
+        commands[n] = {}
+        commands[n]['cmd'] = "git -C %s pull --all " % local_repo_cache_dir
+        commands[n]['ret_val'] = 0
+        commands[n]['repo_lock'] = local_repo_cache_dir
 
         # 3. Create local copy in temp build dir
+        n += 1
         local_repo_build_dir = os.path.join(self.temp_repo_dir, ''.join(random.choices(string.ascii_uppercase + string.digits, k=12)))
-        commands[2] = {}
-        commands[2]['cmd'] = "git clone --single-branch --branch %s %s %s" % (self.branch, local_repo_cache_dir, local_repo_build_dir)
-        commands[2]['ret_val'] = 0
-        commands[2]['repo_lock'] = None
+        commands[n] = {}
+        commands[n]['cmd'] = "git clone --single-branch --branch %s %s %s" % (self.branch, local_repo_cache_dir, local_repo_build_dir)
+        commands[n]['ret_val'] = 0
+        commands[n]['repo_lock'] = None
 
         # 4. Run daps in the docker container, copy results to a build target directory
+        n += 1
         tmp_build_target = tempfile.mkdtemp()
         dc_full_path = os.path.join(local_repo_build_dir, self.dc_file)
-        commands[3] = {}
-        commands[3]['cmd'] = "/usr/bin/daps2docker -o %s %s %s" % (tmp_build_target, dc_full_path, self.build_format)
-        commands[3]['ret_val'] = 0
-        commands[3]['repo_lock'] = None
+        commands[n] = {}
+        commands[n]['cmd'] = "/usr/bin/daps2docker -o %s %s %s" % (tmp_build_target, dc_full_path, self.build_format)
+        commands[n]['ret_val'] = 0
+        commands[n]['repo_lock'] = None
 
-        # 5. rsync build target directory to local versioning folder
-        commands[4] = {}
-        commands[4]['cmd'] = "rsync %s %s" % (tmp_build_target, "/dev/null")
-        commands[4]['ret_val'] = 0
-        commands[4]['repo_lock'] = None
+        # 5. rsync build target directory to backup path
+        n += 1
+        backup_target = self.target['backup_path'] + os.path.join(self.language, self.product_id, self.docset_id, self.build_format)
+        commands[n] = {}
+        commands[n]['cmd'] = "rsync %s %s" % (tmp_build_target, backup_target)
+        commands[n]['ret_val'] = 0
+        commands[n]['repo_lock'] = None
 
         # 6. rsync built target directory with web server
-        deploy_target = self.target + os.path.join(self.language, self.product_id, self.docset_id, self.build_format)
-        commands[5] = {}
-        commands[5]['cmd'] = "rsync %s %s" % (tmp_build_target, deploy_target)
-        commands[5]['ret_val'] = 0
-        commands[5]['repo_lock'] = None
+        n += 1
+        deploy_target = self.target['target_path'] + os.path.join(self.language, self.product_id, self.docset_id, self.build_format)
+        commands[n] = {}
+        commands[n]['cmd'] = "rsync %s %s" % (tmp_build_target, deploy_target)
+        commands[n]['ret_val'] = 0
+        commands[n]['repo_lock'] = None
 
         # 6. free used (RAM) disk space
-        commands[6] = {}
-        commands[6]['cmd'] = "rm -rf %s" % local_repo_build_dir
-        commands[6]['ret_val'] = 0
-        commands[6]['repo_lock'] = None
+        n += 1
+        commands[n] = {}
+        commands[n]['cmd'] = "rm -rf %s" % local_repo_build_dir
+        commands[n]['ret_val'] = 0
+        commands[n]['repo_lock'] = None
 
-        for i in range(0,7):
+        for i in range(0,n + 1):
             cmd = shlex.split(commands[i]['cmd'])
             if commands[i]['repo_lock'] is not None:
                 git_lock = RepoLock(commands[i]['repo_lock'], thread_id)
@@ -220,7 +228,7 @@ class DocConfParser:
                 remote_repo = self.get_repo(build_doc, xml_root)
                 for xml_deliverable in xml_root.findall(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/deliverable" % (build_doc['product'], build_doc['docset'], build_doc['lang'])):
                     for build_format in xml_deliverable.findall(".//format"):
-                        target_value = self.config['targets'][target]['target_path']
+                        target_config = self.config['targets'][target]
                         xml_root = tree.getroot()
                         branch = xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/branch" % (build_doc['product'], build_doc['docset'], build_doc['lang'])).text
                         deliverable = Deliverable(  self.config['server']['repo_dir'],
@@ -230,7 +238,7 @@ class DocConfParser:
                                                     build_doc['lang'],
                                                     xml_deliverable.find(".//dc").text,
                                                     build_format.text,
-                                                    target_value,
+                                                    target_config,
                                                     build_doc['product'],
                                                     build_doc['docset']
                                                         )
@@ -276,7 +284,11 @@ class Docserv:
                 self.config['targets'][config[section]['name']]['type'] =          config[section]['type']
                 self.config['targets'][config[section]['name']]['templdate_dir'] = config[section]['template_dir']
                 self.config['targets'][config[section]['name']]['active'] =        config[section]['active']
+                self.config['targets'][config[section]['name']]['draft'] =         config[section]['draft']
+                self.config['targets'][config[section]['name']]['remarks'] =       config[section]['remarks']
+                self.config['targets'][config[section]['name']]['beta_warning'] =  config[section]['beta_warning']
                 self.config['targets'][config[section]['name']]['target_path'] =   config[section]['target_path']
+                self.config['targets'][config[section]['name']]['backup_path'] =   config[section]['backup_path']
                 self.config['targets'][config[section]['name']]['config_dir'] =    config[section]['config_dir']
         except KeyError:
             logger.warning("Invalid configuration file. Exiting.")

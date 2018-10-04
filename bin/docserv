@@ -181,9 +181,8 @@ class DocConfParser:
             self.read_conf_dir()
         return
 
-    def to_string(self):
-        # generate json stuff
-        pass
+    def __str__(self):
+        return json_dumps(self.build_instruction)
 
     def read_conf_dir(self):
         target = build_instruction['target']

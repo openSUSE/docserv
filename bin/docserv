@@ -472,7 +472,7 @@ class Docserv(DocservState):
             worker.join()
 
     def exit(self):
-        logger.info("Exiting now")
+        logger.warning("Received SIGINT. Telling all threads to end. Please wait.")
         self.end_end_all.put("now")
         self.rest.shutdown()
         self.save_state()

@@ -42,7 +42,6 @@ class RepoLock:
         self.thread_id = thread_id
 
     def acquire(self, blocking=True):
-        logger.debug("Thread %i: Acquiring lock %s." % (self.thread_id, self.resource_name))
         if self.gitLocks[self.resource_name].acquire(blocking):
             self.acquired = True
             logger.debug("Thread %i: Acquired lock %s." % (self.thread_id, self.resource_name))
@@ -52,9 +51,7 @@ class RepoLock:
     def release(self):
         if self.acquired:
             self.gitLocks[self.resource_name].release()
-            self.acquired = False
-            logger.debug("Thread %i: Released lock %s." % (self.thread_id, self.resource_name))
-        
+            self.acquired = FalseW
 
 class Deliverable:
     def __init__(self, local_repo_build_dir, build_instruction, dc_file, build_format, target):
@@ -141,11 +138,11 @@ class Deliverable:
             cmd = shlex.split(commands[i]['cmd'])
             logger.debug("Thread %i: %s" % (thread_id, commands[i]['cmd']))
             time.sleep(1)
-            #s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            #s.communicate()[0]
-            #if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
-            #    logger.warning("Build failed! Unexpected return value %i for '%s'" % (s.returncode, commands[i]['cmd']) )
-            #    return False
+            s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            s.communicate()[0]
+            if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
+                logger.warning("Build failed! Unexpected return value %i for '%s'" % (s.returncode, commands[i]['cmd']) )
+                return False
 
 class DocConfParser:
     def __init__(self, build_instruction, config, gitLocks, gitLocksLock, thread_id):

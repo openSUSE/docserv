@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 setup(
     name="docserv",
-    version="0.1.4",
+    version="0.9.4",
     packages=find_packages(),
     scripts=['bin/docserv', 'bin/docserv-stitch'],
     install_requires=[],

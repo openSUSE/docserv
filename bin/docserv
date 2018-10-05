@@ -51,7 +51,7 @@ class RepoLock:
     def release(self):
         if self.acquired:
             self.gitLocks[self.resource_name].release()
-            self.acquired = FalseW
+            self.acquired = False
 
 class Deliverable:
     def __init__(self, local_repo_build_dir, build_instruction, dc_file, build_format, target):

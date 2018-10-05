@@ -450,8 +450,7 @@ class Docserv(DocservState):
                 self.config['targets'][config[section]['name']]['backup_path'] =   config[section]['backup_path']
                 self.config['targets'][config[section]['name']]['config_dir'] =    config[section]['config_dir']
         except KeyError as error:
-            logger.warning("Missing configuration key %s" % error)
-            logger.warning("Invalid configuration file. Exiting.")
+            logger.warning("Invalid configuration file, missing configuration key '%s'. Exiting." % error)
             sys.exit(1)
 
     def start(self):

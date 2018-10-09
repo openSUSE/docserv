@@ -62,7 +62,16 @@ class Deliverable:
         self.target = target
         self.product_id = build_instruction['product']
         self.docset_id = build_instruction['docset']
+        self.instruction = build_instruction['id']
         logger.debug("Created deliverable: %s %s %s %s %s" % (local_repo_build_dir, self.language, dc_file, build_format, target['target_path']))
+
+    def id(self):
+        return hashlib.md5((self.target['name'] +
+                            self.docset_id +
+                            self.language +
+                            self.product_id +
+                            self.dc_file).encode('utf-8')
+                          ).hexdigest()[:9]
 
     def run(self, thread_id):
         logger.info("Thread %i: Building deliverable" % thread_id)
@@ -142,7 +151,8 @@ class Deliverable:
             s.communicate()[0]
             if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
                 logger.warning("Build failed! Unexpected return value %i for '%s'" % (s.returncode, commands[i]['cmd']) )
-                return False
+                return (False, self.instruction, self.id())
+        return (True, self.instruction, self.id())
 
 class DocConfParser:
     def __init__(self, build_instruction, config, gitLocks, gitLocksLock, thread_id):
@@ -156,6 +166,7 @@ class DocConfParser:
             self.git_lock = RepoLock(resource_to_filename(self.remote_repo), thread_id, gitLocks, gitLocksLock)
             self.prepare_repo()
             self.compare_commit_id()
+            self.reset_success_state()
         else:
             self.initialized = False
         return
@@ -173,7 +184,6 @@ class DocConfParser:
         return self.build_instruction
 
     def __getitem__(self, arg):
-        print(arg)
         return self.build_instruction
 
     def read_conf_dir(self):
@@ -201,6 +211,10 @@ class DocConfParser:
         xml_root = self.tree.getroot()
         self.branch = xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/branch" % (self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])).text
         self.remote_repo = repo = xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/builddocs/git/remote" % (self.build_instruction['product'], self.build_instruction['docset'])).text
+
+    def reset_success_state(self):
+        if self.initialized:
+            self.build_instruction['success'] = True
 
     def prepare_repo(self):
         commands = {}
@@ -251,7 +265,7 @@ class DocConfParser:
         current_commit_id = current_commit_id.decode('utf-8').rstrip()
         logger.debug("Current commit hash: %s" % current_commit_id)
         if current_commit_id == self.build_instruction['commit']:
-            logger.info("Build instruction %s is already up to date. Current commit: %s" % (json.dumps(self.build_instruction), current_commit_id))
+            logger.info("Build for instruction %s is already up to date." % (json.dumps(self.build_instruction)))
             self.initialized = False
         else:
             self.build_instruction['commit'] = current_commit_id
@@ -281,6 +295,7 @@ class DocConfParser:
             return False
         target = self.build_instruction['target']
         xml_root = self.tree.getroot()
+        list_deliverables = []
         for xml_deliverable in xml_root.findall(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/deliverable" % (self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])):
             for build_format in xml_deliverable.findall(".//format"):
                 deliverable = Deliverable(  self.local_repo_build_dir,
@@ -289,21 +304,27 @@ class DocConfParser:
                                             build_format.text,
                                             self.config['targets'][target]
                                          )
+                list_deliverables.append(deliverable.id())
                 self.deliverables.put(deliverable)
             # after all deliverables are generated, we don't need the xml tree anymore
             self.tree = None
-        return True
+        return list_deliverables
 
 class DocservState:
+    # tracks all build_instructions in all queues that should be built
     in_queues = {}
     in_queues_lock = threading.Lock()
+    # FIFO queue for build instructions from REST API
     scheduled_docs = queue.Queue()
-    building_docs = {}
-    building_docs_lock = threading.Lock()
+    # finished builds, contains commit hash and success
     past_builds = {}
     past_builds_lock = threading.Lock()
+    # FIFO for DocConfParser instances, which in turn contains queue of deliverables
     currently_building = queue.Queue()
     currently_building_lock = threading.Lock()
+    # Dict of DocConfParser instances with empty deliverables queue
+    waiting_for_finish = {}
+    waiting_for_finish_lock = threading.Lock()
 
     def __del__(self):
         pass
@@ -341,17 +362,6 @@ class DocservState:
             self.in_queues_lock.release()
             return False
 
-    def get_scheduled_build_instruction(self):
-        # Get a build_instruction for building
-        try:
-            build_instruction = self.scheduled_docs.get(False)
-        except queue.Empty:
-            return None
-        if self.building_docs_lock.acquire():
-            self.building_docs[build_instruction['id']] = build_instruction
-            self.building_docs_lock.release()
-            return build_instruction
-
     def get_deliverable(self):
         if self.currently_building_lock.acquire(False):
             try:
@@ -363,9 +373,8 @@ class DocservState:
                 try:
                     deliverable = doc.deliverables.get(False)
                 except queue.Empty:
-                    logger.info("Finished building deliverables for %s" % doc)
                     self.currently_building_lock.release()
-                    self.finished_building_doc(doc)
+                    self.got_last_deliverable(doc)
                     return None
                 else:
                     logger.info("Got deliverable from %s" % doc)
@@ -374,17 +383,44 @@ class DocservState:
                     return deliverable
         return None
 
-    def finished_building_doc(self, doc):
-        self.building_docs_lock.acquire()
-        self.building_docs.pop(doc.__dict__()['id'],None)
-        self.building_docs_lock.release()
+    def get_scheduled_build_instruction(self):
+        # Get a build_instruction for building
+        try:
+            build_instruction = self.scheduled_docs.get(False)
+        except queue.Empty:
+            return None
+        else:
+            return build_instruction
 
+    def store_deliverable_ids(self, build_instruction_id, deliverables):
         self.in_queues_lock.acquire()
-        self.in_queues.pop(doc.__dict__()['id'],None)
+        self.in_queues[build_instruction_id]['building_deliverables'] = deliverables
         self.in_queues_lock.release()
 
+    def got_last_deliverable(self, doc):
+        self.waiting_for_finish_lock.acquire()
+        self.waiting_for_finish[doc.build_instruction['id']] = doc
+        self.waiting_for_finish_lock.release
+
+    def finished_deliverable(self, success, build_instruction_id, deliverable_id):
+        logger.info("Finished building deliverables for %s" % doc)
+        remove_from_queue = False
+        self.in_queues_lock.acquire()
+        self.in_queues[build_instruction_id]['building_deliverables'].remove(deliverable_id)
+        if not success:
+            self.in_queues[build_instruction_id]['success'] = False
+        if not self.in_queues[build_instruction_id]['building_deliverables']:
+            remove_from_queue = True
+        self.in_queues_lock.release()
+        if remove_from_queue:
+            self.finished_build_instruction(build_instruction_id)
+
+    def finished_build_instruction(self, build_instruction_id):
+        self.in_queues_lock.acquire()
+        build_instruction = self.in_queues.pop(build_instruction_id)
+        self.in_queues_lock.release()
         self.past_builds_lock.acquire()
-        self.past_builds[doc.__dict__()['id']] = doc.__dict__()
+        self.past_builds[build_instruction_id] = build_instruction
         self.past_builds_lock.release()
     
     def save_state(self):
@@ -441,6 +477,7 @@ class Docserv(DocservState):
                 if not str(section).startswith("target_"):
                     continue
                 self.config['targets'][config[section]['name']] =                  {}
+                self.config['targets'][config[section]['name']]['name'] =          config[section]['name']
                 self.config['targets'][config[section]['name']]['templdate_dir'] = config[section]['template_dir']
                 self.config['targets'][config[section]['name']]['active'] =        config[section]['active']
                 self.config['targets'][config[section]['name']]['draft'] =         config[section]['draft']
@@ -477,22 +514,31 @@ class Docserv(DocservState):
         self.rest.shutdown()
         self.save_state()
 
+    def parse_rest_item(self, thread_id):
+        build_instruction = self.get_scheduled_build_instruction()
+        if build_instruction is not None:
+            doc = DocConfParser(build_instruction, self.config, self.gitLocks, self.gitLocksLock, thread_id)
+            if doc.initialized == False:
+                self.finished_build_instruction(build_instruction['id'])
+                return
+            deliverables = doc.generate_deliverables()
+            if deliverables:
+                self.store_deliverable_ids(build_instruction['id'], deliverables)
+                self.currently_building.put(doc)
+            del doc
+
     def worker(self, thread_id):
         while( True ):
             # 1. parse input from rest api and put the instance of the doc class on the currently building queue
-            build_instruction = self.get_scheduled_build_instruction()
-            if build_instruction is not None:
-                doc = DocConfParser(build_instruction, self.config, self.gitLocks, self.gitLocksLock, thread_id)
-                if doc.generate_deliverables():
-                    self.currently_building.put(doc)
-                del doc
+            self.parse_rest_item(thread_id)
              
             # 2. get doc from currently_building queue and then a deliverable from doc.
             #    after that, put doc back on the currently building queue. unless it was
             #    the last deliverable.
             deliverable = self.get_deliverable()
             if deliverable is not None:
-                deliverable.run(thread_id)
+                success, build_instruction_id, deliverable_id = deliverable.run(thread_id)
+                self.finished_deliverable(success, build_instruction_id, deliverable_id)
 
             # 3. end thread if sigint
             if not self.end_end_all.empty(): return True

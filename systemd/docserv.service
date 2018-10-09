@@ -6,6 +6,7 @@ After=multi-user.target
 Type=idle
 Environment="SCRIPT_ARGS=%I"
 ExecStart=/usr/bin/docserv $SCRIPT_ARGS
+User=docserv
 
 [Install]
 WantedBy=multi-user.target

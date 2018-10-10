@@ -476,7 +476,7 @@ class DocservState:
 class Docserv(DocservState):
     gitLocks = {}
     gitLocksLock = threading.Lock()
-    end_end_all = queue.Queue()
+    end_all = queue.Queue()
 
     def __init__(self, argv):
         self.parse_config(argv)
@@ -543,7 +543,7 @@ class Docserv(DocservState):
 
     def exit(self):
         logger.warning("Received SIGINT. Telling all threads to end. Please wait.")
-        self.end_end_all.put("now")
+        self.end_all.put("now")
         self.rest.shutdown()
         self.save_state()
 
@@ -574,7 +574,7 @@ class Docserv(DocservState):
                 self.finished_deliverable(success, build_instruction_id, deliverable_id)
 
             # 3. end thread if sigint
-            if not self.end_end_all.empty(): return True
+            if not self.end_all.empty(): return True
 
             # 4. wait for a short while, then repeat
             time.sleep(2)

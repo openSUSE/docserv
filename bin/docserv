@@ -70,7 +70,8 @@ class Deliverable:
                             self.docset_id +
                             self.language +
                             self.product_id +
-                            self.dc_file).encode('utf-8')
+                            self.dc_file +
+                            self.build_format).encode('utf-8')
                           ).hexdigest()[:9]
 
     def run(self, thread_id):
@@ -98,10 +99,10 @@ class Deliverable:
 
         # Run daps in the docker container, copy results to a build target directory
         n += 1
-        tmp_build_target = tempfile.mkdtemp()
+        tmp_build_target = os.path.join(tempfile.mkdtemp(),self.language, self.product_id, self.docset_id, self.build_format)
         dc_full_path = os.path.join(self.local_repo_build_dir, self.dc_file)
         commands[n] = {}
-        commands[n]['cmd'] = "/usr/bin/d2d_runner -v=0 -x=%s -d=%s -o=%s -i=%s -f=%s %s" % (
+        commands[n]['cmd'] = "/usr/bin/d2d_runner -v=1 -u=0 -x=%s -d=%s -o=%s -i=%s -f=%s %s" % (
                                                 xslt_params_file[1],       # -x
                                                 daps_params_file[1],       # -d
                                                 tmp_build_target,          # -o
@@ -113,16 +114,14 @@ class Deliverable:
 
         # rsync build target directory to backup path
         n += 1
-        backup_target = self.target['backup_path'] + os.path.join(self.language, self.product_id, self.docset_id, self.build_format)
         commands[n] = {}
-        commands[n]['cmd'] = "rsync %s %s" % (tmp_build_target, backup_target)
+        commands[n]['cmd'] = "rsync -lr %s %s" % (tmp_build_target, self.target['backup_path'])
         commands[n]['ret_val'] = 0
 
         # rsync built target directory with web server
         n += 1
-        deploy_target = self.target['target_path'] + os.path.join(self.language, self.product_id, self.docset_id, self.build_format)
         commands[n] = {}
-        commands[n]['cmd'] = "rsync %s %s" % (tmp_build_target, deploy_target)
+        commands[n]['cmd'] = "rsync -lr %s %s" % (tmp_build_target, self.target['target_path'])
         commands[n]['ret_val'] = 0
 
         # remove daps parameter file
@@ -148,9 +147,11 @@ class Deliverable:
             logger.debug("Thread %i: %s" % (thread_id, commands[i]['cmd']))
             time.sleep(1)
             s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            s.communicate()[0]
+            out, err = s.communicate()
             if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
-                logger.warning("Build failed! Unexpected return value %i for '%s'" % (s.returncode, commands[i]['cmd']) )
+                logger.warning("Thread %i: Build failed! Unexpected return value %i for '%s'" % (thread_id, s.returncode, commands[i]['cmd']))
+                logger.warning("Thread %i STDOUT: %s" % (thread_id, out.decode('utf-8')))
+                logger.warning("Thread %i STDERR: %s"% (thread_id, err.decode('utf-8')))
                 return (False, self.instruction, self.id())
         return (True, self.instruction, self.id())
 
@@ -247,7 +248,7 @@ class DocConfParser:
                 self.git_lock.acquire()
             logger.debug("Thread %i: %s" % (self.thread_id, commands[i]['cmd']))
             s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            s.communicate()[0]
+            out, err = s.communicate()
             self.git_lock.release()
             if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
                 logger.warning("Build failed! Unexpected return value %i for '%s'" % (s.returncode, commands[i]['cmd']) )
@@ -320,6 +321,7 @@ class DocservState:
     past_builds = {}
     past_builds_lock = threading.Lock()
     # FIFO for DocConfParser instances, which in turn contains queue of deliverables
+    # DocConfParser instances are requeued if deliverables queue is not empty
     currently_building = queue.Queue()
     currently_building_lock = threading.Lock()
     # Dict of DocConfParser instances with empty deliverables queue
@@ -403,7 +405,6 @@ class DocservState:
         self.waiting_for_finish_lock.release
 
     def finished_deliverable(self, success, build_instruction_id, deliverable_id):
-        logger.info("Finished building deliverables for %s" % doc)
         remove_from_queue = False
         self.in_queues_lock.acquire()
         self.in_queues[build_instruction_id]['building_deliverables'].remove(deliverable_id)
@@ -416,6 +417,7 @@ class DocservState:
             self.finished_build_instruction(build_instruction_id)
 
     def finished_build_instruction(self, build_instruction_id):
+        logger.info("Finished building deliverables for %s" % build_instruction_id)
         self.in_queues_lock.acquire()
         build_instruction = self.in_queues.pop(build_instruction_id)
         self.in_queues_lock.release()

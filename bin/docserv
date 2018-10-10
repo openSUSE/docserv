@@ -101,7 +101,7 @@ class Deliverable:
         tmp_build_target = tempfile.mkdtemp(prefix="docserv_out_")
         dc_full_path = os.path.join(self.local_repo_build_dir, self.dc_file)
         commands[n] = {}
-        commands[n]['cmd'] = "/usr/bin/d2d_runner -v=1 -u=0 -x=%s -d=%s -o=%s -i=%s -f=%s %s" % (
+        commands[n]['cmd'] = "/usr/bin/d2d_runner -v=1 -u=1 -x=%s -d=%s -o=%s -i=%s -f=%s %s" % (
                                                 xslt_params_file[1],       # -x
                                                 daps_params_file[1],       # -d
                                                 tmp_build_target,          # -o

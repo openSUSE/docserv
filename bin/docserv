@@ -75,12 +75,11 @@ class Deliverable:
                           ).hexdigest()[:9]
 
     def run(self, thread_id):
-        logger.info("Thread %i: Building deliverable" % thread_id)
         commands = {}
 
         # Write XSLT parameters to temp file
         n = 0
-        xslt_params_file = tempfile.mkstemp(text=True)
+        xslt_params_file = tempfile.mkstemp(prefix="docserv_xslt_", text=True)
         xslt_params = ""
         commands[n] = {}
         commands[n]['cmd'] = "echo \"%s\" > %s" % (xslt_params, xslt_params_file[1])
@@ -88,7 +87,7 @@ class Deliverable:
 
         # Write daps parameters to temp file
         n += 1
-        daps_params_file = tempfile.mkstemp(text=True)
+        daps_params_file = tempfile.mkstemp(prefix="docserv_daps_", text=True)
         daps_params = "%s %s" % (
                                     "--remarks" if self.target['remarks'] == "yes" else "",
                                     "--draft" if self.target['draft'] == "yes" else ""
@@ -99,7 +98,7 @@ class Deliverable:
 
         # Run daps in the docker container, copy results to a build target directory
         n += 1
-        tmp_build_target = os.path.join(tempfile.mkdtemp(),self.language, self.product_id, self.docset_id, self.build_format)
+        tmp_build_target = tempfile.mkdtemp(prefix="docserv_out_")
         dc_full_path = os.path.join(self.local_repo_build_dir, self.dc_file)
         commands[n] = {}
         commands[n]['cmd'] = "/usr/bin/d2d_runner -v=1 -u=0 -x=%s -d=%s -o=%s -i=%s -f=%s %s" % (
@@ -112,16 +111,31 @@ class Deliverable:
                                                 )
         commands[n]['ret_val'] = 0
 
+        # Create correct directory structure
+        n += 1
+        sync_source_tmp = tempfile.mkdtemp(prefix="docserv_sync_")
+        create_sync_source = os.path.join(sync_source_tmp, self.language, self.product_id, self.docset_id, self.build_format)
+        commands[n] = {}
+        commands[n]['cmd'] = "/usr/bin/mkdir -p %s" % (create_sync_source)
+        commands[n]['ret_val'] = 0
+
+        # Copy wanted files to sync source
+        n += 1
+        commands[n] = {}
+        commands[n]['cmd'] = "/usr/bin/cp -r __FILELIST__  %s" % (create_sync_source)
+        commands[n]['ret_val'] = 0
+        commands[n]['replace'] = {'string': '__FILELIST__', 'source': 'file', 'filepath': os.path.join(tmp_build_target,'filelist')}
+
         # rsync build target directory to backup path
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "rsync -lr %s %s" % (tmp_build_target, self.target['backup_path'])
+        commands[n]['cmd'] = "rsync -lr %s/ %s" % (sync_source_tmp, self.target['backup_path'])
         commands[n]['ret_val'] = 0
 
         # rsync built target directory with web server
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "rsync -lr %s %s" % (tmp_build_target, self.target['target_path'])
+        commands[n]['cmd'] = "rsync -lr %s/ %s" % (sync_source_tmp, self.target['target_path'])
         commands[n]['ret_val'] = 0
 
         # remove daps parameter file
@@ -136,6 +150,11 @@ class Deliverable:
         commands[n]['cmd'] = "rm %s" % (xslt_params_file[1])
         commands[n]['ret_val'] = 0
 
+        # sync source directory
+        commands[n] = {}
+        commands[n]['cmd'] = "rm -rf %s" % (sync_source_tmp)
+        commands[n]['ret_val'] = 0
+
         # build target directory
         n += 1
         commands[n] = {}
@@ -143,9 +162,7 @@ class Deliverable:
         commands[n]['ret_val'] = 0
 
         for i in range(0,n + 1):
-            cmd = shlex.split(commands[i]['cmd'])
-            logger.debug("Thread %i: %s" % (thread_id, commands[i]['cmd']))
-            time.sleep(1)
+            cmd = self.parse_command(commands[i], thread_id)
             s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = s.communicate()
             if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
@@ -154,6 +171,20 @@ class Deliverable:
                 logger.warning("Thread %i STDERR: %s"% (thread_id, err.decode('utf-8')))
                 return (False, self.instruction, self.id())
         return (True, self.instruction, self.id())
+
+    def parse_command(self, command, thread_id):
+        if 'replace' in command:
+            # currently only read from file logic
+            logger.debug("Reading %s" % command['replace']['filepath'])
+            f = open(command['replace']['filepath'], 'r')
+            content = str(f.read()).strip()
+            logger.debug("Content: %s" % content)
+            cmd = command['cmd'].replace(command['replace']['string'], content)
+        else:
+            cmd = command['cmd']
+        logger.debug("Thread %i: %s" % (thread_id, cmd))
+        cmd = shlex.split(cmd)
+        return cmd
 
 class DocConfParser:
     def __init__(self, build_instruction, config, gitLocks, gitLocksLock, thread_id):
@@ -364,7 +395,7 @@ class DocservState:
             self.in_queues_lock.release()
             return False
 
-    def get_deliverable(self):
+    def get_deliverable(self, thread_id):
         if self.currently_building_lock.acquire(False):
             try:
                 doc = self.currently_building.get(False)
@@ -379,7 +410,7 @@ class DocservState:
                     self.got_last_deliverable(doc)
                     return None
                 else:
-                    logger.info("Got deliverable from %s" % doc)
+                    logger.info("Thread %i: Building deliverable %s from %s" % (thread_id, deliverable.id(), doc))
                     self.currently_building.put(doc)
                     self.currently_building_lock.release()
                     return deliverable
@@ -537,7 +568,7 @@ class Docserv(DocservState):
             # 2. get doc from currently_building queue and then a deliverable from doc.
             #    after that, put doc back on the currently building queue. unless it was
             #    the last deliverable.
-            deliverable = self.get_deliverable()
+            deliverable = self.get_deliverable(thread_id)
             if deliverable is not None:
                 success, build_instruction_id, deliverable_id = deliverable.run(thread_id)
                 self.finished_deliverable(success, build_instruction_id, deliverable_id)

@@ -1,0 +1,443 @@
+# RELAX NG Schema for Docserv² product configuration
+
+# BASICS
+
+default namespace = ""
+start = ds.product
+
+
+# TYPES
+
+ds.type.class =
+  ## A space-separated list of HTML classes
+  xsd:token { pattern = "[\-_\+\.a-zA-Z0-9]+( [\-_\+\.a-zA-Z0-9]+)*" }
+
+ds.type.email =
+  # http://www.dpawson.co.uk/relaxng/schema/datatypes/datatypes.html#d1034e184
+  # Works for both normal addresses and forms like
+  # "David Tolpin"@[Obscure Place]
+  # The expression above is slightly more allowing than required,
+  # but should be appropriate for the majority of cases.
+  xsd:token {
+    pattern="""([a-zA-Z0-9!#$%&'*+\-/=?\^_`{|}~]+(\.[a-zA-Z0-9!#$%&'*+\-/=?\^_`{|}~]+)*|"[^"\\]*")@([a-zA-Z0-9!#$%&'*+\-/=?\^_`{|}~]+(\.[a-zA-Z0-9!#$%&'*+\-/=?\^_`{|}~]+)*|\[[^\[\]\\]*\])"""
+  }
+
+ds.type.lang =
+  # A language code
+  xsd:token {
+    pattern="""[a-z]{2}(-[a-z]{2,8})?"""
+  }
+
+ds.type.gitremote =
+  # URL to a Git remote
+  # (Let's not support SSH URLs for the moment since that needs authentication)
+  xsd:anyURI {
+    pattern="""https?://.*"""
+  }
+
+ds.type.dirname =
+  # A relative directory name
+  xsd:anyURI {
+    pattern="""[^/\\]+(/[^/\\]+)*"""
+  }
+
+ds.type.branch =
+  # A Git branch name
+  xsd:token {
+    pattern="""[^\s\\]+"""
+  }
+
+ds.type.dcfile =
+  # A DC file name
+  xsd:anyURI {
+    pattern="""DC-[\-_\.\+a-zA-Z0-9]+"""
+  }
+
+ds.type.xsltparam =
+  # An XSLT parameter name
+  xsd:token {
+    pattern="""[\-_\.\+a-zA-Z0-9]+"""
+  }
+
+ds.type.id =
+  # An ID (however, we do not check for uniqueness here -- we do that in
+  # docserv-stitch)
+  xsd:token {
+    pattern="""[\-_\.\+a-zA-Z0-9]+"""
+  }
+
+
+# TAG/ATTRIBUTE SETS
+
+div
+{
+# FIXME: add img? (It is a bit unclear whether our script would need to take
+# care of copying stuff then.)
+ds.htmlblock =
+  ds.p
+  | ds.div
+  | ds.pre
+  | ds.ul
+  | ds.ol
+  | ds.h1
+  | ds.h2
+  | ds.h3
+  | ds.h4
+  | ds.h5
+  | ds.h6
+}
+
+div
+{
+ds.htmlinline =
+    ds.sup
+  | ds.u
+  | ds.cite
+  | ds.span
+  | ds.s
+  | ds.a
+  | ds.sub
+  | ds.strong
+  | ds.em
+  | ds.q
+  | ds.code
+}
+
+div
+{
+ds.htmlattr =
+  attribute id { xsd:ID }?,
+  attribute class { ds.type.class }?
+}
+
+div
+{
+ds.htmlinlinecontent =
+  ds.htmlattr,
+  (ds.htmlinline |
+  text)*
+}
+
+
+
+# ROOT
+
+ds.product =
+  element product {
+    # This ID value can only be checked when we take all of the productconfig
+    # files together (i.e. after we have run stitch.sh). In any case, it does
+    # not make sense to use xsd:id here because there can only ever be one
+    # of these ID per productconfig file.
+    attribute productid { ds.type.id },
+    ds.name,
+    ds.shortname?,
+    ds.maintainers,
+    ds.defaultdesc,
+    ds.otherdesc+,
+    ds.docset+
+  }
+
+
+# PRODUCT DESCRIPTION
+
+ds.name =
+  element name {
+    text
+  }
+
+ds.shortname =
+  element shortname {
+    text
+  }
+
+ds.maintainers =
+  element maintainers {
+    ds.contact+
+  }
+
+ds.contact =
+  element contact {
+    ds.type.email
+  }
+
+ds.defaultdesc =
+  element desc {
+    attribute lang { ds.type.lang },
+    attribute default { "1" | "true" },
+    ds.htmlblock+
+  }
+
+ds.otherdesc =
+  element desc {
+    attribute lang { ds.type.lang },
+    attribute default { "0" | "false" }?,
+    ds.htmlblock+
+  }
+
+
+# DOCSETS
+
+ds.docset =
+  element docset {
+    attribute setid { ds.type.id },
+    attribute lifecycle { "unpublished" | "beta" | "supported" | "unsupported" },
+    # To allow for name changes between versions, as in the example of SUSE
+    # Cloud -> SUSE OpenStack Cloud: optional ds.name here
+    ds.name?,
+    ds.version,
+    (
+      (ds.builddocs,
+       ds.extralinks?) |
+      ds.extralinks
+    )
+  }
+
+ds.version =
+  element version {
+    text
+  }
+
+ds.builddocs =
+  element builddocs {
+    ds.git,
+    ds.defaultlanguage,
+    ds.otherlanguage*
+  }
+
+ds.git =
+  element git {
+    ds.remote,
+    ds.checkoutdir
+  }
+
+ds.remote =
+  element remote {
+    ds.type.gitremote
+  }
+
+ds.checkoutdir =
+  element checkoutdir {
+    ds.type.dirname
+  }
+
+ds.defaultlanguage =
+  element language {
+    attribute lang { ds.type.lang },
+    attribute default { "1" | "true" },
+    ds.branch,
+    ds.subdir?,
+    ds.deliverable+
+  }
+ds.otherlanguage =
+  element language {
+    attribute lang { ds.type.lang },
+    attribute default { "0" | "false" }?,
+    ds.branch?,
+    ds.subdir?,
+    ds.untranslated?
+  }
+
+
+ds.branch =
+  element branch {
+    ds.type.branch
+  }
+
+ds.subdir =
+  element subdir {
+    ds.type.dirname
+  }
+
+ds.deliverable =
+  element deliverable {
+    attribute remarks { xsd:boolean }?,
+    attribute draft { xsd:boolean }?,
+    attribute meta { xsd:boolean }?,
+    ds.dc,
+    ds.format+,
+    ds.styleroot?,
+    ds.param*,
+    ds.subdeliverable*
+  }
+
+ds.dc =
+  element dc {
+    ds.type.dcfile
+  }
+
+# Unfortunately, this way, I can't force people to choose at least one format
+# they actually want to build.
+ds.format =
+  element format {
+    attribute html { xsd:boolean }?,
+    attribute single-html { xsd:boolean }?,
+    attribute pdf { xsd:boolean }?,
+    attribute epub { xsd:boolean }?
+  }
+
+ds.styleroot =
+  element styleroot {
+    xsd:anyURI
+  }
+
+ds.param =
+  element param {
+    attribute name { ds.type.xsltparam },
+    text
+  }
+
+ds.subdeliverable =
+  element subdeliverable {
+    ds.type.id
+  }
+
+ds.untranslated =
+  element untranslated {
+    ds.deliverablerestricted+
+  }
+
+ds.deliverablerestricted =
+  element deliverable {
+    ds.dc,
+    ds.subdeliverable*
+  }
+
+ds.extralinks =
+  element extralinks {
+    ds.link+
+  }
+
+ds.link =
+  element link {
+    attribute href { xsd:anyURI },
+    (ds.htmlinline |
+    text)*
+  }
+
+
+# SUPPORTED HTML SUBSET
+
+ds.p =
+  element p {
+    ds.htmlinlinecontent
+  }
+
+ds.div =
+  element div {
+    ds.htmlattr,
+    (
+      ds.htmlinline |
+      ds.htmlblock |
+      text
+    )*
+  }
+
+ds.pre =
+  element pre {
+    text*
+  }
+
+ds.ul =
+  element ul {
+    ds.li+
+  }
+
+ds.ol =
+  element ol {
+    ds.li+
+  }
+
+ds.li =
+  element li {
+    ds.htmlattr,
+    ds.htmlblock*
+  }
+
+ds.h1 =
+  element h1 {
+    ds.htmlinlinecontent
+  }
+
+ds.h2 =
+  element h2 {
+    ds.htmlinlinecontent
+  }
+
+ds.h3 =
+  element h3 {
+    ds.htmlinlinecontent
+  }
+
+ds.h4 =
+  element h4 {
+    ds.htmlinlinecontent
+  }
+
+ds.h5 =
+  element h5 {
+    ds.htmlinlinecontent
+  }
+
+ds.h6 =
+  element h6 {
+    ds.htmlinlinecontent
+  }
+
+
+ds.sup =
+  element sup {
+    ds.htmlattr,
+    (ds.htmlinline |
+     text)*
+  }
+
+ds.sub =
+  element sub {
+    ds.htmlinlinecontent
+  }
+
+ds.s =
+  element s {
+    ds.htmlinlinecontent
+  }
+
+ds.u =
+  element u {
+    ds.htmlinlinecontent
+  }
+
+ds.q =
+  element q {
+    ds.htmlinlinecontent
+  }
+
+ds.em =
+  element em {
+    ds.htmlinlinecontent
+  }
+
+ds.a =
+  element a {
+    attribute href { xsd:anyURI },
+    ds.htmlinlinecontent
+  }
+
+ds.strong =
+  element strong {
+    ds.htmlinlinecontent
+  }
+
+ds.code =
+  element code {
+    ds.htmlinlinecontent
+  }
+
+ds.cite =
+  element cite {
+    ds.htmlinlinecontent
+  }
+
+ds.span =
+  element span {
+    ds.htmlinlinecontent
+  }

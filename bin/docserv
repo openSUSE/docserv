@@ -112,8 +112,9 @@ class Deliverable:
         n += 1
         daps_params_file = tempfile.mkstemp(prefix="docserv_daps_", text=True)
         daps_params = "%s %s" % (
-                                    "--remarks" if self.target['remarks'] == "yes" else "",
-                                    "--draft" if self.target['draft'] == "yes" else ""
+                                    "--remarks" if (self.target['remarks'] == "true" or self.target['remarks'] == "1") else "",
+                                    "--draft" if (self.target['draft'] == "true" or self.target['draft'] == "1") else "",
+                                    "--meta" if (self.target['meta'] == "true" or self.target['meta'] == "1") else ""
                                 )
         commands[n] = {}
         commands[n]['cmd'] = "echo \"%s\" > %s" % (daps_params,
@@ -250,11 +251,13 @@ class DocConfParser:
         if not self.config['targets'][target]['active'] == "yes":
             logger.debug("Target %s not active." % target)
             return False
-        # validate with sknorrs magic bash script
+        # validate and stitch files together with bash script
+        # FIXME: productschema: how do I define this best? (cf. schema/productconfig.rnc in this repo)
+        productschema=...
         tmp_handle, tmp_filename = tempfile.mkstemp(text=True)
         logger.info("Stitching XML config directory to %s" % tmp_filename)
-        cmd = '/usr/bin/docserv-stitch %s %s' % (
-            self.config['targets'][target]['config_dir'], tmp_filename)
+        cmd = '/usr/bin/docserv-stitch %s %s %s' %
+            (productschema, self.config['targets'][target]['config_dir'], tmp_filename)
         logger.debug("Stitching command: %s" % cmd)
         cmd = shlex.split(cmd)
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
@@ -272,10 +275,10 @@ class DocConfParser:
         # then read all files into an xml tree
         self.tree = ElementTree.parse(tmp_filename)
         xml_root = self.tree.getroot()
-        self.branch = xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/branch" % (
-            self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])).text
-        self.remote_repo = xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/builddocs/git/remote" % (
-            self.build_instruction['product'], self.build_instruction['docset'])).text
+        self.branch = xml_root.find(".//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/branch" %
+            (self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])).text
+        self.remote_repo = repo = xml_root.find(".//product[@productid='%s']/docset[@setid='%s']/builddocs/git/remote" %
+            (self.build_instruction['product'], self.build_instruction['docset'])).text
 
     def reset_success_state(self):
         if self.initialized:
@@ -369,7 +372,7 @@ class DocConfParser:
         target = self.build_instruction['target']
         xml_root = self.tree.getroot()
         list_deliverables = []
-        for xml_deliverable in xml_root.findall(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/deliverable" % (self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])):
+        for xml_deliverable in xml_root.findall(".//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/deliverable" % (self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])):
             for build_format in xml_deliverable.findall(".//format"):
                 deliverable = Deliverable(  self.local_repo_build_dir,
                                             self.build_instruction,

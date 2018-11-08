@@ -124,7 +124,6 @@ class Deliverable:
         # build target directory
         n += 1
         tmp_build_target = tempfile.mkdtemp(prefix="docserv_out_")
-        dc_full_path = os.path.join(self.local_repo_build_dir, self.dc_file)
         commands[n] = {}
         commands[n]['cmd'] = "/usr/bin/d2d_runner -v=1 -u=1 -x=%s -d=%s -o=%s -i=%s -f=%s %s" % (
                                                 xslt_params_file[1],       # -x
@@ -275,7 +274,7 @@ class DocConfParser:
         xml_root = self.tree.getroot()
         self.branch = xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/branch" % (
             self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])).text
-        self.remote_repo = repo = xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/builddocs/git/remote" % (
+        self.remote_repo = xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/builddocs/git/remote" % (
             self.build_instruction['product'], self.build_instruction['docset'])).text
 
     def reset_success_state(self):
@@ -317,7 +316,7 @@ class DocConfParser:
                 self.git_lock.acquire()
             logger.debug("Thread %i: %s" % (self.thread_id, commands[i]['cmd']))
             s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            out, err = s.communicate()
+            s.communicate()
             self.git_lock.release()
             if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
                 logger.warning("Build failed! Unexpected return value %i for '%s'" % (
@@ -386,6 +385,7 @@ class DocConfParser:
 
 
 class DocservState:
+    config = {}
     # tracks all build_instructions in all queues that should be built
     in_queues = {}
     in_queues_lock = threading.Lock()
@@ -539,7 +539,6 @@ class Docserv(DocservState):
                      2: logging.DEBUG,
                      }
         try:
-            self.config = {}
             self.config['server'] = {}
             self.config['server']['name'] = config_file
             self.config['server']['loglevel'] = int(
@@ -610,7 +609,7 @@ class Docserv(DocservState):
         while(True):
             # 1. parse input from rest api and put the instance of the doc class on the currently building queue
             self.parse_rest_item(thread_id)
-             
+
             # 2. get doc from currently_building queue and then a deliverable from doc.
             #    after that, put doc back on the currently building queue. unless it was
             #    the last deliverable.

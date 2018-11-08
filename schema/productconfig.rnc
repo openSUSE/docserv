@@ -1,0 +1,474 @@
+# RELAX NG Schema for Docserv² product configuration
+
+# BASICS
+
+default namespace = ""
+
+# FIXME: Should this be <docservconfig> instead? (I guess it makes more sense
+# to be able to validate individual productconfig files instead of validating
+# an essentially internal representation)
+start = ds.productindex
+
+
+# TYPES
+
+ds.type.class =
+  ## A class or space-separated list of classes
+  xsd:token { pattern = "[\-_\.a-zA-Z0-9 ]*" }
+
+ds.type.email =
+  # http://www.dpawson.co.uk/relaxng/schema/datatypes/datatypes.html#d1034e184
+  # Works for both normal addresses and forms like
+  # "David Tolpin"@[Obscure Place]
+  # The expression above is slightly more allowing than required,
+  # but should be appropriate for the majority of cases.
+  xsd:token {
+    pattern="""([a-zA-Z0-9!#$%&'*+\-/=?\^_`{|}~]+(\.[a-zA-Z0-9!#$%&'*+\-/=?\^_`{|}~]+)*|"[^"\\]*")@([a-zA-Z0-9!#$%&'*+\-/=?\^_`{|}~]+(\.[a-zA-Z0-9!#$%&'*+\-/=?\^_`{|}~]+)*|\[[^\[\]\\]*\])"""
+  }
+
+ds.type.lang =
+  # A language code
+  xsd:token {
+    pattern="""[a-z]{2,5}(-[a-z]{2,5})?"""
+  }
+
+ds.type.gitremote =
+  # URL to a Git remote
+  # (Let's not support SSH URLs for the moment since that needs authentication)
+  xsd:token {
+    pattern="""https?://.*"""
+  }
+
+ds.type.dirname =
+  # A relative directory name
+  xsd:token {
+    pattern="""[\-_\.\+a-zA-Z0-9][\-_\.\+/a-zA-Z0-9]*"""
+  }
+
+ds.type.branch =
+  # A Git branch name
+  xsd:token {
+    pattern="""[\-_\.\+/a-zA-Z0-9]+"""
+  }
+
+ds.type.dcfile =
+  # A DC file name
+  xsd:token {
+    pattern="""DC-[\-_\.\+/a-zA-Z0-9]+"""
+  }
+
+ds.type.format =
+  # A (space-separated list of) output formats
+  xsd:token {
+    pattern="""(html|single-html|pdf|epub)( (html|single-html|pdf|epub))*"""
+  }
+
+ds.type.xsltparam =
+  # An XSLT parameter name
+  xsd:token {
+    pattern="""[\-_\.\+a-zA-Z0-9]+"""
+  }
+
+ds.type.id =
+  # An ID within the document we are trying to build
+  xsd:token {
+    pattern="""[\-_\.\+a-zA-Z0-9]+"""
+  }
+
+
+# TAG/ATTRIBUTE SETS
+
+div
+{
+# FIXME: add img? (It is a bit unclear whether out script would need to take
+# care of copying stuff then.)
+ds.htmlblock =
+  ds.p
+  | ds.div
+  | ds.pre
+  | ds.ul
+  | ds.ol
+  | ds.h1
+  | ds.h2
+  | ds.h3
+  | ds.h4
+  | ds.h5
+  | ds.h6
+}
+
+div
+{
+ds.htmlinline =
+    ds.sup
+  | ds.u
+  | ds.cite
+  | ds.span
+  | ds.s
+  | ds.a
+  | ds.sub
+  | ds.strong
+  | ds.em
+  | ds.q
+  | ds.code
+}
+
+div
+{
+ds.htmlattr =
+  attribute id { xsd:ID }?,
+  attribute class { ds.type.class }?
+}
+
+
+
+# ROOT
+
+ds.productindex =
+  element productindex {
+    # This ID value can only be checked when we take all of the productconfig
+    # files together (i.e. after we have run stitch.sh). In any case, it does
+    # not make sense to use xsd:id here because there can only ever be one
+    # of these ID per productconfig file.
+    attribute productid { ds.type.id },
+    attribute lifecycle { "unpublished" | "beta" | "supported" | "unsupported" },
+    ds.product,
+    ds.docset+
+  }
+
+
+# PRODUCT DESCRIPTION
+
+ds.product =
+  element product {
+    ds.name,
+    ds.shortname?,
+    ds.maintainers,
+    ds.defaultblurb,
+    ds.blurb+
+  }
+
+ds.name =
+  element name {
+    text
+  }
+
+ds.shortname =
+  element shortname {
+    text
+  }
+
+ds.maintainers =
+  element maintainers {
+    ds.contact+
+  }
+
+ds.contact =
+  element contact {
+    ds.type.email
+  }
+
+ds.defaultblurb =
+  element defaultblurb {
+    attribute lang { ds.type.lang },
+    ds.htmlblock+
+  }
+
+ds.blurb =
+  element blurb {
+    attribute lang { ds.type.lang },
+    ds.htmlblock+
+  }
+
+
+# DOCSETS
+
+ds.docset =
+  element docset {
+    attribute setid { ds.type.id },
+    ds.version,
+    (
+      (ds.builddocs,
+       ds.extralinks?) |
+      ds.extralinks
+    )
+  }
+
+ds.version =
+  element version {
+    text
+  }
+
+ds.builddocs =
+  element builddocs {
+    ds.vcs,
+    ds.default,
+    ds.translation*
+  }
+
+ds.vcs =
+  element vcs {
+    # git is currently the only thing supported but let's leave that open
+    attribute type { "git" },
+    ds.remote,
+    ds.checkoutdir
+  }
+
+ds.remote =
+  element remote {
+    ds.type.gitremote
+  }
+
+ds.checkoutdir =
+  element checkoutdir {
+    ds.type.dirname
+  }
+
+ds.default =
+  element default {
+    attribute lang { ds.type.lang },
+    ds.branch,
+    ds.subdir?,
+    ds.deliverable+
+  }
+
+ds.branch =
+  element branch {
+    ds.type.branch
+  }
+
+ds.subdir =
+  element subdir {
+    ds.type.dirname
+  }
+
+ds.deliverable =
+  element deliverable {
+    # FIXME: implementation probably uses yes/no values, xsd:boolean supports 0/1 or true/false!
+    attribute remarks { xsd:boolean }?,
+    attribute draft { xsd:boolean }?,
+    attribute meta { xsd:boolean }?,
+    ds.dc,
+    ds.format,
+    ds.styleroot?,
+    ds.param*,
+    ds.subdeliverable*
+  }
+
+ds.dc =
+  element dc {
+    ds.type.dcfile
+  }
+
+ds.format =
+  element format {
+    ds.type.format
+  }
+
+ds.styleroot =
+  element styleroot {
+    # FIXME: I think this this could either be a absolute/relative path or a URI
+    # xsd:token is probably too generous but I don't care enough right now.
+    xsd:token
+  }
+
+ds.param =
+  element param {
+    attribute name { ds.type.xsltparam },
+    text
+  }
+
+ds.subdeliverable =
+  element subdeliverable {
+    ds.type.id
+  }
+
+ds.translation =
+  element translation {
+    attribute lang { ds.type.lang },
+    ds.branch?,
+    ds.subdir?,
+    ds.untranslated?
+  }
+
+ds.untranslated =
+  element untranslated {
+    ds.deliverablerestricted+
+  }
+
+ds.deliverablerestricted =
+  element deliverable {
+    ds.dc,
+    ds.subdeliverable*
+  }
+
+ds.extralinks =
+  element extralinks {
+    ds.link+
+  }
+
+ds.link =
+  element link {
+    attribute href { xsd:anyURI },
+    (ds.htmlinline |
+    text)*
+  }
+
+
+# SUPPORTED HTML SUBSET
+
+ds.p =
+  element p {
+    ds.htmlattr,
+    (ds.htmlinline |
+     text)*
+  }
+
+ds.div =
+  element div {
+    ds.htmlattr,
+    (ds.htmlinline |
+     ds.htmlblock |
+     text)*
+  }
+
+ds.pre =
+  element pre {
+    text*
+  }
+
+ds.ul =
+  element ul {
+    ds.li+
+  }
+
+ds.ol =
+  element ol {
+    ds.li+
+  }
+
+ds.li =
+  element li {
+    ds.htmlattr,
+    ds.htmlblock*
+  }
+
+ds.h1 =
+  element h1 {
+    ds.htmlattr,
+    (ds.htmlinline |
+     text)*
+  }
+
+ds.h2 =
+  element h2 {
+    ds.htmlattr,
+    (ds.htmlinline |
+     text)*
+  }
+
+ds.h3 =
+  element h3 {
+    ds.htmlattr,
+    (ds.htmlinline |
+     text)*
+  }
+
+ds.h4 =
+  element h4 {
+    ds.htmlattr,
+    (ds.htmlinline |
+     text)*
+  }
+
+ds.h5 =
+  element h5 {
+    ds.htmlattr,
+    (ds.htmlinline |
+     text)*
+  }
+
+ds.h6 =
+  element h6 {
+    ds.htmlattr,
+    (ds.htmlinline |
+     text)*
+  }
+
+
+ds.sup =
+  element sup {
+    ds.htmlattr,
+    (ds.htmlinline |
+     text)*
+  }
+
+ds.sub =
+  element sub {
+    ds.htmlattr,
+    (ds.htmlinline |
+     text)*
+  }
+
+ds.s =
+  element s {
+    ds.htmlattr,
+    (ds.htmlinline |
+     text)*
+  }
+
+ds.u =
+  element u {
+    ds.htmlattr,
+    (ds.htmlinline |
+     text)*
+  }
+
+ds.q =
+  element q {
+    ds.htmlattr,
+    (ds.htmlinline |
+     text)*
+  }
+
+ds.em =
+  element em {
+    ds.htmlattr,
+    (ds.htmlinline |
+     text)*
+  }
+
+ds.a =
+  element a {
+    attribute href { xsd:anyURI },
+    ds.htmlattr,
+    (ds.htmlinline |
+     text)*
+  }
+
+ds.strong =
+  element strong {
+    ds.htmlattr,
+    (ds.htmlinline |
+     text)*
+  }
+
+ds.code =
+  element code {
+    ds.htmlattr,
+    (ds.htmlinline |
+     text)*
+  }
+
+ds.cite =
+  element cite {
+    ds.htmlattr,
+    (ds.htmlinline |
+     text)*
+  }
+
+ds.span =
+  element span {
+    ds.htmlattr,
+    (ds.htmlinline |
+     text)*
+  }

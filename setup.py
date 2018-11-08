@@ -1,4 +1,4 @@
-#/usr/bin/env python3
+# /usr/bin/env python3
 #
 # Copyright (c) 2018 SUSE Linux GmbH
 #
@@ -19,6 +19,7 @@
 
 
 from setuptools import setup, find_packages
+
 setup(
     name="docserv",
     version="0.1.4",
@@ -26,7 +27,9 @@ setup(
     scripts=['bin/docserv', 'bin/docserv-stitch'],
     install_requires=[],
     package_data={
-        '': ['config/docserv.ini', 'config/config.d/sles.xml', 'systemd/docserv.service']
+        '': ['config/docserv.ini',
+             'config/config.d/sles.xml',
+             'systemd/docserv.service']
     },
     author="SUSE Documentation Team",
     author_email="doc-team@suse.com",

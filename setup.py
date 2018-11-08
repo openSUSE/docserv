@@ -1,13 +1,16 @@
 from setuptools import setup, find_packages
 setup(
     name="docserv",
-    version="0.1.4",
+    version="0.9.7",
     packages=find_packages(),
     scripts=['bin/docserv', 'bin/docserv-stitch'],
     install_requires=[],
-    package_data={
-        '': ['config/docserv.ini', 'config/config.d/sles.xml', 'systemd/docserv.service']
-    },
+    data_files=[
+        ('/etc/docserv/', ['config/docserv.ini']),
+        ('/etc/docserv/config.d/', ['config/config.d/sles.xml']),
+        ('/usr/lib/systemd/system/', ['systemd/docserv.service']),
+        ('/usr/share/docserv/templates/', ['templates/index.html'])
+    ],
     author="SUSE Documentation Team",
     author_email="doc-team@suse.com",
     description="Build server for DAPS documentation",
@@ -19,7 +22,6 @@ setup(
         'Topic :: Documentation',
         'Topic :: Software Development :: Documentation',
         'Intended Audience :: Developers',
-        'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',

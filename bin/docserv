@@ -39,12 +39,15 @@ from socketserver import ThreadingMixIn
 from xml.etree import ElementTree
 my_env = os.environ
 
+
 def resource_to_filename(url):
-    # create something like https_github_com_SUSE_doc_sle from https://github.com/SUSE/doc-sle
+    # create something like https_github_com_SUSE_doc_sle
+    # from https://github.com/SUSE/doc-sle
     replace = "/\\-.,:;#+`´{}()[]!\"§$%&"
     for char in replace:
         url = str(url).replace(char, '_')
     return url
+
 
 class RepoLock:
     def __init__(self, repo_dir, thread_id, gitLocks, gitLocksLock):
@@ -61,7 +64,8 @@ class RepoLock:
     def acquire(self, blocking=True):
         if self.gitLocks[self.resource_name].acquire(blocking):
             self.acquired = True
-            logger.debug("Thread %i: Acquired lock %s." % (self.thread_id, self.resource_name))
+            logger.debug("Thread %i: Acquired lock %s." % (self.thread_id,
+                                                           self.resource_name))
             return True
         return False
 
@@ -71,7 +75,8 @@ class RepoLock:
             self.acquired = False
 
 class Deliverable:
-    def __init__(self, local_repo_build_dir, build_instruction, dc_file, build_format, target):
+    def __init__(self, local_repo_build_dir, build_instruction, dc_file,
+                 build_format, target):
         self.local_repo_build_dir = local_repo_build_dir
         self.language = build_instruction['lang']
         self.dc_file = dc_file
@@ -99,7 +104,8 @@ class Deliverable:
         xslt_params_file = tempfile.mkstemp(prefix="docserv_xslt_", text=True)
         xslt_params = ""
         commands[n] = {}
-        commands[n]['cmd'] = "echo \"%s\" > %s" % (xslt_params, xslt_params_file[1])
+        commands[n]['cmd'] = "echo \"%s\" > %s" % (xslt_params,
+                                                   xslt_params_file[1])
         commands[n]['ret_val'] = 0
 
         # Write daps parameters to temp file
@@ -110,10 +116,12 @@ class Deliverable:
                                     "--draft" if self.target['draft'] == "yes" else ""
                                 )
         commands[n] = {}
-        commands[n]['cmd'] = "echo \"%s\" > %s" % (daps_params, daps_params_file[1])
+        commands[n]['cmd'] = "echo \"%s\" > %s" % (daps_params,
+                                                   daps_params_file[1])
         commands[n]['ret_val'] = 0
 
-        # Run daps in the docker container, copy results to a build target directory
+        # Run daps in the docker container, copy results to a
+        # build target directory
         n += 1
         tmp_build_target = tempfile.mkdtemp(prefix="docserv_out_")
         dc_full_path = os.path.join(self.local_repo_build_dir, self.dc_file)
@@ -203,6 +211,7 @@ class Deliverable:
         cmd = shlex.split(cmd)
         return cmd
 
+
 class DocConfParser:
     def __init__(self, build_instruction, config, gitLocks, gitLocksLock, thread_id):
         self.deliverables = queue.Queue()
@@ -212,7 +221,8 @@ class DocConfParser:
             self.build_instruction = build_instruction
             self.config = config
             self.read_conf_dir()
-            self.git_lock = RepoLock(resource_to_filename(self.remote_repo), thread_id, gitLocks, gitLocksLock)
+            self.git_lock = RepoLock(resource_to_filename(
+                self.remote_repo), thread_id, gitLocks, gitLocksLock)
             self.prepare_repo()
             self.compare_commit_id()
             self.reset_success_state()
@@ -223,7 +233,8 @@ class DocConfParser:
     def __del__(self):
         logger.debug("Cleaning up %s" % json.dumps(self.build_instruction))
         cmd = shlex.split("rm -rf %s" % self.local_repo_build_dir)
-        s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
         s.communicate()[0]
 
     def __str__(self):
@@ -243,23 +254,29 @@ class DocConfParser:
         # validate with sknorrs magic bash script
         tmp_handle, tmp_filename = tempfile.mkstemp(text=True)
         logger.info("Stitching XML config directory to %s" % tmp_filename)
-        cmd = '/usr/bin/docserv-stitch %s %s' % (self.config['targets'][target]['config_dir'], tmp_filename)
+        cmd = '/usr/bin/docserv-stitch %s %s' % (
+            self.config['targets'][target]['config_dir'], tmp_filename)
         logger.debug("Stitching command: %s" % cmd)
         cmd = shlex.split(cmd)
-        s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
         s.communicate()[0]
         rc = int(s.returncode)
         if rc == 0:
-            logger.debug("Stitching of %s successful" % self.config['targets'][target]['config_dir'])
+            logger.debug("Stitching of %s successful" %
+                         self.config['targets'][target]['config_dir'])
         else:
-            logger.warning("Stitching of %s failed!" % self.config['targets'][target]['config_dir'])
+            logger.warning("Stitching of %s failed!" %
+                           self.config['targets'][target]['config_dir'])
             self.initialized = False
             return False
         # then read all files into an xml tree
         self.tree = ElementTree.parse(tmp_filename)
         xml_root = self.tree.getroot()
-        self.branch = xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/branch" % (self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])).text
-        self.remote_repo = repo = xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/builddocs/git/remote" % (self.build_instruction['product'], self.build_instruction['docset'])).text
+        self.branch = xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/builddocs/language[@code='%s']/branch" % (
+            self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])).text
+        self.remote_repo = repo = xml_root.find(".//productindex[@id='%s']/docset[@id='%s']/builddocs/git/remote" % (
+            self.build_instruction['product'], self.build_instruction['docset'])).text
 
     def reset_success_state(self):
         if self.initialized:
@@ -269,9 +286,11 @@ class DocConfParser:
         commands = {}
         # Clone locally cached repository, does nothing if exists
         n = 0
-        local_repo_cache_dir = os.path.join(self.config['server']['repo_dir'], resource_to_filename(self.remote_repo))
+        local_repo_cache_dir = os.path.join(
+            self.config['server']['repo_dir'], resource_to_filename(self.remote_repo))
         commands[n] = {}
-        commands[n]['cmd'] = "git clone %s %s" % (self.remote_repo, local_repo_cache_dir)
+        commands[n]['cmd'] = "git clone %s %s" % (
+            self.remote_repo, local_repo_cache_dir)
         commands[n]['ret_val'] = None
         commands[n]['repo_lock'] = local_repo_cache_dir
 
@@ -284,13 +303,15 @@ class DocConfParser:
 
         # Create local copy in temp build dir
         n += 1
-        local_repo_build_dir = os.path.join(self.config['server']['temp_repo_dir'], ''.join(random.choices(string.ascii_uppercase + string.digits, k=12)))
+        local_repo_build_dir = os.path.join(self.config['server']['temp_repo_dir'], ''.join(
+            random.choices(string.ascii_uppercase + string.digits, k=12)))
         commands[n] = {}
-        commands[n]['cmd'] = "git clone --single-branch --branch %s %s %s" % (self.branch, local_repo_cache_dir, local_repo_build_dir)
+        commands[n]['cmd'] = "git clone --single-branch --branch %s %s %s" % (
+            self.branch, local_repo_cache_dir, local_repo_build_dir)
         commands[n]['ret_val'] = 0
         commands[n]['repo_lock'] = None
 
-        for i in range(0,n + 1):
+        for i in range(0, n + 1):
             cmd = shlex.split(commands[i]['cmd'])
             if commands[i]['repo_lock'] is not None:
                 self.git_lock.acquire()
@@ -299,7 +320,8 @@ class DocConfParser:
             out, err = s.communicate()
             self.git_lock.release()
             if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
-                logger.warning("Build failed! Unexpected return value %i for '%s'" % (s.returncode, commands[i]['cmd']) )
+                logger.warning("Build failed! Unexpected return value %i for '%s'" % (
+                    s.returncode, commands[i]['cmd']))
                 self.initialized = False
                 return False
 
@@ -308,8 +330,10 @@ class DocConfParser:
         return True
 
     def compare_commit_id(self):
-        cmd = shlex.split("git -C "+self.local_repo_build_dir+" log --format=\"%H\" -n 1")
-        s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        cmd = shlex.split("git -C "+self.local_repo_build_dir +
+                          " log --format=\"%H\" -n 1")
+        s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
         current_commit_id = s.communicate()[0]
         current_commit_id = current_commit_id.decode('utf-8').rstrip()
         logger.debug("Current commit hash: %s" % current_commit_id)
@@ -336,11 +360,12 @@ class DocConfParser:
         if not isinstance(build_instruction['target'], str):
             logger.warning("Validation: target is not a string")
             return False
-        logger.debug("Valid build instruction: %s" % json.dumps(build_instruction))
+        logger.debug("Valid build instruction: %s" %
+                     json.dumps(build_instruction))
         return True
 
     def generate_deliverables(self):
-        if self.initialized == False:
+        if not self.initialized:
             return False
         target = self.build_instruction['target']
         xml_root = self.tree.getroot()
@@ -358,6 +383,7 @@ class DocConfParser:
             # after all deliverables are generated, we don't need the xml tree anymore
             self.tree = None
         return list_deliverables
+
 
 class DocservState:
     # tracks all build_instructions in all queues that should be built
@@ -387,18 +413,18 @@ class DocservState:
             'building': self.in_queues,
             'finished': self.past_builds
         }
-    
+
     def generate_id(self, build_instruction):
         return hashlib.md5((build_instruction['target'] +
                             build_instruction['docset'] +
                             build_instruction['lang'] +
                             build_instruction['product']).encode('utf-8')
-                          ).hexdigest()[:9]
+                           ).hexdigest()[:9]
 
     def add_build_instruction(self, build_instruction):
         build_instruction['id'] = self.generate_id(build_instruction)
         if build_instruction['id'] in self.past_builds.keys():
-            build_instruction['commit'] =self.past_builds[build_instruction['id']]['commit']
+            build_instruction['commit'] = self.past_builds[build_instruction['id']]['commit']
         else:
             build_instruction['commit'] = ""
         self.in_queues_lock.acquire()
@@ -472,10 +498,10 @@ class DocservState:
         self.past_builds_lock.acquire()
         self.past_builds[build_instruction_id] = build_instruction
         self.past_builds_lock.release()
-    
+
     def save_state(self):
         f = open("/etc/docserv/%s.json" % self.config['server']['name'], "w")
-        f.write(self.__str__()) 
+        f.write(self.__str__())
 
     def load_state(self):
         logger.info("Reading previous state.")
@@ -489,6 +515,7 @@ class DocservState:
                     self.add_build_instruction(build_instruction)
                 return True
         return False
+
 
 class Docserv(DocservState):
     gitLocks = {}
@@ -508,21 +535,23 @@ class Docserv(DocservState):
         logger.info("Reading /etc/docserv/%s.ini" % config_file)
         config.read("/etc/docserv/%s.ini" % config_file)
         LOGLEVELS = {0: logging.WARNING,
-             1: logging.INFO,
-             2: logging.DEBUG,
-        }
+                     1: logging.INFO,
+                     2: logging.DEBUG,
+                     }
         try:
             self.config = {}
-            self.config['server'] =                  {}
-            self.config['server']['name'] =          config_file
-            self.config['server']['loglevel'] =      int(config['server']['loglevel'])
+            self.config['server'] = {}
+            self.config['server']['name'] = config_file
+            self.config['server']['loglevel'] = int(
+                config['server']['loglevel'])
             logger.setLevel(LOGLEVELS[self.config['server']['loglevel']])
-            self.config['server']['host'] =          config['server']['host']
-            self.config['server']['port'] =          int(config['server']['port'])
-            self.config['server']['repo_dir'] =      config['server']['repo_dir']
+            self.config['server']['host'] = config['server']['host']
+            self.config['server']['port'] = int(config['server']['port'])
+            self.config['server']['repo_dir'] = config['server']['repo_dir']
             self.config['server']['temp_repo_dir'] = config['server']['temp_repo_dir']
-            self.config['server']['max_threads'] =   int(config['server']['max_threads'])
-            self.config['targets'] =                 {}
+            self.config['server']['max_threads'] = int(
+                config['server']['max_threads'])
+            self.config['targets'] = {}
             for section in config.sections():
                 if not str(section).startswith("target_"):
                     continue
@@ -546,7 +575,7 @@ class Docserv(DocservState):
             thread_receive = threading.Thread(target=self.listen)
             thread_receive.start()
             workers = []
-            for i in range(0,min([os.cpu_count(), self.config['server']['max_threads']])):
+            for i in range(0, min([os.cpu_count(), self.config['server']['max_threads']])):
                 logger.info("Starting build thread %i" % i)
                 worker = threading.Thread(target=self.worker, args=(i,))
                 worker.start()
@@ -578,7 +607,7 @@ class Docserv(DocservState):
             del doc
 
     def worker(self, thread_id):
-        while( True ):
+        while(True):
             # 1. parse input from rest api and put the instance of the doc class on the currently building queue
             self.parse_rest_item(thread_id)
              
@@ -597,19 +626,24 @@ class Docserv(DocservState):
             time.sleep(2)
 
     def listen(self):
-        server_address = (self.config['server']['host'], int(self.config['server']['port']))
+        server_address = (self.config['server']['host'], int(
+            self.config['server']['port']))
         self.rest = ThreadedRESTServer(server_address, RESTServer, self)
         self.rest.serve_forever()
         return True
+
 
 class RESTServer(BaseHTTPRequestHandler):
     def _set_headers(self):
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
+
     def do_GET(self):
         self._set_headers()
-        self.wfile.write(bytes(json.dumps(self.server.docserv.__dict__()), "utf-8"))
+        self.wfile.write(
+            bytes(json.dumps(self.server.docserv.__dict__()), "utf-8"))
+
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
         # [{"docset": "15ga", "lang": "en-us", "product": "sles", "target": "external"}. ]
@@ -620,11 +654,14 @@ class RESTServer(BaseHTTPRequestHandler):
             self.server.docserv.add_build_instruction(job)
         self._set_headers()
 
+
 class ThreadedRESTServer(ThreadingMixIn, HTTPServer):
     def __init__(self, server_address, RequestHandlerClass, docserv, bind_and_activate=True):
-        HTTPServer.__init__(self, server_address, RequestHandlerClass, bind_and_activate)
+        HTTPServer.__init__(self, server_address,
+                            RequestHandlerClass, bind_and_activate)
         logger.info("Starting HTTP server on %s:%i" % server_address)
         self.docserv = docserv
+
 
 logger = logging.getLogger('docserv')
 logger.setLevel(logging.INFO)

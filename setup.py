@@ -1,4 +1,4 @@
-#/usr/bin/env python3
+# /usr/bin/env python3
 #
 # Copyright (c) 2018 SUSE Linux GmbH
 #
@@ -19,6 +19,7 @@
 
 
 from setuptools import setup, find_packages
+
 setup(
     name="docserv",
     version="0.9.7",

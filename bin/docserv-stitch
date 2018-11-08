@@ -1,22 +1,55 @@
 #!/bin/bash
-# $1 - Directory with config files
-# $2 - Output file (optional, if not set, outputs to stdout)
+# Validate productconfig files from a directory one by one, then stitch them
+# together, so the docserv script can build from them.
+#
+# $1 - Schema file (RelaxNG compact/RNC)
+# $2 - Directory with config files
+# $3 - Output file (optional, if not set, outputs to stdout)
+#
+# XML tool deps: xmlstarlet, jing, xmllint
 
 out() {
-  >&2 echo "$1"
+  >&2 echo -e "$1"
   exit 1
 }
 
+xmllint='xmllint'
+jing='jing'
 starlet='xmlstarlet'
 
-[[ ! -d $1 ]] && out "Directory $1 does not exist"
+stacksize=${stacksize:-"-Xss4096K"}
+java_flags="-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=org.apache.xerces.parsers.XIncludeParserConfiguration"
 
-indir=$1
+
+[[ ! -f $(readlink -f $1) ]] && out "Schema $1 does not exist."
+schema=$(readlink -f $1)
+
+[[ ! -d $(readlink -f $2) ]] && out "Directory $2 does not exist."
+indir=$(readlink -f $2)
 
 cd $indir
 
 for file in *.xml; do
-  [[ $(2>&1 xmllint --noout --noent $file) ]] && out "$indir/$file is not well-formed."
+
+  # xmllint is faster and gives more readable error messages than jing, so
+  # run that first
+
+  wellformed=$(2>&1 xmllint --noout --noent $file)
+  [[ $? -gt 0 ]] && out "$indir/$file is not well-formed:\n$wellformed"
+
+  valid=$(2>&1 ADDITIONAL_FLAGS="$java_flags" ADDITIONAL_OPTIONS="$java_flags" \
+    $jing -ci $schema $file)
+  [[ $? -gt 0 ]] && out "$indir/$file is not valid:\n$valid"
+
+  # we want to allow IDs that start with a digit, hence we can't use RelaxNG's
+  # xsd:ID data type, but we can use xmlstarlet to check
+
+  setids=$($starlet sel -t -v "//@setid" $file | sort)
+  uniquesetids=$(echo -e "$setids" | sort -u)
+  [[ ! "$setids" == "$uniquesetids" ]] && \
+    out \
+      "Some setid values in $indir/$file are not unique. Check the setid(s): "$(comm -2 -3 <(echo -e "$setids") <(echo -e "$uniquesetids") | tr '\n' ' ')"."
+
 done
 
 outfile='<?xml version="1.0" encoding="UTF-8"?>\n<docservconfig>\n\n'
@@ -28,12 +61,20 @@ done
 
 outfile+='\n</docservconfig>\n'
 
+# check for uniqueness of productid values (which we can't do before
+# stitching the file together)
+
+productids=$(echo -e "$outfile" | $starlet sel -t -v '//@productid' | sort)
+uniqueproductids=$(echo -e "$productids" | sort -u)
+
+[[ ! "$productids" == "$uniqueproductids" ]] && \
+    out \
+      "Some productid values in $indir are not unique. Check the productid(s): "$(comm -2 -3 <(echo -e "$productids") <(echo -e "$uniqueproductids") | tr '\n' ' ')"."
+
 cd -
 
-if [[ $2 ]]; then
-  echo -e "$outfile" > $2
+if [[ $3 ]]; then
+  echo -e "$outfile" > $3
 else
   echo -e "$outfile"
 fi
-
-# FIXME: Now validate according to DTD/RNG (which we currently don't have)

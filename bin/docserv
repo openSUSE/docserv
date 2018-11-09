@@ -303,11 +303,11 @@ class DocConfParser:
 
         # Create local copy in temp build dir
         n += 1
-        local_repo_build_dir = os.path.join(self.config['server']['temp_repo_dir'], ''.join(
+        self.local_repo_build_dir = os.path.join(self.config['server']['temp_repo_dir'], ''.join(
             random.choices(string.ascii_uppercase + string.digits, k=12)))
         commands[n] = {}
         commands[n]['cmd'] = "git clone --single-branch --branch %s %s %s" % (
-            self.branch, local_repo_cache_dir, local_repo_build_dir)
+            self.branch, local_repo_cache_dir, self.local_repo_build_dir)
         commands[n]['ret_val'] = 0
         commands[n]['repo_lock'] = None
 
@@ -325,8 +325,6 @@ class DocConfParser:
                 self.initialized = False
                 return False
 
-        # a working copy containing the required branch has been created in local_repo_build_dir
-        self.local_repo_build_dir = local_repo_build_dir
         return True
 
     def compare_commit_id(self):

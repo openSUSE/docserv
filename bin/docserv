@@ -274,9 +274,9 @@ class DocConfParser:
         # then read all files into an xml tree
         self.tree = ElementTree.parse(tmp_filename)
         xml_root = self.tree.getroot()
-        self.branch = xml_root.find(".//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/branch" % (
+        self.branch = xml_root.find("docservconfig/product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/branch" % (
             self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])).text
-        self.remote_repo = repo = xml_root.find(".//product[@productid='%s']/docset[@setid='%s']/builddocs/git/remote" % (
+        self.remote_repo = xml_root.find("docservconfig/product[@productid='%s']/docset[@setid='%s']/builddocs/git/remote" % (
             self.build_instruction['product'], self.build_instruction['docset'])).text
 
     def reset_success_state(self):

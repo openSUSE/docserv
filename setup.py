@@ -22,7 +22,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="docserv",
-    version="0.9.8",
+    version="0.9.9",
     packages=find_packages(),
     scripts=['bin/docserv', 'bin/docserv-stitch'],
     install_requires=[],

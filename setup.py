@@ -22,7 +22,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="docserv",
-    version="0.9.7",
+    version="0.9.8",
     packages=find_packages(),
     scripts=['bin/docserv', 'bin/docserv-stitch'],
     install_requires=[],
@@ -30,7 +30,8 @@ setup(
         ('/etc/docserv/', ['config/docserv.ini']),
         ('/etc/docserv/config.d/', ['config/config.d/sles.xml']),
         ('/usr/lib/systemd/system/', ['systemd/docserv.service']),
-        ('/usr/share/docserv/templates/', ['templates/index.html'])
+        ('/usr/share/docserv/templates/', ['templates/index.html']),
+        ('/usr/share/docserv/', ['schema/config-validation.rnc'])
     ],
     author="SUSE Documentation Team",
     author_email="doc-team@suse.com",

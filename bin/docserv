@@ -220,7 +220,9 @@ class DocConfParser:
             self.initialized = True
             self.build_instruction = build_instruction
             self.config = config
-            self.read_conf_dir()
+            if not self.read_conf_dir():
+                self.initialized = False
+                return
             self.git_lock = RepoLock(resource_to_filename(
                 self.remote_repo), thread_id, gitLocks, gitLocksLock)
             self.prepare_repo()
@@ -232,14 +234,18 @@ class DocConfParser:
 
     def __del__(self):
         logger.debug("Cleaning up %s" % json.dumps(self.build_instruction))
+        if not hasattr(self, 'local_repo_build_dir'):
+            return
         cmd = shlex.split("rm -rf %s" % self.local_repo_build_dir)
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
         s.communicate()[0]
 
+    @property
     def __str__(self):
         return json.dumps(self.build_instruction)
 
+    @property
     def __dict__(self):
         return self.build_instruction
 
@@ -252,6 +258,8 @@ class DocConfParser:
             logger.debug("Target %s not active." % target)
             return False
         # validate and stitch files together with bash script
+        productschema = "/usr/share/docserv/config-validation.rnc"
+        # pylint: disable=unused-variable
         tmp_handle, tmp_filename = tempfile.mkstemp(text=True)
         logger.info("Stitching XML config directory to %s" % tmp_filename)
         cmd = '/usr/bin/docserv-stitch %s %s %s' % (
@@ -273,10 +281,18 @@ class DocConfParser:
         # then read all files into an xml tree
         self.tree = ElementTree.parse(tmp_filename)
         xml_root = self.tree.getroot()
-        self.branch = xml_root.find("positivedocservconfig/product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/branch" % (
-            self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])).text
-        self.remote_repo = xml_root.find("positivedocservconfig/product[@productid='%s']/docset[@setid='%s']/builddocs/git/remote" % (
-            self.build_instruction['product'], self.build_instruction['docset'])).text
+        try:
+            xpath = ".//positivedocservconfig/product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/branch" % (
+                self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])
+            self.branch = xml_root.find(xpath).text
+
+            xpath = ".//positivedocservconfig/product[@productid='%s']/docset[@setid='%s']/builddocs/git/remote" % (
+                self.build_instruction['product'], self.build_instruction['docset'])
+            self.remote_repo = xml_root.find(xpath).text
+        except AttributeError:
+            logger.warning("Failed to parse xpath: %s" % xpath)
+            return False
+        return True
 
     def reset_success_state(self):
         if self.initialized:
@@ -368,12 +384,13 @@ class DocConfParser:
         target = self.build_instruction['target']
         xml_root = self.tree.getroot()
         list_deliverables = []
+        logger.debug("Generating deliverables.")
         for xml_deliverable in xml_root.findall(".//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/deliverable" % (self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])):
-            for build_format in xml_deliverable.findall(".//format"):
+            for build_format in xml_deliverable.find(".//format").attrib:
                 deliverable = Deliverable(  self.local_repo_build_dir,
                                             self.build_instruction,
                                             xml_deliverable.find(".//dc").text,
-                                            build_format.text,
+                                            build_format,
                                             self.config['targets'][target]
                                          )
                 list_deliverables.append(deliverable.id())
@@ -404,9 +421,11 @@ class DocservState:
     def __del__(self):
         pass
 
+    @property
     def __str__(self):
-        return json.dumps(self.__dict__())
+        return json.dumps(self.__dict__)
 
+    @property
     def __dict__(self):
         return {
             'building': self.in_queues,
@@ -487,10 +506,11 @@ class DocservState:
             remove_from_queue = True
         self.in_queues_lock.release()
         if remove_from_queue:
+            logger.info("Finished building deliverables for %s" % build_instruction_id)
             self.finished_build_instruction(build_instruction_id)
 
     def finished_build_instruction(self, build_instruction_id):
-        logger.info("Finished building deliverables for %s" % build_instruction_id)
+        logger.info("Finished %s" % build_instruction_id)
         self.in_queues_lock.acquire()
         build_instruction = self.in_queues.pop(build_instruction_id)
         self.in_queues_lock.release()
@@ -500,7 +520,7 @@ class DocservState:
 
     def save_state(self):
         f = open("/etc/docserv/%s.json" % self.config['server']['name'], "w")
-        f.write(self.__str__())
+        f.write(self.__str__)
 
     def load_state(self):
         logger.info("Reading previous state.")
@@ -510,6 +530,7 @@ class DocservState:
             state = json.loads(file.read())
             if 'finished' in state and 'building' in state:
                 self.past_builds = state['finished']
+                # pylint: disable=unused-variable
                 for build_instruction_id, build_instruction in state['building'].items():
                     self.add_build_instruction(build_instruction)
                 return True
@@ -559,6 +580,7 @@ class Docserv(DocservState):
                 self.config['targets'][config[section]['name']]['active'] =        config[section]['active']
                 self.config['targets'][config[section]['name']]['draft'] =         config[section]['draft']
                 self.config['targets'][config[section]['name']]['remarks'] =       config[section]['remarks']
+                self.config['targets'][config[section]['name']]['meta'] =          config[section]['meta']
                 self.config['targets'][config[section]['name']]['beta_warning'] =  config[section]['beta_warning']
                 self.config['targets'][config[section]['name']]['target_path'] =   config[section]['target_path']
                 self.config['targets'][config[section]['name']]['backup_path'] =   config[section]['backup_path']
@@ -621,7 +643,7 @@ class Docserv(DocservState):
             if not self.end_all.empty(): return True
 
             # 4. wait for a short while, then repeat
-            time.sleep(2)
+            time.sleep(0.1)
 
     def listen(self):
         server_address = (self.config['server']['host'], int(
@@ -640,7 +662,7 @@ class RESTServer(BaseHTTPRequestHandler):
     def do_GET(self):
         self._set_headers()
         self.wfile.write(
-            bytes(json.dumps(self.server.docserv.__dict__()), "utf-8"))
+            bytes(json.dumps(self.server.docserv.__dict__), "utf-8"))
 
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])

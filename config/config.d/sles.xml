@@ -11,6 +11,7 @@
       please upgrade"
   -->
 
+
   <name>SUSE Linux Enterprise Server</name>
   <shortname>SLES</shortname>
   <maintainers>
@@ -18,7 +19,7 @@
     <contact>sseebergelverfeldt@suse.com</contact>
   </maintainers>
 
-  <desc default="1" lang="en">
+  <desc default="1" lang="en-us">
     <!-- This is restricted HTML:
     p, div, h*, ul/li, ol/li, pre, em, strong, span, sup, sub, code, a, s,
     q, cite + class/id attributes -->
@@ -28,7 +29,7 @@
     </p>
   </desc>
 
-  <desc default="0" lang="fr">
+  <desc default="0" lang="fr-fr">
     <p>
       Ce produit ne peut pas obtenir la contrôle de vous, mais le vous aidez
       a vivir libre. SLES est très heureux de vous avoir et d'avoir vos
@@ -36,7 +37,7 @@
     </p>
   </desc>
 
-  <desc lang="de">
+  <desc lang="de-de">
     <p>
       Dieses Produkt hat die Kontrolle über Sie bereits verloren und will
       Ihnen helfen, lieber libre zu leben. SLES ist verzückt, dass Sie ihm
@@ -56,18 +57,17 @@
           <repodir/> configured in docserv.xml -->
       </git>
 
-      <language default="1" lang="en">
+      <language default="1" lang="en-us">
         <branch>develop</branch>
-        <subdir>.</subdir>
 
         <!-- MAXIMALIST (<styleroot>/<param>) COMPILATION (i.e. w/ <subdeliverables/>) DELIVERABLE EXAMPLE -->
         <deliverable remarks="0" draft="false" meta="0">
           <dc>DC-SLES-all</dc>
           <format html="1" single-html="0" pdf="0" epub="0"/>
-          <styleroot>/.../.../...</styleroot>
-            <!-- Styleroot is totally optional. -->
-          <param name="foo.bar">1</param>
-            <!-- Automatically forwarded to DAPS as "-stringparam"s. -->
+          <styleroot>/usr/share/xml/docbook/stylesheet/hpe-ns</styleroot>
+            <!-- <styleroot/> is totally optional. -->
+          <param name="an-xslt-parameter">Is it a good time or is it highly inappropriate?</param>
+            <!-- <param>, automatically forwarded to DAPS as "-stringparam"s. -->
           <subdeliverable>book.admin</subdeliverable>
           <subdeliverable>book.gnomeuser</subdeliverable>
             <!-- Subdeliverables contain the IDs of books we link to from the
@@ -85,7 +85,7 @@
         </deliverable>
         <deliverable>
           <!-- Minimalist individual deliverable -->
-          <dc>DC-SLES-gnomeuser</dc>
+          <dc>DC-SLES-tuning</dc>
           <format single-html="1" pdf="1" epub="1"/>
         </deliverable>
 
@@ -93,9 +93,10 @@
 
       <!-- For translations, we assume the same deliverables as for the
       original language, exceptions are noted within the <untranslated>
-      element. However, we probably still need to build these untranslated deliverables. -->
-      <language lang="de">
-        <branch>maint/sle15</branch>
+      element. However, we probably still need to build these untranslated
+      deliverables. -->
+      <language lang="de-de">
+        <branch>trans/SLE15SP0</branch>
         <subdir>sles/de</subdir>
         <untranslated>
           <deliverable>
@@ -108,8 +109,8 @@
         </untranslated>
       </language>
 
-      <language lang="fr">
-        <branch>maint/sle15</branch>
+      <language lang="fr-fr">
+        <branch>trans/SLE15SP0</branch>
         <subdir>sles/fr</subdir>
       </language>
 
@@ -128,27 +129,21 @@
 
     <builddocs>
 
-
       <git>
-        <remote>https://svn.opensuse.org/viewvc/opensuse-doc/trunk/documents/sle/</remote>
+        <remote>https://github.com/SUSE/doc-sle-legacy</remote>
         <checkoutdir>doc-sle-legacy</checkoutdir>
       </git>
 
-      <language default="1" lang="en">
-        <branch>master</branch>
-        <subdir>en/attic</subdir>
+      <language default="1" lang="en-us">
+        <branch>maintenance/SLE11SP4</branch>
 
-        <!-- MAXIMALIST (<styleroot>/<param>) COMPILATION (i.e. w/ <subdeliverables/>) DELIVERABLE EXAMPLE -->
         <deliverable remarks="1" draft="0" meta="0">
           <dc>DC-SLES-all</dc>
           <format html="1"/>
-          <styleroot>/.../.../...</styleroot>
-          <param name="foo.bar">1</param>
           <subdeliverable>book.admin</subdeliverable>
           <subdeliverable>book.gnomeuser</subdeliverable>
         </deliverable>
 
-        <!-- MINIMALIST INDIVIDUAL DELIVERABLE EXAMPLES -->
         <deliverable>
           <dc>DC-SLES-admin</dc>
           <format single-html="1" pdf="1" epub="1"/>
@@ -161,9 +156,9 @@
 
       </language>
 
-      <language default="0" lang="de">
-        <branch>master</branch>
-        <subdir>trans/attic/sles/de</subdir>
+      <language default="0" lang="de-de">
+        <branch>trans/SLE11SP4</branch>
+        <subdir>sles/de</subdir>
         <untranslated>
           <deliverable>
             <dc>DC-SLES-all</dc>
@@ -175,9 +170,9 @@
         </untranslated>
       </language>
 
-      <language lang="fr">
-        <branch>master</branch>
-        <subdir>trans/attic/sles/de</subdir>
+      <language lang="fr-fr">
+        <branch>trans/SLE11SP4</branch>
+        <subdir>sles/de</subdir>
       </language>
 
     </builddocs>

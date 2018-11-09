@@ -117,8 +117,8 @@
     </builddocs>
 
     <extralinks>
-      <link href="https://.../...">Release Notes</link>
-      <link href="https://.../...">SUSE Best Practices</link>
+      <link href="https://.../..." lang="all">Release Notes</link>
+      <link href="https://.../..." lang="de-de">SUSE Best Practices</link>
       <link href="https://.../...">SUSE Evil Curls 2018 Documentation</link>
     </extralinks>
 

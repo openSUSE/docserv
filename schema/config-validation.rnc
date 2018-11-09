@@ -310,6 +310,7 @@ ds.extralinks =
 ds.link =
   element link {
     attribute href { xsd:anyURI },
+    attribute lang { ds.type.lang | "all" }?,
     (ds.htmlinline |
     text)*
   }

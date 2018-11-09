@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<productindex id="sles" lifecycle="supported">
+<product productid="sles">
   <!-- ID can be used for build commands, HTML IDs, etc. -->
   <!-- active="yes"/"no" configures whether  -->
   <!-- lifecycle="unpublished"/"beta"/"supported"/"unsupported":
@@ -10,42 +10,66 @@
     + "unsupported": build, publish with note "not supported anymore,
       please upgrade"
   -->
-  
 
-  <product>SUSE Linux Enterprise Server</product>
-  <productshort>SLES</productshort>
+  <name>SUSE Linux Enterprise Server</name>
+  <shortname>SLES</shortname>
+  <maintainers>
+    <contact>sknorr@suse.de</contact>
+    <contact>sseebergelverfeldt@suse.com</contact>
+  </maintainers>
 
-  <productdesc>
-    <!-- This is HTML -->
+  <desc default="1" lang="en">
+    <!-- This is restricted HTML:
+    p, div, h*, ul/li, ol/li, pre, em, strong, span, sup, sub, code, a, s,
+    q, cite + class/id attributes -->
     <p>
       This product will lose control of you and help you live free.
-      SLES is so glad to have you.
+      SLES is so glad to have you and your evil curls.
     </p>
-  </productdesc>
+  </desc>
 
-  <docset id="15ga">
+  <desc default="0" lang="fr">
+    <p>
+      Ce produit ne peut pas obtenir la contrôle de vous, mais le vous aidez
+      a vivir libre. SLES est très heureux de vous avoir et d'avoir vos
+      cheveux chevalier.
+    </p>
+  </desc>
+
+  <desc lang="de">
+    <p>
+      Dieses Produkt hat die Kontrolle über Sie bereits verloren und will
+      Ihnen helfen, lieber libre zu leben. SLES ist verzückt, dass Sie ihm
+      und seinen bösartigen Lockrufen gefolgt sind.
+    </p>
+  </desc>
+
+  <docset setid="15ga" lifecycle="supported">
     <version>15</version>
 
     <builddocs>
 
       <git>
         <remote>https://github.com/SUSE/doc-sle</remote>
+        <checkoutdir>doc-sle</checkoutdir>
+          <!-- checkoutdir is assumed to be located directly under the
+          <repodir/> configured in docserv.xml -->
       </git>
 
-      <language code="en-us" default="yes">
+      <language default="1" lang="en">
         <branch>develop</branch>
         <subdir>.</subdir>
 
         <!-- MAXIMALIST (<styleroot>/<param>) COMPILATION (i.e. w/ <subdeliverables/>) DELIVERABLE EXAMPLE -->
-        <deliverable remarks="no" draft="no" meta="no">
+        <deliverable remarks="0" draft="false" meta="0">
           <dc>DC-SLES-all</dc>
-          <format>html</format>
+          <format html="1" single-html="0" pdf="0" epub="0"/>
           <styleroot>/.../.../...</styleroot>
             <!-- Styleroot is totally optional. -->
           <param name="foo.bar">1</param>
             <!-- Automatically forwarded to DAPS as "-stringparam"s. -->
-          <subdeliverable id="book.admin"/>
-          <subdeliverable id="book.gnomeuser"/>
+          <subdeliverable>book.admin</subdeliverable>
+          <subdeliverable>book.gnomeuser</subdeliverable>
             <!-- Subdeliverables contain the IDs of books we link to from the
             overview page; if there are no subdeliverables, we instead link
             to "index.html" -->
@@ -57,16 +81,12 @@
         <!-- MINIMALIST INDIVIDUAL DELIVERABLE EXAMPLES -->
         <deliverable>
           <dc>DC-SLES-admin</dc>
-          <format>single-html</format>
-          <format>pdf</format>
-          <format>epub</format>
+          <format single-html="1" pdf="true" epub="1"/>
         </deliverable>
         <deliverable>
           <!-- Minimalist individual deliverable -->
           <dc>DC-SLES-gnomeuser</dc>
-          <format>single-html</format>
-          <format>pdf</format>
-          <format>epub</format>
+          <format single-html="1" pdf="1" epub="1"/>
         </deliverable>
 
       </language>
@@ -74,13 +94,13 @@
       <!-- For translations, we assume the same deliverables as for the
       original language, exceptions are noted within the <untranslated>
       element. However, we probably still need to build these untranslated deliverables. -->
-      <language code="de-de">
+      <language lang="de">
         <branch>maint/sle15</branch>
         <subdir>sles/de</subdir>
         <untranslated>
           <deliverable>
             <dc>DC-SLES-all</dc>
-            <subdeliverable id="book.gnomeuser"/>
+            <subdeliverable>book.gnomeuser</subdeliverable>
           </deliverable>
           <deliverable>
             <dc>DC-SLES-gnomeuser</dc>
@@ -88,10 +108,9 @@
         </untranslated>
       </language>
 
-      <language code="fr-fr">
+      <language lang="fr">
         <branch>maint/sle15</branch>
         <subdir>sles/fr</subdir>
-        <untranslated/>
       </language>
 
     </builddocs>
@@ -104,55 +123,51 @@
 
   </docset>
 
-  <docset id="11sp4">
+  <docset setid="11sp4" lifecycle="unsupported">
     <version>11 SP4</version>
 
     <builddocs>
 
+
       <git>
-        <remote>https://github.com/SUSE/doc-sle</remote>
+        <remote>https://svn.opensuse.org/viewvc/opensuse-doc/trunk/documents/sle/</remote>
+        <checkoutdir>doc-sle-legacy</checkoutdir>
       </git>
 
-      <language code="en-us">
-        <branch/>
-          <!-- In SVN, branches are directories - so we should just use
-          <subdir/> and ignore whatever is in the <branch/> element. -->
+      <language default="1" lang="en">
+        <branch>master</branch>
         <subdir>en/attic</subdir>
 
         <!-- MAXIMALIST (<styleroot>/<param>) COMPILATION (i.e. w/ <subdeliverables/>) DELIVERABLE EXAMPLE -->
-        <deliverable remarks="no" draft="no" meta="no">
+        <deliverable remarks="1" draft="0" meta="0">
           <dc>DC-SLES-all</dc>
-          <format>html</format>
+          <format html="1"/>
           <styleroot>/.../.../...</styleroot>
           <param name="foo.bar">1</param>
-          <subdeliverable id="book.admin"/>
-          <subdeliverable id="book.gnomeuser"/>
+          <subdeliverable>book.admin</subdeliverable>
+          <subdeliverable>book.gnomeuser</subdeliverable>
         </deliverable>
 
         <!-- MINIMALIST INDIVIDUAL DELIVERABLE EXAMPLES -->
         <deliverable>
           <dc>DC-SLES-admin</dc>
-          <format>single-html</format>
-          <format>pdf</format>
-          <format>epub</format>
+          <format single-html="1" pdf="1" epub="1"/>
         </deliverable>
         <deliverable>
           <!-- Minimalist individual deliverable -->
           <dc>DC-SLES-gnomeuser</dc>
-          <format>single-html</format>
-          <format>pdf</format>
-          <format>epub</format>
+          <format single-html="1" pdf="1" epub="1"/>
         </deliverable>
 
       </language>
 
-      <language code="de-de">
-        <branch/>
+      <language default="0" lang="de">
+        <branch>master</branch>
         <subdir>trans/attic/sles/de</subdir>
         <untranslated>
           <deliverable>
             <dc>DC-SLES-all</dc>
-            <subdeliverable id="book.gnomeuser"/>
+            <subdeliverable>book.gnomeuser</subdeliverable>
           </deliverable>
           <deliverable>
             <dc>DC-SLES-gnomeuser</dc>
@@ -160,10 +175,9 @@
         </untranslated>
       </language>
 
-      <language code="fr-fr">
-        <branch/>
+      <language lang="fr">
+        <branch>master</branch>
         <subdir>trans/attic/sles/de</subdir>
-        <untranslated/>
       </language>
 
     </builddocs>
@@ -176,4 +190,4 @@
   </docset>
 
 
-</productindex>
+</product>

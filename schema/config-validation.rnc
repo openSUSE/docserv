@@ -133,7 +133,7 @@ ds.product =
     ds.shortname?,
     ds.maintainers,
     ds.defaultdesc,
-    ds.otherdesc+,
+    ds.otherdesc*,
     ds.docset+
   }
 
@@ -171,7 +171,7 @@ ds.otherdesc =
   element desc {
     attribute lang { ds.type.lang },
     attribute default { "0" | "false" }?,
-    ds.htmlblock+
+    ds.htmlblock*
   }
 
 
@@ -304,7 +304,7 @@ ds.deliverablerestricted =
 
 ds.extralinks =
   element extralinks {
-    ds.link+
+    ds.link*
   }
 
 ds.link =

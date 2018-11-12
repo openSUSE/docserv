@@ -71,7 +71,7 @@ uniqueproductids=$(echo -e "$productids" | sort -u)
     out \
       "Some productid values in $indir are not unique. Check the productid(s): "$(comm -2 -3 <(echo -e "$productids") <(echo -e "$uniqueproductids") | tr '\n' ' ')"."
 
-cd -
+cd - >/dev/null
 
 if [[ $3 ]]; then
   echo -e "$outfile" > $3

@@ -443,6 +443,9 @@ class DocservState:
         build_instruction['id'] = self.generate_id(build_instruction)
         if build_instruction['id'] in self.past_builds.keys():
             build_instruction['commit'] = self.past_builds[build_instruction['id']]['commit']
+            self.past_builds_lock.acquire()
+            self.past_builds.pop(build_instruction['id'])
+            self.past_builds_lock.release()
         else:
             build_instruction['commit'] = ""
         self.in_queues_lock.acquire()
@@ -511,6 +514,10 @@ class DocservState:
 
     def finished_build_instruction(self, build_instruction_id):
         logger.info("Finished %s" % build_instruction_id)
+        if build_instruction_id in self.waiting_for_finish:
+            self.waiting_for_finish_lock.acquire()
+            self.waiting_for_finish.pop(build_instruction_id)
+            self.waiting_for_finish_lock.release
         self.in_queues_lock.acquire()
         build_instruction = self.in_queues.pop(build_instruction_id)
         self.in_queues_lock.release()

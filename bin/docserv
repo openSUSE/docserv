@@ -525,7 +525,7 @@ class DocservState:
 
     def save_state(self):
         f = open("/etc/docserv/%s.json" % self.config['server']['name'], "w")
-        f.write(self)
+        f.write(str(self))
 
     def load_state(self):
         logger.info("Reading previous state.")
@@ -687,6 +687,14 @@ class ThreadedRESTServer(ThreadingMixIn, HTTPServer):
         logger.info("Starting HTTP server on %s:%i" % server_address)
         self.docserv = docserv
 
+def print_help():
+    print("""This is a deamon and should be invoked with the command:
+
+> systemctl start docserv CONFIG_FILENAME
+or
+> docserv CONFIG_FILENAME
+
+The CONFIG_FILENAME must reside in /etc/docserv/ and end with .ini.""")
 
 logger = logging.getLogger('docserv')
 logger.setLevel(logging.INFO)
@@ -698,5 +706,8 @@ ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 if __name__ == "__main__":
-    docserv = Docserv(sys.argv)
-    docserv.start()
+    if "--help" in sys.argv:
+        print_help()
+    else:
+        docserv = Docserv(sys.argv)
+        docserv.start()

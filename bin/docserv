@@ -241,7 +241,6 @@ class DocConfParser:
                              stderr=subprocess.PIPE)
         s.communicate()[0]
 
-    @property
     def __str__(self):
         return json.dumps(self.build_instruction)
 
@@ -421,7 +420,6 @@ class DocservState:
     def __del__(self):
         pass
 
-    @property
     def __str__(self):
         return json.dumps(self.__dict__)
 
@@ -527,7 +525,7 @@ class DocservState:
 
     def save_state(self):
         f = open("/etc/docserv/%s.json" % self.config['server']['name'], "w")
-        f.write(self.__str__)
+        f.write(self)
 
     def load_state(self):
         logger.info("Reading previous state.")

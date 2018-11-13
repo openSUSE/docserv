@@ -690,7 +690,7 @@ class ThreadedRESTServer(ThreadingMixIn, HTTPServer):
 def print_help():
     print("""This is a deamon and should be invoked with the command:
 
-> systemctl start docserv CONFIG_FILENAME
+> systemctl start docserv@CONFIG_FILENAME
 or
 > docserv CONFIG_FILENAME
 

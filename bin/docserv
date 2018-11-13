@@ -495,7 +495,7 @@ class DocservState:
     def got_last_deliverable(self, doc):
         self.waiting_for_finish_lock.acquire()
         self.waiting_for_finish[doc.build_instruction['id']] = doc
-        self.waiting_for_finish_lock.release
+        self.waiting_for_finish_lock.release()
 
     def finished_deliverable(self, success, build_instruction_id, deliverable_id):
         remove_from_queue = False
@@ -515,7 +515,7 @@ class DocservState:
         if build_instruction_id in self.waiting_for_finish:
             self.waiting_for_finish_lock.acquire()
             self.waiting_for_finish.pop(build_instruction_id)
-            self.waiting_for_finish_lock.release
+            self.waiting_for_finish_lock.release()
         self.in_queues_lock.acquire()
         build_instruction = self.in_queues.pop(build_instruction_id)
         self.in_queues_lock.release()

@@ -711,3 +711,4 @@ if __name__ == "__main__":
     else:
         docserv = Docserv(sys.argv)
         docserv.start()
+        sys.exit(0)

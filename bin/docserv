@@ -502,7 +502,7 @@ class DocservState:
         self.in_queues_lock.acquire()
         self.in_queues[build_instruction_id]['building_deliverables'].remove(deliverable_id)
         if not success:
-            self.in_queues[build_instruction_id]['success'] = False
+            self.in_queues[build_instruction_id]['success'] = success
         if not self.in_queues[build_instruction_id]['building_deliverables']:
             remove_from_queue = True
         self.in_queues_lock.release()
@@ -706,7 +706,7 @@ ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 if __name__ == "__main__":
-    if "--help" in sys.argv:
+    if "--help" in sys.argv or "-h" in sys.argv:
         print_help()
     else:
         docserv = Docserv(sys.argv)

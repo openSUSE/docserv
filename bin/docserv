@@ -472,7 +472,7 @@ class DocservState:
                     self.got_last_deliverable(doc)
                     return None
                 else:
-                    logger.info("Thread %i: Building deliverable %s from %s" % (thread_id, deliverable.id(), doc))
+                    logger.info("Thread %i: Building deliverable %s (%s, %s) from %s" % (thread_id, deliverable.id(), deliverable.dc_file, deliverable.build_format, doc))
                     self.currently_building.put(doc)
                     self.currently_building_lock.release()
                     return deliverable

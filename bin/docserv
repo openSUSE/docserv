@@ -92,8 +92,7 @@ class Deliverable:
         self.build_instruction_id = build_instruction['id']
         logger.debug("Created deliverable: %s %s %s %s %s" % (local_repo_build_dir, self.language, dc_file, build_format, target['target_path']))
 
-    @property
-    def __dict__(self):
+    def dict(self):
         value = {
             'id': self.id(),
             'build_instruction_id': self.build_instruction_id,
@@ -110,7 +109,7 @@ class Deliverable:
         return value
 
     def __str__(self):
-        return json.dumps(dict(self.__dict__))
+        return json.dumps(self.dict())
 
     def id(self):
         return hashlib.md5((self.target['name'] +
@@ -220,9 +219,9 @@ class Deliverable:
                 logger.warning("Thread %i STDOUT: %s" % (thread_id, out.decode('utf-8')))
                 logger.warning("Thread %i STDERR: %s"% (thread_id, err.decode('utf-8')))
                 self.status = "failed"
-                return self.__dict__
+                return self.dict()
         self.status = "succeeded"
-        return self.__dict__
+        return self.dict()
 
     def parse_command(self, command, thread_id):
         if 'replace' in command:
@@ -271,8 +270,7 @@ class BuildInstructionHandler:
     def __str__(self):
         return json.dumps(self.build_instruction)
 
-    @property
-    def __dict__(self):
+    def dict(self):
         return self.build_instruction
 
     def __getitem__(self, arg):
@@ -419,7 +417,7 @@ class BuildInstructionHandler:
                                             build_format,
                                             self.config['targets'][target]
                                          )
-                deliverables[deliverable.id()] = deliverable.__dict__
+                deliverables[deliverable.id()] = deliverable.dict()
                 self.deliverables.put(deliverable)
             # after all deliverables are generated, we don't need the xml tree anymore
             self.tree = None
@@ -451,10 +449,9 @@ class DocservState:
         pass
 
     def __str__(self):
-        return json.dumps(self.__dict__)
+        return json.dumps(self.dict())
 
-    @property
-    def __dict__(self):
+    def dict(self):
         return {
             'building': self.in_queues,
             'finished': self.past_builds
@@ -709,7 +706,7 @@ class RESTServer(BaseHTTPRequestHandler):
         if self.path == '/' or self.path == '/build_instructions/':
             self._set_headers()
             self.wfile.write(
-                bytes(json.dumps(self.server.docserv.__dict__), "utf-8"))
+                bytes(json.dumps(self.server.docserv.dict()), "utf-8"))
         elif self.path == '/deliverables/':
             self._set_headers()
             self.wfile.write(

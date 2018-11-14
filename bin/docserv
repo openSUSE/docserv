@@ -79,48 +79,43 @@ class Deliverable:
     path = None
     commit = None
     status = "building"
+    successful_build_commit = None
+    last_build_attempt_commit = None
 
-    def __init__(self, local_repo_build_dir, build_instruction, dc_file,
-                 build_format, target):
-        self.local_repo_build_dir = local_repo_build_dir
-        self.language = build_instruction['lang']
+    def __init__(self, parent, dc_file, build_format):
+        self.parent = parent # Reference to the parent BuildInstructionHandler
         self.dc_file = dc_file
         self.build_format = build_format
-        self.target = target
-        self.product_id = build_instruction['product']
-        self.docset_id = build_instruction['docset']
-        self.build_instruction_id = build_instruction['id']
-        logger.debug("Created deliverable: %s %s %s %s %s" % (local_repo_build_dir, self.language, dc_file, build_format, target['target_path']))
+        self.id = self.generate_id()
+        logger.debug("Created deliverable (%s, %s) for %s" % (  self.dc_file,
+                                                                self.build_format,
+                                                                self.parent
+                                                             ))
 
     def dict(self):
         value = {
-            'id': self.id(),
-            'build_instruction_id': self.build_instruction_id,
-            'language': self.language,
-            'target': self.target,
+            'id': self.id,
             'build_format': self.build_format,
-            'product_id': self.product_id,
-            'docset_id': self.docset_id,
             'status': self.status,
             'title': self.title,
             'path': self.path,
-            'commit': self.commit
+            'successful_build_commit': self.successful_build_commit,
+            'last_build_attempt_commit': self.last_build_attempt_commit
         }
         return value
 
-    def __str__(self):
-        return json.dumps(self.dict())
-
-    def id(self):
-        return hashlib.md5((self.target['name'] +
-                            self.docset_id +
-                            self.language +
-                            self.product_id +
+    def generate_id(self):
+        return hashlib.md5((self.parent.build_instruction['target'] +
+                            self.parent.build_instruction['docset'] +
+                            self.parent.build_instruction['lang'] +
+                            self.parent.build_instruction['product'] +
                             self.dc_file +
                             self.build_format).encode('utf-8')
                           ).hexdigest()[:9]
 
     def run(self, thread_id):
+        with self.parent.deliverables_open_lock:
+            self.parent.deliverables[self.id]['last_build_attempt_commit'] = self.parent.build_instruction['commit']
         commands = {}
 
         # Write XSLT parameters to temp file
@@ -135,10 +130,13 @@ class Deliverable:
         # Write daps parameters to temp file
         n += 1
         daps_params_file = tempfile.mkstemp(prefix="docserv_daps_", text=True)
+        remarks = self.parent.config['targets'][self.parent.build_instruction['target']]['remarks']
+        draft = self.parent.config['targets'][self.parent.build_instruction['target']]['draft']
+        meta = self.parent.config['targets'][self.parent.build_instruction['target']]['meta']
         daps_params = " ".join([
-                                    "--remarks" if (self.target['remarks'] == "true" or self.target['remarks'] == "1") else "",
-                                    "--draft" if (self.target['draft'] == "true" or self.target['draft'] == "1") else "",
-                                    "--meta" if (self.target['meta'] == "true" or self.target['meta'] == "1") else ""
+                                    "--remarks" if (remarks == "true" or remarks == "1") else "",
+                                    "--draft" if (draft == "true" or draft == "1") else "",
+                                    "--meta" if (meta == "true" or meta == "1") else ""
                                 ])
         commands[n] = {}
         commands[n]['cmd'] = "echo \"%s\" > %s" % (daps_params,
@@ -154,7 +152,7 @@ class Deliverable:
                                                 xslt_params_file[1],       # -x
                                                 daps_params_file[1],       # -d
                                                 tmp_build_target,          # -o
-                                                self.local_repo_build_dir, # -i
+                                                self.parent.local_repo_build_dir, # -i
                                                 self.build_format,         # -f
                                                 self.dc_file               # last param
                                                 )
@@ -163,7 +161,7 @@ class Deliverable:
         # Create correct directory structure
         n += 1
         sync_source_tmp = tempfile.mkdtemp(prefix="docserv_sync_")
-        create_sync_source = os.path.join(sync_source_tmp, self.language, self.product_id, self.docset_id, self.build_format)
+        create_sync_source = os.path.join(sync_source_tmp, self.parent.build_instruction['lang'], self.parent.build_instruction['product'], self.parent.build_instruction['docset'], self.build_format)
         commands[n] = {}
         commands[n]['cmd'] = "/usr/bin/mkdir -p %s" % (create_sync_source)
         commands[n]['ret_val'] = 0
@@ -176,15 +174,17 @@ class Deliverable:
         commands[n]['replace'] = {'string': '__FILELIST__', 'source': 'file', 'filepath': os.path.join(tmp_build_target,'filelist')}
 
         # rsync build target directory to backup path
+        backup_path = self.parent.config['targets'][self.parent.build_instruction['target']]['backup_path']
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "rsync -lr %s/ %s" % (sync_source_tmp, self.target['backup_path'])
+        commands[n]['cmd'] = "rsync -lr %s/ %s" % (sync_source_tmp, backup_path)
         commands[n]['ret_val'] = 0
 
         # rsync built target directory with web server
+        target_path = self.parent.config['targets'][self.parent.build_instruction['target']]['target_path']
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "rsync -lr %s/ %s" % (sync_source_tmp, self.target['target_path'])
+        commands[n]['cmd'] = "rsync -lr %s/ %s" % (sync_source_tmp, target_path)
         commands[n]['ret_val'] = 0
 
         # remove daps parameter file
@@ -221,7 +221,13 @@ class Deliverable:
                 self.status = "failed"
                 return self.dict()
         self.status = "succeeded"
-        return self.dict()
+        self.finish()
+
+    def finish(self):
+        with self.parent.deliverables_building_lock:
+            self.parent.deliverables_building.remove(self.id)
+        with self.parent.deliverables_open_lock:
+            self.parent.deliverables[self.id]['successful_build_commit'] = self.parent.build_instruction['commit']
 
     def parse_command(self, command, thread_id):
         if 'replace' in command:
@@ -239,8 +245,30 @@ class Deliverable:
 
 
 class BuildInstructionHandler:
+    # This object is created when a new build request
+    # is coming in via the API. This object parses the
+    # incoming request and with the help of the XML
+    # configuration creates a set of Deliverables.
+
+    # A dict with meta information about a Deliverable.
+    # It is filled with Deliverable.dict().
+    deliverables = {}
+    deliverables_lock = threading.Lock()
+    # A dict that contains all Deliverable objects
+    # mapped with the Deliverable ID.
+    deliverable_objects = {}
+    deliverable_objects_lock = threading.Lock()
+    # A list of Deliverable IDs that have not yet been
+    # build / have to be built.
+    deliverables_open = []
+    deliverables_open_lock = threading.Lock()
+    # A list of Deliverable IDs that are currently
+    # building. That means a worker thread is currently
+    # running daps for them.
+    deliverables_building = []
+    deliverables_building_lock = threading.Lock()
+
     def __init__(self, build_instruction, config, gitLocks, gitLocksLock, thread_id):
-        self.deliverables = queue.Queue()
         self.thread_id = thread_id
         if self.validate(build_instruction, config):
             self.initialized = True
@@ -252,7 +280,7 @@ class BuildInstructionHandler:
             self.git_lock = RepoLock(resource_to_filename(
                 self.remote_repo), thread_id, gitLocks, gitLocksLock)
             self.prepare_repo()
-            self.compare_commit_id()
+            self.get_commit_hash()
             self.reset_success_state()
         else:
             self.initialized = False
@@ -271,7 +299,11 @@ class BuildInstructionHandler:
         return json.dumps(self.build_instruction)
 
     def dict(self):
-        return self.build_instruction
+        retval = self.build_instruction
+        retval['open'] = self.deliverables_open
+        retval['building'] = self.deliverables_building
+        retval['deliverables'] = self.deliverables
+        return retval
 
     def __getitem__(self, arg):
         return self.build_instruction
@@ -367,19 +399,13 @@ class BuildInstructionHandler:
 
         return True
 
-    def compare_commit_id(self):
+    def get_commit_hash(self):
         cmd = shlex.split("git -C "+self.local_repo_build_dir +
                           " log --format=\"%H\" -n 1")
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
-        current_commit_id = s.communicate()[0]
-        current_commit_id = current_commit_id.decode('utf-8').rstrip()
-        logger.debug("Current commit hash: %s" % current_commit_id)
-        if current_commit_id == self.build_instruction['commit']:
-            logger.info("Build for instruction %s is already up to date." % (json.dumps(self.build_instruction)))
-            self.initialized = False
-        else:
-            self.build_instruction['commit'] = current_commit_id
+        self.build_instruction['commit'] = s.communicate()[0].decode('utf-8').rstrip()
+        logger.debug("Current commit hash: %s" % self.build_instruction['commit'])
 
     def validate(self, build_instruction, config):
         # build_instruction = {'docs': [{'docset': '15ga', 'lang': 'en', 'product': 'sles'}],'targets': ['external']}
@@ -405,45 +431,76 @@ class BuildInstructionHandler:
     def generate_deliverables(self):
         if not self.initialized:
             return False
-        target = self.build_instruction['target']
         xml_root = self.tree.getroot()
-        deliverables = {}
         logger.debug("Generating deliverables.")
         for xml_deliverable in xml_root.findall(".//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/deliverable" % (self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])):
             for build_format in xml_deliverable.find(".//format").attrib:
-                deliverable = Deliverable(  self.local_repo_build_dir,
-                                            self.build_instruction,
-                                            xml_deliverable.find(".//dc").text,
-                                            build_format,
-                                            self.config['targets'][target]
+                deliverable = Deliverable(self,
+                                          xml_deliverable.find(".//dc").text,
+                                          build_format
                                          )
-                deliverables[deliverable.id()] = deliverable.dict()
-                self.deliverables.put(deliverable)
+                self.deliverables[deliverable.id] = deliverable.dict()
+                self.deliverable_objects[deliverable.id] = deliverable
+                self.deliverables_open.append(deliverable.id)
             # after all deliverables are generated, we don't need the xml tree anymore
             self.tree = None
-        return deliverables
+        return True
+
+    def get_deliverable(self):
+        # return deliverable object that can run to build the output
+        # return None if all deliverables are already building
+        # return 'done' if all deliverables have finished building
+        retval = None
+        deliverable_id = None
+        with self.deliverables_open_lock:
+            if len(self.deliverables_open) > 0:
+                deliverable_id = self.deliverables_open.pop()
+                with self.deliverable_objects_lock:
+                    retval = self.deliverable_objects.pop(deliverable_id)
+        if retval is not None:
+            with self.deliverables_building_lock:
+                self.deliverables_building.append(deliverable_id)
+            return retval
+        with self.deliverables_building_lock:
+            retval = len(self.deliverables_building)
+        if retval == 0:
+            return 'done'
+        else:
+            return None
 
 
 class DocservState:
     config = {}
-    # tracks all build_instructions in all queues that should be built
-    in_queues = {}
-    in_queues_lock = threading.Lock()
-    # FIFO queue for build instructions from REST API
-    scheduled_docs = queue.Queue()
-    # finished builds, contains commit hash and success
+
+    ###################################################
+    #   The following section contains all dicts and  #
+    #   queues that keep track of stuff to be build   #
+    ###################################################
+    #
+    # 1. FIFO queue for build instructions from REST API
+    #
+    scheduled_build_instruction = queue.Queue()
+
+    #
+    # 2.1 A dict that contains all BuildInstructionHandlers.
+    #     This is the state in which documents are being
+    #     build.
+    #
+    bih_dict = {}
+    bih_dict_lock = threading.Lock()
+
+    #
+    # 2.2 A queue that contains BUILD_INSTRUCTION_ID. With the ID
+    #     the workers will retrieve a Deliverable and build it.
+    #
+    bih_queue = queue.Queue()
+
+    #
+    # 3. When a BuildInstructionHandler is finished, its
+    #    status is dumped into a dict and kept for the future.
+    #
     past_builds = {}
     past_builds_lock = threading.Lock()
-    # FIFO for BuildInstructionHandler instances, which in turn contains queue of deliverables
-    # BuildInstructionHandler instances are requeued if deliverables queue is not empty
-    currently_building = queue.Queue()
-    currently_building_lock = threading.Lock()
-    # Dict of BuildInstructionHandler instances with empty deliverables queue
-    waiting_for_finish = {}
-    waiting_for_finish_lock = threading.Lock()
-    # Store information about deliverables
-    deliverables = {}
-    deliverables_lock = threading.Lock()
 
     def __del__(self):
         pass
@@ -452,10 +509,16 @@ class DocservState:
         return json.dumps(self.dict())
 
     def dict(self):
-        return {
-            'building': self.in_queues,
-            'finished': self.past_builds
-        }
+        retval = []
+        with self.bih_dict_lock:
+            for key in self.bih_dict:
+                try:
+                    retval.append(self.bih_dict[key].dict())
+                except AttributeError:
+                    pass
+        for key in self.past_builds:
+            retval.append(self.past_builds[key])
+        return retval
 
     def generate_id(self, build_instruction):
         return hashlib.md5((build_instruction['target'] +
@@ -467,98 +530,47 @@ class DocservState:
     def add_build_instruction(self, build_instruction):
         build_instruction['id'] = self.generate_id(build_instruction)
         if build_instruction['id'] in self.past_builds.keys():
-            build_instruction['commit'] = self.past_builds[build_instruction['id']]['commit']
-            self.past_builds_lock.acquire()
-            self.past_builds.pop(build_instruction['id'])
-            self.past_builds_lock.release()
-        else:
-            build_instruction['commit'] = ""
-        self.in_queues_lock.acquire()
-        if build_instruction['id'] not in self.in_queues:
-            self.in_queues[build_instruction['id']] = build_instruction
-            self.in_queues_lock.release()
-            self.scheduled_docs.put(build_instruction)
-            return True
-        else:
-            # Already building or queued for building
-            self.in_queues_lock.release()
-            return False
+            with self.past_builds_lock:
+                self.past_builds.pop(build_instruction['id'])
+        with self.bih_dict_lock:
+            if build_instruction['id'] not in self.bih_dict:
+                self.bih_dict[build_instruction['id']] = build_instruction
+                self.scheduled_build_instruction.put(build_instruction)
+                retval = True
+            else:
+                # Already building or queued for building
+                retval = False
+        return retval
 
     def get_deliverable(self, thread_id):
-        if self.currently_building_lock.acquire(False):
-            try:
-                doc = self.currently_building.get(False)
-            except queue.Empty:
-                self.currently_building_lock.release()
-                return None
-            else:
-                try:
-                    deliverable = doc.deliverables.get(False)
-                except queue.Empty:
-                    self.currently_building_lock.release()
-                    self.got_last_deliverable(doc)
-                    return None
-                else:
-                    logger.info("Thread %i: Building deliverable %s" % (thread_id, deliverable))
-                    self.currently_building.put(doc)
-                    self.currently_building_lock.release()
-                    return deliverable
-        return None
+        try:
+            build_instruction_id = self.bih_queue.get(False)
+        except queue.Empty:
+            return None
+        else:
+            deliverable = self.bih_dict[build_instruction_id].get_deliverable()
+            if deliverable == 'done':
+                self.finish_build_instruction(build_instruction_id)
+                deliverable = None
+            else: # build instruction is not yet finished, put its ID back on the queue
+                self.bih_queue.put(build_instruction_id)
+        return deliverable
 
     def get_scheduled_build_instruction(self):
         # Get a build_instruction for building
         try:
-            build_instruction = self.scheduled_docs.get(False)
+            build_instruction = self.scheduled_build_instruction.get(False)
         except queue.Empty:
             return None
         else:
             return build_instruction
 
-    def store_deliverables(self, build_instruction_id, deliverables):
-        self.in_queues_lock.acquire()
-        self.in_queues[build_instruction_id]['building_deliverables'] = []
-        print(deliverables)
-        for deliverable_id in deliverables:
-            self.in_queues[build_instruction_id]['building_deliverables'].append(deliverable_id)
-        self.in_queues_lock.release()
-        self.deliverables_lock.acquire()
-        for deliverable_id in deliverables:
-            self.deliverables[deliverable_id] = deliverables[deliverable_id]
-        self.deliverables_lock.release()
-
-    def got_last_deliverable(self, doc):
-        self.waiting_for_finish_lock.acquire()
-        self.waiting_for_finish[doc.build_instruction['id']] = doc
-        self.waiting_for_finish_lock.release()
-
-    def finished_deliverable(self, deliverable_result):
-        remove_from_queue = False
-        self.deliverables_lock.acquire()
-        self.deliverables[deliverable_result['id']] = deliverable_result
-        self.deliverables_lock.release()
-        self.in_queues_lock.acquire()
-        self.in_queues[deliverable_result['build_instruction_id']]['building_deliverables'].remove(deliverable_result['id'])
-        if deliverable_result['status'] == "failed":
-            self.in_queues[deliverable_result['build_instruction_id']]['success'] = False
-        if not self.in_queues[deliverable_result['build_instruction_id']]['building_deliverables']:
-            remove_from_queue = True
-        self.in_queues_lock.release()
-        if remove_from_queue:
-            logger.info("Finished building deliverables for %s" % deliverable_result['build_instruction_id'])
-            self.finished_build_instruction(deliverable_result['build_instruction_id'])
-
-    def finished_build_instruction(self, build_instruction_id):
-        logger.info("Finished %s" % build_instruction_id)
-        if build_instruction_id in self.waiting_for_finish:
-            self.waiting_for_finish_lock.acquire()
-            self.waiting_for_finish.pop(build_instruction_id)
-            self.waiting_for_finish_lock.release()
-        self.in_queues_lock.acquire()
-        build_instruction = self.in_queues.pop(build_instruction_id)
-        self.in_queues_lock.release()
-        self.past_builds_lock.acquire()
-        self.past_builds[build_instruction_id] = build_instruction
-        self.past_builds_lock.release()
+    def finish_build_instruction(self, build_instruction_id):
+            logger.info("Finished build instruction %s" % build_instruction_id)
+            with self.bih_dict_lock:
+                build_instruction = self.bih_dict.pop(build_instruction_id)
+            with self.past_builds_lock:
+                self.past_builds[build_instruction_id] = build_instruction.dict()
 
     def save_state(self):
         f = open("/etc/docserv/%s.json" % self.config['server']['name'], "w")
@@ -658,16 +670,14 @@ class Docserv(DocservState):
     def parse_rest_item(self, thread_id):
         build_instruction = self.get_scheduled_build_instruction()
         if build_instruction is not None:
-            doc = BuildInstructionHandler(build_instruction, self.config, self.gitLocks, self.gitLocksLock, thread_id)
-            if doc.initialized == False:
-                self.finished_build_instruction(build_instruction['id'])
+            myBIH = BuildInstructionHandler(build_instruction, self.config, self.gitLocks, self.gitLocksLock, thread_id)
+            if myBIH.initialized == False:
+                self.finish_build_instruction(build_instruction['id'])
                 return
-            deliverables = doc.generate_deliverables()
-            if deliverables:
-                print(deliverables)
-                self.store_deliverables(build_instruction['id'], deliverables)
-                self.currently_building.put(doc)
-            del doc
+            myBIH.generate_deliverables()
+            with self.bih_dict_lock:
+                self.bih_dict[build_instruction['id']] = myBIH
+            self.bih_queue.put(build_instruction['id'])
 
     def worker(self, thread_id):
         while(True):
@@ -679,8 +689,7 @@ class Docserv(DocservState):
             #    the last deliverable.
             deliverable = self.get_deliverable(thread_id)
             if deliverable is not None:
-                result = deliverable.run(thread_id)
-                self.finished_deliverable(result)
+                deliverable.run(thread_id)
 
             # 3. end thread if sigint
             if not self.end_all.empty(): return True

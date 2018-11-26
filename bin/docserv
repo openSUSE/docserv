@@ -252,11 +252,10 @@ class DocConfParser:
             logger.debug("Target %s not active." % target)
             return False
         # validate and stitch files together with bash script
-        productschema = "/usr/share/docserv/config-validation.rnc"
         tmp_handle, tmp_filename = tempfile.mkstemp(text=True)
         logger.info("Stitching XML config directory to %s" % tmp_filename)
-        cmd = '/usr/bin/docserv-stitch %s %s %s' % (
-            productschema, self.config['targets'][target]['config_dir'], tmp_filename)
+        cmd = '/usr/bin/docserv-stitch %s %s' % (
+            self.config['targets'][target]['config_dir'], tmp_filename)
         logger.debug("Stitching command: %s" % cmd)
         cmd = shlex.split(cmd)
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE,

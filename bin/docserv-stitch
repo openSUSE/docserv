@@ -2,16 +2,21 @@
 # Validate productconfig files from a directory one by one, then stitch them
 # together, so the docserv script can build from them.
 #
-# $1 - Schema file (RelaxNG compact/RNC)
-# $2 - Directory with config files
-# $3 - Output file (optional, if not set, outputs to stdout)
+# $1 - Directory with config files
+# $2 - Output file (optional, if not set, outputs to stdout)
 #
 # XML tool deps: xmlstarlet, jing, xmllint
+
 
 out() {
   >&2 echo -e "$1"
   exit 1
 }
+
+me=$(test -L $(realpath $0) && readlink $(realpath $0) || echo $(realpath $0))
+mydir=$(dirname $me)
+
+source $mydir/docserv-dirs
 
 xmllint='xmllint'
 jing='jing'
@@ -20,12 +25,13 @@ starlet='xmlstarlet'
 stacksize=${stacksize:-"-Xss4096K"}
 java_flags="-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=org.apache.xerces.parsers.XIncludeParserConfiguration"
 
+schema_file=$share_dir/schema/config-validation.rnc
 
-[[ ! -f $(readlink -f $1) ]] && out "Schema $1 does not exist."
-schema=$(readlink -f $1)
+[[ ! -f $schema_file ]] && out "Schema $schema_file does not exist."
+schema=$schema_file
 
-[[ ! -d $(readlink -f $2) ]] && out "Directory $2 does not exist."
-indir=$(readlink -f $2)
+[[ ! -d $(readlink -f $1) ]] && out "Directory $1 does not exist."
+indir=$(readlink -f $1)
 
 cd $indir
 
@@ -73,8 +79,8 @@ uniqueproductids=$(echo -e "$productids" | sort -u)
 
 cd - >/dev/null
 
-if [[ $3 ]]; then
-  echo -e "$outfile" > $3
+if [[ $2 ]]; then
+  echo -e "$outfile" > $2
 else
   echo -e "$outfile"
 fi

@@ -1,0 +1,10 @@
+#!/bin/bash
+# No use on its own, made to be sourced by docserv-related scripts
+
+bin_dir=/usr/bin
+share_dir=/usr/share/docserv
+config_dir=/etc/config/docserv
+
+[[ $(printenv DOCSERV_BIN_DIR) ]] && bin_dir=$(printenv DOCSERV_BIN_DIR)
+[[ $(printenv DOCSERV_SHARE_DIR) ]] && share_dir=$(printenv DOCSERV_SHARE_DIR)
+[[ $(printenv DOCSERV_CONFIG_DIR) ]] && bin_dir=$(printenv DOCSERV_CONFIG_DIR)

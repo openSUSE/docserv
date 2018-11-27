@@ -2,8 +2,10 @@
 # Validate productconfig files from a directory one by one, then stitch them
 # together, so the docserv script can build from them.
 #
-# $1 - Directory with config files
-# $2 - Output file (optional, if not set, outputs to stdout)
+# Arguments (in order of appearance):
+# [--make-positive] # Turn translation document blacklist into whitelist (optional)
+# INPUT_DIR         # Directory with config files
+# [OUTPUT_FILE]     # Output file (optional, if not set, outputs to stdout)
 #
 # XML tool deps: xmlstarlet, jing, xmllint
 
@@ -26,9 +28,16 @@ stacksize=${stacksize:-"-Xss4096K"}
 java_flags="-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=org.apache.xerces.parsers.XIncludeParserConfiguration"
 
 schema_file=$share_dir/schema/config-validation.rnc
+positive_xslt_file=$share_dir/xslt/positive-config.xsl
 
 [[ ! -f $schema_file ]] && out "Schema $schema_file does not exist."
-schema=$schema_file
+
+make_positive=0
+if [[ $1 == '--make-positive' ]]; then
+  [[ ! -f $positive_xslt_file ]] && out "Schema $positive_xslt_file does not exist."
+  make_positive=1
+  shift
+fi
 
 [[ ! -d $(readlink -f $1) ]] && out "Directory $1 does not exist."
 indir=$(readlink -f $1)
@@ -44,7 +53,7 @@ for file in *.xml; do
   [[ $? -gt 0 ]] && out "$indir/$file is not well-formed:\n$wellformed"
 
   valid=$(2>&1 ADDITIONAL_FLAGS="$java_flags" ADDITIONAL_OPTIONS="$java_flags" \
-    $jing -ci $schema $file)
+    $jing -ci $schema_file $file)
   [[ $? -gt 0 ]] && out "$indir/$file is not valid:\n$valid"
 
   # we want to allow IDs that start with a digit, hence we can't use RelaxNG's
@@ -78,6 +87,10 @@ uniqueproductids=$(echo -e "$productids" | sort -u)
       "Some productid values in $indir are not unique. Check the productid(s): "$(comm -2 -3 <(echo -e "$productids") <(echo -e "$uniqueproductids") | tr '\n' ' ')"."
 
 cd - >/dev/null
+
+if [[ $make_positive == 1 ]]; then
+  outfile=$(echo -e "$outfile" | xsltproc $positive_xslt_file -)
+fi
 
 if [[ $2 ]]; then
   echo -e "$outfile" > $2

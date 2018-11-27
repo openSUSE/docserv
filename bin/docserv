@@ -254,8 +254,8 @@ class DocConfParser:
         # validate and stitch files together with bash script
         tmp_handle, tmp_filename = tempfile.mkstemp(text=True)
         logger.info("Stitching XML config directory to %s" % tmp_filename)
-        cmd = '/usr/bin/docserv-stitch %s %s' % (
-            self.config['targets'][target]['config_dir'], tmp_filename)
+        cmd = '/usr/bin/docserv-stitch %s %s %s' % (
+            '--make-positive', self.config['targets'][target]['config_dir'], tmp_filename)
         logger.debug("Stitching command: %s" % cmd)
         cmd = shlex.split(cmd)
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
@@ -273,9 +273,9 @@ class DocConfParser:
         # then read all files into an xml tree
         self.tree = ElementTree.parse(tmp_filename)
         xml_root = self.tree.getroot()
-        self.branch = xml_root.find("docservconfig/product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/branch" % (
+        self.branch = xml_root.find("positivedocservconfig/product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/branch" % (
             self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])).text
-        self.remote_repo = xml_root.find("docservconfig/product[@productid='%s']/docset[@setid='%s']/builddocs/git/remote" % (
+        self.remote_repo = xml_root.find("positivedocservconfig/product[@productid='%s']/docset[@setid='%s']/builddocs/git/remote" % (
             self.build_instruction['product'], self.build_instruction['docset'])).text
 
     def reset_success_state(self):

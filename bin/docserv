@@ -87,7 +87,9 @@ class Deliverable:
         self.build_format = build_format
         self.id = self.generate_id()
         self.prev_state()
-        logger.debug("Created deliverable (%s, %s) for %s" % (  self.dc_file,
+        logger.debug("Created deliverable %s (%s, %s) for %s" % (
+                                                                self.id,
+                                                                self.dc_file,
                                                                 self.build_format,
                                                                 self.parent
                                                              ))
@@ -285,6 +287,8 @@ class BuildInstructionHandler:
         if self.validate(build_instruction, config):
             self.initialized = True
             self.build_instruction = build_instruction
+            if 'deliverables' in build_instruction:
+                self.deliverables = build_instruction['deliverables']
             self.config = config
             if not self.read_conf_dir():
                 self.initialized = False
@@ -532,7 +536,7 @@ class DocservState:
                             build_instruction['product']).encode('utf-8')
                            ).hexdigest()[:9]
 
-    def add_build_instruction(self, build_instruction):
+    def queue_rest_item(self, build_instruction):
         build_instruction['id'] = self.generate_id(build_instruction)
         if build_instruction['id'] in self.past_builds.keys():
             with self.past_builds_lock:
@@ -606,7 +610,7 @@ class DocservState:
                 self.past_builds = state['finished']
                 # pylint: disable=unused-variable
                 for build_instruction_id, build_instruction in state['building'].items():
-                    self.add_build_instruction(build_instruction)
+                    self.queue_rest_item(build_instruction)
                 return True
         return False
 
@@ -687,9 +691,10 @@ class Docserv(DocservState):
         logger.warning("Received SIGINT. Telling all threads to end. Please wait.")
         self.end_all.put("now")
 
-    def parse_rest_item(self, thread_id):
+    def parse_build_instruction(self, thread_id):
         build_instruction = self.get_scheduled_build_instruction()
         if build_instruction is not None:
+            logger.warning("Parsing build instruction %s" % build_instruction)
             myBIH = BuildInstructionHandler(build_instruction, self.config, self.gitLocks, self.gitLocksLock, thread_id)
             # If the initialization failed, immediately delete the BuildInstructionHandler
             if myBIH.initialized == False:
@@ -703,7 +708,7 @@ class Docserv(DocservState):
     def worker(self, thread_id):
         while(True):
             # 1. parse input from rest api and put the instance of the doc class on the currently building queue
-            self.parse_rest_item(thread_id)
+            self.parse_build_instruction(thread_id)
 
             # 2. get doc from currently_building queue and then a deliverable from doc.
             #    after that, put doc back on the currently building queue. unless it was
@@ -753,7 +758,7 @@ class RESTServer(BaseHTTPRequestHandler):
         build_jobs = json.loads(post_data)
         for job in build_jobs:
             logger.info("Queueing %s" % json.dumps(job))
-            self.server.docserv.add_build_instruction(job)
+            self.server.docserv.queue_rest_item(job)
         self._set_headers()
 
 

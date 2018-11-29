@@ -488,7 +488,8 @@ class DocservState:
     #
     # 1. FIFO queue for build instructions from REST API
     #
-    scheduled_build_instruction = queue.Queue()
+    scheduled_build_instruction = {}
+    scheduled_build_instruction_lock = threading.Lock()
 
     #
     # 2.1 A dict that contains all BuildInstructionHandlers.
@@ -519,6 +520,12 @@ class DocservState:
 
     def dict(self):
         retval = []
+        with self.scheduled_build_instruction_lock:
+            for key in self.scheduled_build_instruction:
+                try:
+                    retval.append(self.scheduled_build_instruction[key])
+                except AttributeError:
+                    pass
         with self.bih_dict_lock:
             for key in self.bih_dict:
                 try:
@@ -536,14 +543,15 @@ class DocservState:
                             build_instruction['product']).encode('utf-8')
                            ).hexdigest()[:9]
 
-    def queue_rest_item(self, build_instruction):
+    def queue_build_instruction(self, build_instruction):
         build_instruction['id'] = self.generate_id(build_instruction)
         if build_instruction['id'] in self.past_builds.keys():
             with self.past_builds_lock:
                 build_instruction = self.past_builds.pop(build_instruction['id'])
         with self.bih_dict_lock:
             if build_instruction['id'] not in self.bih_dict:
-                self.scheduled_build_instruction.put(build_instruction)
+                with self.scheduled_build_instruction_lock:
+                    self.scheduled_build_instruction[build_instruction['id']] = build_instruction
                 retval = True
             else:
                 # Already building or queued for building
@@ -552,12 +560,12 @@ class DocservState:
 
     def get_scheduled_build_instruction(self):
         # Get a build_instruction for building
-        try:
-            build_instruction = self.scheduled_build_instruction.get(False)
-        except queue.Empty:
-            return None
-        else:
-            return build_instruction
+        with self.scheduled_build_instruction_lock:
+            if len(self.scheduled_build_instruction.keys()) > 0:
+                build_instruction = self.scheduled_build_instruction.pop(list(self.scheduled_build_instruction.keys())[0], None)
+            else:
+                build_instruction = None
+        return build_instruction
 
     def finish_build_instruction(self, build_instruction_id):
             logger.info("Finished build instruction %s" % build_instruction_id)
@@ -582,20 +590,7 @@ class DocservState:
 
     def save_state(self):
         f = open("/etc/docserv/%s.json" % self.config['server']['name'], "w")
-        with self.past_builds_lock:
-            past_builds = self.past_builds
-        building = {}
-        with self.bih_dict_lock:
-            for key in self.bih_dict:
-                building[key] = self.bih_dict[key].dict()
-            while not self.scheduled_build_instruction.empty():
-                build_instruction = self.scheduled_build_instruction.get()
-                building[build_instruction['id']] = build_instruction
-        status = {
-            'finished': past_builds,
-            'building': building
-        }
-        f.write(json.dumps(status))
+        f.write(json.dumps(self.dict()))
 
     def load_state(self):
         logger.info("Reading previous state.")
@@ -606,12 +601,12 @@ class DocservState:
                 state = json.loads(file.read())
             except json.decoder.JSONDecodeError:
                 return False
-            if 'finished' in state and 'building' in state:
-                self.past_builds = state['finished']
-                # pylint: disable=unused-variable
-                for build_instruction_id, build_instruction in state['building'].items():
-                    self.queue_rest_item(build_instruction)
-                return True
+            for build_instruction in state:
+                if len(build_instruction['building']) > 0 or len(build_instruction['open']) > 0:
+                    self.queue_build_instruction(build_instruction)
+                else:
+                    self.past_builds[build_instruction['id']] = build_instruction
+            return True
         return False
 
 
@@ -758,7 +753,7 @@ class RESTServer(BaseHTTPRequestHandler):
         build_jobs = json.loads(post_data)
         for job in build_jobs:
             logger.info("Queueing %s" % json.dumps(job))
-            self.server.docserv.queue_rest_item(job)
+            self.server.docserv.queue_build_instruction(job)
         self._set_headers()
 
 

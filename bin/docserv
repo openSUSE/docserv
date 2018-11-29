@@ -87,11 +87,11 @@ class Deliverable:
         self.build_format = build_format
         self.id = self.generate_id()
         self.prev_state()
-        logger.debug("Created deliverable %s (%s, %s) for %s" % (
+        logger.debug("Created deliverable %s (%s, %s) for BI %s" % (
                                                                 self.id,
                                                                 self.dc_file,
                                                                 self.build_format,
-                                                                self.parent
+                                                                self.parent.build_instruction['id']
                                                              ))
 
     def prev_state(self):
@@ -123,7 +123,12 @@ class Deliverable:
 
     def run(self, thread_id):
         if self.parent.build_instruction['commit'] == self.parent.deliverables[self.id]['successful_build_commit']:
-            logger.info("Deliverable %s already up to date. Skipping daps run." % self.parent.deliverables[self.id])
+            logger.debug("Deliverable %s (%s, %s) for BI %s already up to date. Skipping daps run." % (
+                                                                self.id,
+                                                                self.dc_file,
+                                                                self.build_format,
+                                                                self.parent.build_instruction['id']
+                                                             ))
             return self.finish()
         with self.parent.deliverables_open_lock:
             self.parent.deliverables[self.id]['last_build_attempt_commit'] = self.parent.build_instruction['commit']
@@ -301,7 +306,7 @@ class BuildInstructionHandler:
         return
 
     def __del__(self):
-        logger.debug("Cleaning up %s" % json.dumps(self.build_instruction))
+        logger.debug("Cleaning up %s" % json.dumps(self.build_instruction['id']))
         if not hasattr(self, 'local_repo_build_dir'):
             return
         cmd = shlex.split("rm -rf %s" % self.local_repo_build_dir)
@@ -329,7 +334,7 @@ class BuildInstructionHandler:
             return False
         # pylint: disable=unused-variable
         tmp_handle, tmp_filename = tempfile.mkstemp(text=True)
-        logger.info("Stitching XML config directory to %s" % tmp_filename)
+        logger.debug("Stitching XML config directory to %s" % tmp_filename)
         cmd = '/usr/bin/docserv-stitch %s %s %s' % (
             '--make-positive', self.config['targets'][target]['config_dir'], tmp_filename)
         logger.debug("Stitching command: %s" % cmd)
@@ -432,8 +437,7 @@ class BuildInstructionHandler:
         if not isinstance(build_instruction['target'], str):
             logger.warning("Validation: target is not a string")
             return False
-        logger.debug("Valid build instruction: %s" %
-                     json.dumps(build_instruction))
+        logger.debug("Valid build instruction: %s" % build_instruction['id'])
         return True
 
     def generate_deliverables(self):
@@ -715,7 +719,6 @@ class Docserv(DocservState):
     def parse_build_instruction(self, thread_id):
         build_instruction = self.get_scheduled_build_instruction()
         if build_instruction is not None:
-            logger.warning("Parsing build instruction %s" % build_instruction)
             myBIH = BuildInstructionHandler(build_instruction, self.config, self.gitLocks, self.gitLocksLock, thread_id)
             # If the initialization failed, immediately delete the BuildInstructionHandler
             if myBIH.initialized == False:

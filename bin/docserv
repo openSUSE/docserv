@@ -556,6 +556,7 @@ class DocservState:
                            ).hexdigest()[:9]
 
     def queue_build_instruction(self, build_instruction):
+        retval = False
         build_instruction['id'] = self.generate_id(build_instruction)
         if build_instruction['id'] in self.past_builds.keys():
             with self.past_builds_lock:
@@ -563,11 +564,9 @@ class DocservState:
         with self.bih_dict_lock:
             if build_instruction['id'] not in self.bih_dict:
                 with self.scheduled_build_instruction_lock:
-                    self.scheduled_build_instruction[build_instruction['id']] = build_instruction
-                retval = True
-            else:
-                # Already building or queued for building
-                retval = False
+                    if build_instruction['id'] not in self.scheduled_build_instruction:
+                        self.scheduled_build_instruction[build_instruction['id']] = build_instruction
+                        retval = True
         return retval
 
     def get_scheduled_build_instruction(self):
@@ -782,10 +781,11 @@ class RESTServer(BaseHTTPRequestHandler):
         post_data = self.rfile.read(content_length)
         build_jobs = json.loads(post_data)
         for job in build_jobs:
-            logger.info("Queueing %s" % json.dumps(job))
-            self.server.docserv.queue_build_instruction(job)
+            if self.server.docserv.queue_build_instruction(job):
+                logger.info("Queueing %s" % json.dumps(job))
+            else:
+                logger.info("Not queueing %s" % json.dumps(job))
         self._set_headers()
-
 
 class ThreadedRESTServer(ThreadingMixIn, HTTPServer):
     def __init__(self, server_address, RequestHandlerClass, docserv, bind_and_activate=True):

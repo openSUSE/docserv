@@ -75,28 +75,63 @@ class RepoLock:
             self.acquired = False
 
 class Deliverable:
-    def __init__(self, local_repo_build_dir, build_instruction, dc_file,
-                 build_format, target):
-        self.local_repo_build_dir = local_repo_build_dir
-        self.language = build_instruction['lang']
+    title = None
+    path = None
+    status = "building"
+    successful_build_commit = None
+    last_build_attempt_commit = None
+
+    def __init__(self, parent, dc_file, build_format):
+        self.parent = parent # Reference to the parent BuildInstructionHandler
         self.dc_file = dc_file
         self.build_format = build_format
-        self.target = target
-        self.product_id = build_instruction['product']
-        self.docset_id = build_instruction['docset']
-        self.instruction = build_instruction['id']
-        logger.debug("Created deliverable: %s %s %s %s %s" % (local_repo_build_dir, self.language, dc_file, build_format, target['target_path']))
+        self.id = self.generate_id()
+        self.prev_state()
+        logger.debug("Created deliverable %s (%s, %s) for BI %s" % (
+                                                                self.id,
+                                                                self.dc_file,
+                                                                self.build_format,
+                                                                self.parent.build_instruction['id']
+                                                             ))
 
-    def id(self):
-        return hashlib.md5((self.target['name'] +
-                            self.docset_id +
-                            self.language +
-                            self.product_id +
+    def prev_state(self):
+        if self.id in self.parent.deliverables.keys():
+            self.successful_build_commit = self.parent.deliverables[self.id]['successful_build_commit']
+            self.last_build_attempt_commit = self.parent.deliverables[self.id]['last_build_attempt_commit']
+            self.title = self.parent.deliverables[self.id]['title']
+            self.path = self.parent.deliverables[self.id]['path']
+
+    def dict(self):
+        value = {
+            'build_format': self.build_format,
+            'status': self.status,
+            'title': self.title,
+            'path': self.path,
+            'successful_build_commit': self.successful_build_commit,
+            'last_build_attempt_commit': self.last_build_attempt_commit
+        }
+        return value
+
+    def generate_id(self):
+        return hashlib.md5((self.parent.build_instruction['target'] +
+                            self.parent.build_instruction['docset'] +
+                            self.parent.build_instruction['lang'] +
+                            self.parent.build_instruction['product'] +
                             self.dc_file +
                             self.build_format).encode('utf-8')
                           ).hexdigest()[:9]
 
     def run(self, thread_id):
+        if self.parent.build_instruction['commit'] == self.parent.deliverables[self.id]['successful_build_commit']:
+            logger.debug("Deliverable %s (%s, %s) for BI %s already up to date. Skipping daps run." % (
+                                                                self.id,
+                                                                self.dc_file,
+                                                                self.build_format,
+                                                                self.parent.build_instruction['id']
+                                                             ))
+            return self.finish()
+        with self.parent.deliverables_open_lock:
+            self.parent.deliverables[self.id]['last_build_attempt_commit'] = self.parent.build_instruction['commit']
         commands = {}
 
         # Write XSLT parameters to temp file
@@ -111,10 +146,13 @@ class Deliverable:
         # Write daps parameters to temp file
         n += 1
         daps_params_file = tempfile.mkstemp(prefix="docserv_daps_", text=True)
+        remarks = self.parent.config['targets'][self.parent.build_instruction['target']]['remarks']
+        draft = self.parent.config['targets'][self.parent.build_instruction['target']]['draft']
+        meta = self.parent.config['targets'][self.parent.build_instruction['target']]['meta']
         daps_params = " ".join([
-                                    "--remarks" if (self.target['remarks'] == "true" or self.target['remarks'] == "1") else "",
-                                    "--draft" if (self.target['draft'] == "true" or self.target['draft'] == "1") else "",
-                                    "--meta" if (self.target['meta'] == "true" or self.target['meta'] == "1") else ""
+                                    "--remarks" if (remarks == "true" or remarks == "1") else "",
+                                    "--draft" if (draft == "true" or draft == "1") else "",
+                                    "--meta" if (meta == "true" or meta == "1") else ""
                                 ])
         commands[n] = {}
         commands[n]['cmd'] = "echo \"%s\" > %s" % (daps_params,
@@ -130,7 +168,7 @@ class Deliverable:
                                                 xslt_params_file[1],       # -x
                                                 daps_params_file[1],       # -d
                                                 tmp_build_target,          # -o
-                                                self.local_repo_build_dir, # -i
+                                                self.parent.local_repo_build_dir, # -i
                                                 self.build_format,         # -f
                                                 self.dc_file               # last param
                                                 )
@@ -139,7 +177,7 @@ class Deliverable:
         # Create correct directory structure
         n += 1
         sync_source_tmp = tempfile.mkdtemp(prefix="docserv_sync_")
-        create_sync_source = os.path.join(sync_source_tmp, self.language, self.product_id, self.docset_id, self.build_format)
+        create_sync_source = os.path.join(sync_source_tmp, self.parent.build_instruction['lang'], self.parent.build_instruction['product'], self.parent.build_instruction['docset'], self.build_format)
         commands[n] = {}
         commands[n]['cmd'] = "/usr/bin/mkdir -p %s" % (create_sync_source)
         commands[n]['ret_val'] = 0
@@ -152,15 +190,17 @@ class Deliverable:
         commands[n]['replace'] = {'string': '__FILELIST__', 'source': 'file', 'filepath': os.path.join(tmp_build_target,'filelist')}
 
         # rsync build target directory to backup path
+        backup_path = self.parent.config['targets'][self.parent.build_instruction['target']]['backup_path']
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "rsync -lr %s/ %s" % (sync_source_tmp, self.target['backup_path'])
+        commands[n]['cmd'] = "rsync -lr %s/ %s" % (sync_source_tmp, backup_path)
         commands[n]['ret_val'] = 0
 
         # rsync built target directory with web server
+        target_path = self.parent.config['targets'][self.parent.build_instruction['target']]['target_path']
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "rsync -lr %s/ %s" % (sync_source_tmp, self.target['target_path'])
+        commands[n]['cmd'] = "rsync -lr %s/ %s" % (sync_source_tmp, target_path)
         commands[n]['ret_val'] = 0
 
         # remove daps parameter file
@@ -194,8 +234,19 @@ class Deliverable:
                 logger.warning("Thread %i: Build failed! Unexpected return value %i for '%s'" % (thread_id, s.returncode, commands[i]['cmd']))
                 logger.warning("Thread %i STDOUT: %s" % (thread_id, out.decode('utf-8')))
                 logger.warning("Thread %i STDERR: %s"% (thread_id, err.decode('utf-8')))
-                return (False, self.instruction, self.id())
-        return (True, self.instruction, self.id())
+                with self.parent.deliverables_open_lock:
+                    self.parent.deliverables[self.id]['status'] = "fail"
+                return self.dict()
+        with self.parent.deliverables_open_lock:
+            self.parent.deliverables[self.id]['status'] = "success"
+        return self.finish()
+
+    def finish(self):
+        with self.parent.deliverables_building_lock:
+            self.parent.deliverables_building.remove(self.id)
+        with self.parent.deliverables_open_lock:
+            self.parent.deliverables[self.id]['successful_build_commit'] = self.parent.build_instruction['commit']
+        return True
 
     def parse_command(self, command, thread_id):
         if 'replace' in command:
@@ -212,26 +263,52 @@ class Deliverable:
         return cmd
 
 
-class DocConfParser:
+class BuildInstructionHandler:
+    # This object is created when a new build request
+    # is coming in via the API. This object parses the
+    # incoming request and with the help of the XML
+    # configuration creates a set of Deliverables.
+
+    # A dict with meta information about a Deliverable.
+    # It is filled with Deliverable.dict().
+    deliverables = {}
+    deliverables_lock = threading.Lock()
+    # A dict that contains all Deliverable objects
+    # mapped with the Deliverable ID.
+    deliverable_objects = {}
+    deliverable_objects_lock = threading.Lock()
+    # A list of Deliverable IDs that have not yet been
+    # build / have to be built.
+    deliverables_open = []
+    deliverables_open_lock = threading.Lock()
+    # A list of Deliverable IDs that are currently
+    # building. That means a worker thread is currently
+    # running daps for them.
+    deliverables_building = []
+    deliverables_building_lock = threading.Lock()
+
     def __init__(self, build_instruction, config, gitLocks, gitLocksLock, thread_id):
-        self.deliverables = queue.Queue()
-        self.thread_id = thread_id
         if self.validate(build_instruction, config):
             self.initialized = True
             self.build_instruction = build_instruction
+            if 'deliverables' in build_instruction:
+                self.deliverables = build_instruction['deliverables']
             self.config = config
-            self.read_conf_dir()
+            if not self.read_conf_dir():
+                self.initialized = False
+                return
             self.git_lock = RepoLock(resource_to_filename(
                 self.remote_repo), thread_id, gitLocks, gitLocksLock)
-            self.prepare_repo()
-            self.compare_commit_id()
-            self.reset_success_state()
+            self.prepare_repo(thread_id)
+            self.get_commit_hash()
         else:
             self.initialized = False
         return
 
     def __del__(self):
-        logger.debug("Cleaning up %s" % json.dumps(self.build_instruction))
+        logger.debug("Cleaning up %s" % json.dumps(self.build_instruction['id']))
+        if not hasattr(self, 'local_repo_build_dir'):
+            return
         cmd = shlex.split("rm -rf %s" % self.local_repo_build_dir)
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
@@ -240,8 +317,12 @@ class DocConfParser:
     def __str__(self):
         return json.dumps(self.build_instruction)
 
-    def __dict__(self):
-        return self.build_instruction
+    def dict(self):
+        retval = self.build_instruction
+        retval['open'] = self.deliverables_open
+        retval['building'] = self.deliverables_building
+        retval['deliverables'] = self.deliverables
+        return retval
 
     def __getitem__(self, arg):
         return self.build_instruction
@@ -251,9 +332,9 @@ class DocConfParser:
         if not self.config['targets'][target]['active'] == "yes":
             logger.debug("Target %s not active." % target)
             return False
-        # validate and stitch files together with bash script
+        # pylint: disable=unused-variable
         tmp_handle, tmp_filename = tempfile.mkstemp(text=True)
-        logger.info("Stitching XML config directory to %s" % tmp_filename)
+        logger.debug("Stitching XML config directory to %s" % tmp_filename)
         cmd = '/usr/bin/docserv-stitch %s %s %s' % (
             '--make-positive', self.config['targets'][target]['config_dir'], tmp_filename)
         logger.debug("Stitching command: %s" % cmd)
@@ -273,16 +354,20 @@ class DocConfParser:
         # then read all files into an xml tree
         self.tree = ElementTree.parse(tmp_filename)
         xml_root = self.tree.getroot()
-        self.branch = xml_root.find("positivedocservconfig/product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/branch" % (
-            self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])).text
-        self.remote_repo = xml_root.find("positivedocservconfig/product[@productid='%s']/docset[@setid='%s']/builddocs/git/remote" % (
-            self.build_instruction['product'], self.build_instruction['docset'])).text
+        try:
+            xpath = ".//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/branch" % (
+                self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])
+            self.branch = xml_root.find(xpath).text
 
-    def reset_success_state(self):
-        if self.initialized:
-            self.build_instruction['success'] = True
+            xpath = ".//product[@productid='%s']/docset[@setid='%s']/builddocs/git/remote" % (
+                self.build_instruction['product'], self.build_instruction['docset'])
+            self.remote_repo = xml_root.find(xpath).text
+        except AttributeError:
+            logger.warning("Failed to parse xpath: %s" % xpath)
+            return False
+        return True
 
-    def prepare_repo(self):
+    def prepare_repo(self, thread_id):
         commands = {}
         # Clone locally cached repository, does nothing if exists
         n = 0
@@ -303,11 +388,11 @@ class DocConfParser:
 
         # Create local copy in temp build dir
         n += 1
-        local_repo_build_dir = os.path.join(self.config['server']['temp_repo_dir'], ''.join(
+        self.local_repo_build_dir = os.path.join(self.config['server']['temp_repo_dir'], ''.join(
             random.choices(string.ascii_uppercase + string.digits, k=12)))
         commands[n] = {}
         commands[n]['cmd'] = "git clone --single-branch --branch %s %s %s" % (
-            self.branch, local_repo_cache_dir, local_repo_build_dir)
+            self.branch, local_repo_cache_dir, self.local_repo_build_dir)
         commands[n]['ret_val'] = 0
         commands[n]['repo_lock'] = None
 
@@ -315,7 +400,7 @@ class DocConfParser:
             cmd = shlex.split(commands[i]['cmd'])
             if commands[i]['repo_lock'] is not None:
                 self.git_lock.acquire()
-            logger.debug("Thread %i: %s" % (self.thread_id, commands[i]['cmd']))
+            logger.debug("Thread %i: %s" % (thread_id, commands[i]['cmd']))
             s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             s.communicate()
             self.git_lock.release()
@@ -325,23 +410,15 @@ class DocConfParser:
                 self.initialized = False
                 return False
 
-        # a working copy containing the required branch has been created in local_repo_build_dir
-        self.local_repo_build_dir = local_repo_build_dir
         return True
 
-    def compare_commit_id(self):
+    def get_commit_hash(self):
         cmd = shlex.split("git -C "+self.local_repo_build_dir +
                           " log --format=\"%H\" -n 1")
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
-        current_commit_id = s.communicate()[0]
-        current_commit_id = current_commit_id.decode('utf-8').rstrip()
-        logger.debug("Current commit hash: %s" % current_commit_id)
-        if current_commit_id == self.build_instruction['commit']:
-            logger.info("Build for instruction %s is already up to date." % (json.dumps(self.build_instruction)))
-            self.initialized = False
-        else:
-            self.build_instruction['commit'] = current_commit_id
+        self.build_instruction['commit'] = s.communicate()[0].decode('utf-8').rstrip()
+        logger.debug("Current commit hash: %s" % self.build_instruction['commit'])
 
     def validate(self, build_instruction, config):
         # build_instruction = {'docs': [{'docset': '15ga', 'lang': 'en', 'product': 'sles'}],'targets': ['external']}
@@ -360,60 +437,116 @@ class DocConfParser:
         if not isinstance(build_instruction['target'], str):
             logger.warning("Validation: target is not a string")
             return False
-        logger.debug("Valid build instruction: %s" %
-                     json.dumps(build_instruction))
+        logger.debug("Valid build instruction: %s" % build_instruction['id'])
         return True
 
     def generate_deliverables(self):
         if not self.initialized:
             return False
-        target = self.build_instruction['target']
         xml_root = self.tree.getroot()
-        list_deliverables = []
+        logger.debug("Generating deliverables.")
         for xml_deliverable in xml_root.findall(".//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/deliverable" % (self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])):
-            for build_format in xml_deliverable.findall(".//format"):
-                deliverable = Deliverable(  self.local_repo_build_dir,
-                                            self.build_instruction,
-                                            xml_deliverable.find(".//dc").text,
-                                            build_format.text,
-                                            self.config['targets'][target]
+            for build_format in xml_deliverable.find(".//format").attrib:
+                deliverable = Deliverable(self,
+                                          xml_deliverable.find(".//dc").text,
+                                          build_format
                                          )
-                list_deliverables.append(deliverable.id())
-                self.deliverables.put(deliverable)
+                self.deliverables[deliverable.id] = deliverable.dict()
+                self.deliverable_objects[deliverable.id] = deliverable
+                self.deliverables_open.append(deliverable.id)
             # after all deliverables are generated, we don't need the xml tree anymore
             self.tree = None
-        return list_deliverables
+        return True
+
+    def get_deliverable(self):
+        # return deliverable object that can run to build the output
+        # return None if all deliverables are already building
+        # return 'done' if all deliverables have finished building
+        retval = None
+        deliverable_id = None
+        with self.deliverables_open_lock:
+            if len(self.deliverables_open) > 0:
+                deliverable_id = self.deliverables_open.pop()
+                with self.deliverable_objects_lock:
+                    retval = self.deliverable_objects.pop(deliverable_id)
+        if retval is not None:
+            with self.deliverables_building_lock:
+                self.deliverables_building.append(deliverable_id)
+            return retval
+        with self.deliverables_building_lock:
+            retval = len(self.deliverables_building)
+        if retval == 0:
+            return 'done'
+        else:
+            return None
 
 
 class DocservState:
     config = {}
-    # tracks all build_instructions in all queues that should be built
-    in_queues = {}
-    in_queues_lock = threading.Lock()
-    # FIFO queue for build instructions from REST API
-    scheduled_docs = queue.Queue()
-    # finished builds, contains commit hash and success
+
+    ###################################################
+    #   The following section contains all dicts and  #
+    #   queues that keep track of stuff to be build   #
+    ###################################################
+    #
+    # 1. "queue" for build instructions from REST API
+    #
+    scheduled_build_instruction = {}
+    scheduled_build_instruction_lock = threading.Lock()
+
+    #
+    # 2. When an item form the scheduled_build_instruction dict
+    #    is taken up for processing, its information needs
+    #    to be updated from the configuration. During that phase
+    #    it remains in the scheduled_build_instructions dict but
+    #    its key is added to the updating_build_instruction list.
+    #    This also uses the scheduled_build_instruction_lock.
+    updating_build_instruction = []
+
+    #
+    # 3.1 A dict that contains all BuildInstructionHandlers.
+    #     This is the state in which documents are being
+    #     build.
+    #
+    bih_dict = {}
+    bih_dict_lock = threading.Lock()
+
+    #
+    # 3.2 A queue that contains BUILD_INSTRUCTION_ID. With the ID
+    #     the workers will retrieve a Deliverable and build it.
+    #
+    bih_queue = queue.Queue()
+
+    #
+    # 4. When a BuildInstructionHandler is finished, its
+    #    status is dumped into a dict and kept for the future.
+    #
     past_builds = {}
     past_builds_lock = threading.Lock()
-    # FIFO for DocConfParser instances, which in turn contains queue of deliverables
-    # DocConfParser instances are requeued if deliverables queue is not empty
-    currently_building = queue.Queue()
-    currently_building_lock = threading.Lock()
-    # Dict of DocConfParser instances with empty deliverables queue
-    waiting_for_finish = {}
-    waiting_for_finish_lock = threading.Lock()
 
     def __del__(self):
         pass
 
     def __str__(self):
-        return json.dumps(self.__dict__())
+        return json.dumps(self.dict())
 
-    def __dict__(self):
-        return {
-            'building': self.in_queues,
-            'finished': self.past_builds
-        }
+    def dict(self):
+        retval = []
+        with self.scheduled_build_instruction_lock:
+            for key in self.scheduled_build_instruction:
+                try:
+                    retval.append(self.scheduled_build_instruction[key])
+                except AttributeError:
+                    pass
+        with self.bih_dict_lock:
+            for key in self.bih_dict:
+                try:
+                    retval.append(self.bih_dict[key].dict())
+                except AttributeError:
+                    pass
+        for key in self.past_builds:
+            retval.append(self.past_builds[key])
+        return retval
 
     def generate_id(self, build_instruction):
         return hashlib.md5((build_instruction['target'] +
@@ -422,99 +555,87 @@ class DocservState:
                             build_instruction['product']).encode('utf-8')
                            ).hexdigest()[:9]
 
-    def add_build_instruction(self, build_instruction):
+    def queue_build_instruction(self, build_instruction):
+        retval = False
         build_instruction['id'] = self.generate_id(build_instruction)
         if build_instruction['id'] in self.past_builds.keys():
-            build_instruction['commit'] = self.past_builds[build_instruction['id']]['commit']
-        else:
-            build_instruction['commit'] = ""
-        self.in_queues_lock.acquire()
-        if build_instruction['id'] not in self.in_queues:
-            self.in_queues[build_instruction['id']] = build_instruction
-            self.in_queues_lock.release()
-            self.scheduled_docs.put(build_instruction)
-            return True
-        else:
-            # Already building or queued for building
-            self.in_queues_lock.release()
-            return False
-
-    def get_deliverable(self, thread_id):
-        if self.currently_building_lock.acquire(False):
-            try:
-                doc = self.currently_building.get(False)
-            except queue.Empty:
-                self.currently_building_lock.release()
-                return None
-            else:
-                try:
-                    deliverable = doc.deliverables.get(False)
-                except queue.Empty:
-                    self.currently_building_lock.release()
-                    self.got_last_deliverable(doc)
-                    return None
-                else:
-                    logger.info("Thread %i: Building deliverable %s from %s" % (thread_id, deliverable.id(), doc))
-                    self.currently_building.put(doc)
-                    self.currently_building_lock.release()
-                    return deliverable
-        return None
+            with self.past_builds_lock:
+                build_instruction = self.past_builds.pop(build_instruction['id'])
+        with self.bih_dict_lock:
+            if build_instruction['id'] not in self.bih_dict:
+                with self.scheduled_build_instruction_lock:
+                    if build_instruction['id'] not in self.scheduled_build_instruction:
+                        self.scheduled_build_instruction[build_instruction['id']] = build_instruction
+                        retval = True
+        return retval
 
     def get_scheduled_build_instruction(self):
         # Get a build_instruction for building
+        with self.scheduled_build_instruction_lock:
+            for key in self.scheduled_build_instruction:
+                if key not in self.updating_build_instruction:
+                    self.updating_build_instruction.append(key)
+                    return self.scheduled_build_instruction[key]
+        return None
+
+    def remove_scheduled_build_instruction(self, build_instruction_id):
+        # Get a build_instruction for building
+        with self.scheduled_build_instruction_lock:
+            self.updating_build_instruction.remove(build_instruction_id)
+            self.scheduled_build_instruction.pop(build_instruction_id)
+
+    def abort_build_instruction(self, build_instruction_id):
+        logger.info("Aborting build instruction %s" % build_instruction_id)
+        with self.scheduled_build_instruction_lock:
+            self.updating_build_instruction.remove(build_instruction_id)
+            build_instruction = self.scheduled_build_instruction.pop(build_instruction_id, None)
+        if build_instruction is None:
+            with self.bih_dict_lock:
+                build_instruction = self.bih_dict.pop(build_instruction_id).dict()
+        if build_instruction is not None:
+            with self.past_builds_lock:
+                self.past_builds[build_instruction_id] = build_instruction
+
+    def finish_build_instruction(self, build_instruction_id):
+        logger.info("Finished build instruction %s" % build_instruction_id)
+        with self.bih_dict_lock:
+            build_instruction = self.bih_dict.pop(build_instruction_id)
+        with self.past_builds_lock:
+            self.past_builds[build_instruction_id] = build_instruction.dict()
+
+    def get_deliverable(self, thread_id):
         try:
-            build_instruction = self.scheduled_docs.get(False)
+            build_instruction_id = self.bih_queue.get(False)
         except queue.Empty:
             return None
         else:
-            return build_instruction
-
-    def store_deliverable_ids(self, build_instruction_id, deliverables):
-        self.in_queues_lock.acquire()
-        self.in_queues[build_instruction_id]['building_deliverables'] = deliverables
-        self.in_queues_lock.release()
-
-    def got_last_deliverable(self, doc):
-        self.waiting_for_finish_lock.acquire()
-        self.waiting_for_finish[doc.build_instruction['id']] = doc
-        self.waiting_for_finish_lock.release
-
-    def finished_deliverable(self, success, build_instruction_id, deliverable_id):
-        remove_from_queue = False
-        self.in_queues_lock.acquire()
-        self.in_queues[build_instruction_id]['building_deliverables'].remove(deliverable_id)
-        if not success:
-            self.in_queues[build_instruction_id]['success'] = False
-        if not self.in_queues[build_instruction_id]['building_deliverables']:
-            remove_from_queue = True
-        self.in_queues_lock.release()
-        if remove_from_queue:
-            self.finished_build_instruction(build_instruction_id)
-
-    def finished_build_instruction(self, build_instruction_id):
-        logger.info("Finished building deliverables for %s" % build_instruction_id)
-        self.in_queues_lock.acquire()
-        build_instruction = self.in_queues.pop(build_instruction_id)
-        self.in_queues_lock.release()
-        self.past_builds_lock.acquire()
-        self.past_builds[build_instruction_id] = build_instruction
-        self.past_builds_lock.release()
+            deliverable = self.bih_dict[build_instruction_id].get_deliverable()
+            if deliverable == 'done':
+                self.finish_build_instruction(build_instruction_id)
+                deliverable = None
+            else: # build instruction is not yet finished, put its ID back on the queue
+                self.bih_queue.put(build_instruction_id)
+        return deliverable
 
     def save_state(self):
         f = open("/etc/docserv/%s.json" % self.config['server']['name'], "w")
-        f.write(self.__str__())
+        f.write(json.dumps(self.dict()))
 
     def load_state(self):
         logger.info("Reading previous state.")
         filepath = "/etc/docserv/%s.json" % self.config['server']['name']
         if os.path.isfile(filepath):
             file = open(filepath, "r")
-            state = json.loads(file.read())
-            if 'finished' in state and 'building' in state:
-                self.past_builds = state['finished']
-                for build_instruction_id, build_instruction in state['building'].items():
-                    self.add_build_instruction(build_instruction)
-                return True
+            try:
+                state = json.loads(file.read())
+            except json.decoder.JSONDecodeError:
+                return False
+            for build_instruction in state:
+                if len(build_instruction['building']) > 0 or len(build_instruction['open']) > 0:
+                    self.queue_build_instruction(build_instruction)
+                else:
+                    self.past_builds[build_instruction['id']] = build_instruction
+            return True
         return False
 
 
@@ -561,6 +682,7 @@ class Docserv(DocservState):
                 self.config['targets'][config[section]['name']]['active'] =        config[section]['active']
                 self.config['targets'][config[section]['name']]['draft'] =         config[section]['draft']
                 self.config['targets'][config[section]['name']]['remarks'] =       config[section]['remarks']
+                self.config['targets'][config[section]['name']]['meta'] =          config[section]['meta']
                 self.config['targets'][config[section]['name']]['beta_warning'] =  config[section]['beta_warning']
                 self.config['targets'][config[section]['name']]['target_path'] =   config[section]['target_path']
                 self.config['targets'][config[section]['name']]['backup_path'] =   config[section]['backup_path']
@@ -586,44 +708,48 @@ class Docserv(DocservState):
             self.exit()
         for worker in workers:
             worker.join()
+        self.rest.shutdown()
+        self.save_state()
 
     def exit(self):
         logger.warning("Received SIGINT. Telling all threads to end. Please wait.")
         self.end_all.put("now")
-        self.rest.shutdown()
-        self.save_state()
 
-    def parse_rest_item(self, thread_id):
+    def parse_build_instruction(self, thread_id):
         build_instruction = self.get_scheduled_build_instruction()
         if build_instruction is not None:
-            doc = DocConfParser(build_instruction, self.config, self.gitLocks, self.gitLocksLock, thread_id)
-            if doc.initialized == False:
-                self.finished_build_instruction(build_instruction['id'])
+            myBIH = BuildInstructionHandler(build_instruction, self.config, self.gitLocks, self.gitLocksLock, thread_id)
+            # If the initialization failed, immediately delete the BuildInstructionHandler
+            if myBIH.initialized == False:
+                self.abort_build_instruction(build_instruction['id'])
                 return
-            deliverables = doc.generate_deliverables()
-            if deliverables:
-                self.store_deliverable_ids(build_instruction['id'], deliverables)
-                self.currently_building.put(doc)
-            del doc
+            myBIH.generate_deliverables()
+            self.remove_scheduled_build_instruction(build_instruction['id'])
+            with self.bih_dict_lock:
+                self.bih_dict[build_instruction['id']] = myBIH
+            self.bih_queue.put(build_instruction['id'])
 
     def worker(self, thread_id):
         while(True):
             # 1. parse input from rest api and put the instance of the doc class on the currently building queue
-            self.parse_rest_item(thread_id)
+            self.parse_build_instruction(thread_id)
 
             # 2. get doc from currently_building queue and then a deliverable from doc.
             #    after that, put doc back on the currently building queue. unless it was
             #    the last deliverable.
             deliverable = self.get_deliverable(thread_id)
             if deliverable is not None:
-                success, build_instruction_id, deliverable_id = deliverable.run(thread_id)
-                self.finished_deliverable(success, build_instruction_id, deliverable_id)
+                deliverable.run(thread_id)
 
             # 3. end thread if sigint
             if not self.end_all.empty(): return True
 
             # 4. wait for a short while, then repeat
-            time.sleep(2)
+            time.sleep(0.1)
+
+            # Thread 0 is frequently saving the state
+            if thread_id == 0:
+                self.save_state()
 
     def listen(self):
         server_address = (self.config['server']['host'], int(
@@ -640,9 +766,14 @@ class RESTServer(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        self._set_headers()
-        self.wfile.write(
-            bytes(json.dumps(self.server.docserv.__dict__()), "utf-8"))
+        if self.path == '/' or self.path == '/build_instructions/':
+            self._set_headers()
+            self.wfile.write(
+                bytes(json.dumps(self.server.docserv.dict()), "utf-8"))
+        elif self.path == '/deliverables/':
+            self._set_headers()
+            self.wfile.write(
+                bytes(json.dumps(self.server.docserv.deliverables), "utf-8"))
 
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
@@ -650,10 +781,11 @@ class RESTServer(BaseHTTPRequestHandler):
         post_data = self.rfile.read(content_length)
         build_jobs = json.loads(post_data)
         for job in build_jobs:
-            logger.info("Queueing %s" % json.dumps(job))
-            self.server.docserv.add_build_instruction(job)
+            if self.server.docserv.queue_build_instruction(job):
+                logger.info("Queueing %s" % json.dumps(job))
+            else:
+                logger.info("Not queueing %s" % json.dumps(job))
         self._set_headers()
-
 
 class ThreadedRESTServer(ThreadingMixIn, HTTPServer):
     def __init__(self, server_address, RequestHandlerClass, docserv, bind_and_activate=True):
@@ -662,6 +794,14 @@ class ThreadedRESTServer(ThreadingMixIn, HTTPServer):
         logger.info("Starting HTTP server on %s:%i" % server_address)
         self.docserv = docserv
 
+def print_help():
+    print("""This is a deamon and should be invoked with the command:
+
+> systemctl start docserv@CONFIG_FILENAME
+or
+> docserv CONFIG_FILENAME
+
+The CONFIG_FILENAME must reside in /etc/docserv/ and end with .ini.""")
 
 logger = logging.getLogger('docserv')
 logger.setLevel(logging.INFO)
@@ -673,5 +813,9 @@ ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 if __name__ == "__main__":
-    docserv = Docserv(sys.argv)
-    docserv.start()
+    if "--help" in sys.argv or "-h" in sys.argv:
+        print_help()
+    else:
+        docserv = Docserv(sys.argv)
+        docserv.start()
+        sys.exit(0)

@@ -283,7 +283,6 @@ class BuildInstructionHandler:
     deliverables_building_lock = threading.Lock()
 
     def __init__(self, build_instruction, config, gitLocks, gitLocksLock, thread_id):
-        self.thread_id = thread_id
         if self.validate(build_instruction, config):
             self.initialized = True
             self.build_instruction = build_instruction
@@ -295,7 +294,7 @@ class BuildInstructionHandler:
                 return
             self.git_lock = RepoLock(resource_to_filename(
                 self.remote_repo), thread_id, gitLocks, gitLocksLock)
-            self.prepare_repo()
+            self.prepare_repo(thread_id)
             self.get_commit_hash()
         else:
             self.initialized = False
@@ -363,7 +362,7 @@ class BuildInstructionHandler:
             return False
         return True
 
-    def prepare_repo(self):
+    def prepare_repo(self, thread_id):
         commands = {}
         # Clone locally cached repository, does nothing if exists
         n = 0
@@ -396,7 +395,7 @@ class BuildInstructionHandler:
             cmd = shlex.split(commands[i]['cmd'])
             if commands[i]['repo_lock'] is not None:
                 self.git_lock.acquire()
-            logger.debug("Thread %i: %s" % (self.thread_id, commands[i]['cmd']))
+            logger.debug("Thread %i: %s" % (thread_id, commands[i]['cmd']))
             s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             s.communicate()
             self.git_lock.release()
@@ -486,13 +485,22 @@ class DocservState:
     #   queues that keep track of stuff to be build   #
     ###################################################
     #
-    # 1. FIFO queue for build instructions from REST API
+    # 1. "queue" for build instructions from REST API
     #
     scheduled_build_instruction = {}
     scheduled_build_instruction_lock = threading.Lock()
 
     #
-    # 2.1 A dict that contains all BuildInstructionHandlers.
+    # 2. When an item form the scheduled_build_instruction dict
+    #    is taken up for processing, its information needs
+    #    to be updated from the configuration. During that phase
+    #    it remains in the scheduled_build_instructions dict but
+    #    its key is added to the updating_build_instruction list.
+    #    This also uses the scheduled_build_instruction_lock.
+    updating_build_instruction = []
+
+    #
+    # 3.1 A dict that contains all BuildInstructionHandlers.
     #     This is the state in which documents are being
     #     build.
     #
@@ -500,13 +508,13 @@ class DocservState:
     bih_dict_lock = threading.Lock()
 
     #
-    # 2.2 A queue that contains BUILD_INSTRUCTION_ID. With the ID
+    # 3.2 A queue that contains BUILD_INSTRUCTION_ID. With the ID
     #     the workers will retrieve a Deliverable and build it.
     #
     bih_queue = queue.Queue()
 
     #
-    # 3. When a BuildInstructionHandler is finished, its
+    # 4. When a BuildInstructionHandler is finished, its
     #    status is dumped into a dict and kept for the future.
     #
     past_builds = {}
@@ -561,18 +569,36 @@ class DocservState:
     def get_scheduled_build_instruction(self):
         # Get a build_instruction for building
         with self.scheduled_build_instruction_lock:
-            if len(self.scheduled_build_instruction.keys()) > 0:
-                build_instruction = self.scheduled_build_instruction.pop(list(self.scheduled_build_instruction.keys())[0], None)
-            else:
-                build_instruction = None
-        return build_instruction
+            for key in self.scheduled_build_instruction:
+                if key not in self.updating_build_instruction:
+                    self.updating_build_instruction.append(key)
+                    return self.scheduled_build_instruction[key]
+        return None
+
+    def remove_scheduled_build_instruction(self, build_instruction_id):
+        # Get a build_instruction for building
+        with self.scheduled_build_instruction_lock:
+            self.updating_build_instruction.remove(build_instruction_id)
+            self.scheduled_build_instruction.pop(build_instruction_id)
+
+    def abort_build_instruction(self, build_instruction_id):
+        logger.info("Aborting build instruction %s" % build_instruction_id)
+        with self.scheduled_build_instruction_lock:
+            self.updating_build_instruction.remove(build_instruction_id)
+            build_instruction = self.scheduled_build_instruction.pop(build_instruction_id, None)
+        if build_instruction is None:
+            with self.bih_dict_lock:
+                build_instruction = self.bih_dict.pop(build_instruction_id).dict()
+        if build_instruction is not None:
+            with self.past_builds_lock:
+                self.past_builds[build_instruction_id] = build_instruction
 
     def finish_build_instruction(self, build_instruction_id):
-            logger.info("Finished build instruction %s" % build_instruction_id)
-            with self.bih_dict_lock:
-                build_instruction = self.bih_dict.pop(build_instruction_id)
-            with self.past_builds_lock:
-                self.past_builds[build_instruction_id] = build_instruction.dict()
+        logger.info("Finished build instruction %s" % build_instruction_id)
+        with self.bih_dict_lock:
+            build_instruction = self.bih_dict.pop(build_instruction_id)
+        with self.past_builds_lock:
+            self.past_builds[build_instruction_id] = build_instruction.dict()
 
     def get_deliverable(self, thread_id):
         try:
@@ -693,9 +719,10 @@ class Docserv(DocservState):
             myBIH = BuildInstructionHandler(build_instruction, self.config, self.gitLocks, self.gitLocksLock, thread_id)
             # If the initialization failed, immediately delete the BuildInstructionHandler
             if myBIH.initialized == False:
-                self.finish_build_instruction(build_instruction['id'])
+                self.abort_build_instruction(build_instruction['id'])
                 return
             myBIH.generate_deliverables()
+            self.remove_scheduled_build_instruction(build_instruction['id'])
             with self.bih_dict_lock:
                 self.bih_dict[build_instruction['id']] = myBIH
             self.bih_queue.put(build_instruction['id'])

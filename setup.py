@@ -22,13 +22,16 @@ from setuptools import setup, find_packages
 
 setup(
     name="docserv",
-    version="0.9.13",
+    version="0.9.14",
     packages=find_packages(),
     scripts=['bin/docserv', 'bin/docserv-stitch', 'bin/docserv-dirs'],
     install_requires=[],
     data_files=[
-        ('/etc/docserv/', ['config/docserv.ini', 'config/config.d/sles.xml', 'config/templates/index.html']),
-        ('/usr/share/docserv/', ['share/schema/config-validation.rnc', 'share/xslt/positive-config.xsl']),
+        ('/etc/docserv/', ['config/docserv.ini']),
+        ('/etc/docserv/config.d/', ['config/config.d/sles.xml']),
+        ('/etc/docserv/templates/', ['config/templates/index.html']),
+        ('/usr/share/docserv/schema/', ['share/schema/config-validation.rnc']),
+        ('/usr/share/docserv/xslt/', ['share/xslt/positive-config.xsl']),
         ('/usr/lib/systemd/system/', ['systemd/docserv.service']),
     ],
     author="SUSE Documentation Team",

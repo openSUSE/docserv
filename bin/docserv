@@ -76,10 +76,11 @@ class RepoLock:
 
 class Deliverable:
     title = None
-    path = None
+    path = []
     status = "building"
     successful_build_commit = None
     last_build_attempt_commit = None
+    root_id = None # False if no root id exists
 
     def __init__(self, parent, dc_file, build_format):
         self.parent = parent # Reference to the parent BuildInstructionHandler
@@ -132,6 +133,13 @@ class Deliverable:
             return self.finish(True)
         with self.parent.deliverables_open_lock:
             self.parent.deliverables[self.id]['last_build_attempt_commit'] = self.parent.build_instruction['commit']
+
+        #
+        # The following lines of code define all bash commands that
+        # are required to build and publish the deliverable.
+        # This includes preparation of the target directories and
+        # clean up after the build is finished.
+        #
         commands = {}
 
         # Write XSLT parameters to temp file
@@ -190,10 +198,30 @@ class Deliverable:
         # Copy wanted files to sync source
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "rsync --exclude '*_bigfile.xml' -r __FILELIST__  %s" % (sync_source_dir)
+        commands[n]['cmd'] = "rsync -r __FILELIST__  %s" % (sync_source_dir)
         commands[n]['ret_val'] = 0
         commands[n]['pre_cmd_hook'] = 'parse_d2d_filelist'
         commands[n]['tmp_build_target'] = tmp_build_target
+
+        # create directory for Deliverable cache file
+        deliverable_cache_dir = os.path.join( '/var/cache/docserv/',
+                                        self.parent.config['server']['name'],
+                                        self.parent.build_instruction['lang'],
+                                        self.parent.build_instruction['product'],
+                                        self.parent.build_instruction['docset'],
+                                      )
+        n += 1
+        commands[n] = {}
+        commands[n]['cmd'] = "mkdir -p %s" % deliverable_cache_dir
+        commands[n]['tmp_build_target'] = tmp_build_target
+        commands[n]['pre_cmd_hook'] = 'extract_root_id' # get root id from bigfile
+
+        # (re-)generate overview page
+        n += 1
+        commands[n] = {}
+        commands[n]['cmd'] = "docserv-build-overview --cache-dir %s" % deliverable_cache_dir
+        commands[n]['deliverable_cache_dir'] = deliverable_cache_dir
+        commands[n]['pre_cmd_hook'] = 'write_deliverable_cache' # write configuration for overview page
 
         # rsync build target directory to backup path
         backup_path = self.parent.config['targets'][self.parent.build_instruction['target']]['backup_path']
@@ -232,16 +260,16 @@ class Deliverable:
         commands[n]['cmd'] = "rm -rf %s" % (tmp_build_target)
         commands[n]['ret_val'] = 0
 
+        #
+        # Now iterate through all commands and execute them
+        #
         for i in range(0,n + 1):
             if commands[i]['pre_cmd_hook'] is not None:
                 commands[i] = getattr(self, commands[i]['pre_cmd_hook'])(commands[i])
 
             result = self.execute(commands[i], thread_id)
-            with self.parent.deliverables_open_lock:
-                if result:
-                    self.parent.deliverables[self.id]['status'] = "success"
-                else:
-                    self.parent.deliverables[self.id]['status'] = "fail"
+            if not result: # abort if one command failed
+                return self.finish(False)
 
             if commands[i]['post_cmd_hook'] is not None:
                 getattr(self, commands[i]['post_cmd_hook'])(commands[i])
@@ -258,11 +286,16 @@ class Deliverable:
             logger.warning("Thread %i: Build failed! Unexpected return value %i for '%s'" % (
                 thread_id, s.returncode, command['cmd']))
             logger.warning("Thread %i STDOUT: %s" % (thread_id, self.out.decode('utf-8')))
-            logger.warning("Thread %i STDERR: %s"% (thread_id, self.err.decode('utf-8')))
+            logger.warning("Thread %i STDERR: %s" % (thread_id, self.err.decode('utf-8')))
             return False
         return True
 
     def finish(self, result):
+        with self.parent.deliverables_open_lock:
+            if result:
+                self.parent.deliverables[self.id]['status'] = "success"
+            else:
+                self.parent.deliverables[self.id]['status'] = "fail"
         with self.parent.deliverables_building_lock:
             self.parent.deliverables_building.remove(self.id)
         if result:
@@ -273,11 +306,40 @@ class Deliverable:
     def parse_d2d_filelist(self, command):
         # currently only read from file logic
         f = open(os.path.join(command['tmp_build_target'],'filelist'), 'r')
-        content = str(f.read()).strip()
-        logger.debug("Content: %s" % content)
-        command['cmd'] = command['cmd'].replace('__FILELIST__', content)
+        for line in f.readline().strip():
+            if '_bigfile.xml' not in line:
+                self.path.append(line)
+        logger.debug("Deliverable build results: %s" % str(self.path))
+        command['cmd'] = command['cmd'].replace('__FILELIST__', ' '.join(self.path))
         return command
 
+    def extract_root_id(self, command):
+        # extract root id from DC file and then title from bigfile
+        dc_path = os.path.join(self.parent.local_repo_build_dir, self.dc_file)
+        with open(dc_path) as f:
+            import re
+            for line in f.readlines():
+                m = re.search('ROOTID=\"(.+?)\"', line)
+                if m:
+                    root_id = m.group(1)
+                    break
+        if root_id:
+            bigfile = root_id
+            logger.debug("Found ROOTID for %s: %s" % ( self.id, root_id ))
+        else:
+            bigfile = self.dc_file.replace('DC-', '')
+            logger.debug("No ROOTID found for %s, using DC file name: %s" % ( self.id, self.dc_file ))
+        self.tree = ElementTree.parse(os.path.join(command['tmp_build_target'], '%s_bigfile.xml' % bigfile))
+        xml_root = self.tree.getroot()
+        try:
+            xpath = "(//*[@*[local-name(.)='id']='%s'][1]/*[local-name(.)='title'][1]|//*[@*[local-name(.)='id']='%s'][1]/*[contains(local-name(.),'info')][1]/*[local-name(.)='title'][1])[1]"
+            self.title = xml_root.find(xpath).text
+        except:
+            pass
+        return command
+
+    def write_deliverable_cache(self, command):
+        pass
 
 class BuildInstructionHandler:
     # This object is created when a new build request

@@ -177,7 +177,12 @@ class Deliverable:
         # Create correct directory structure
         n += 1
         sync_source_tmp = tempfile.mkdtemp(prefix="docserv_sync_")
-        sync_source_dir = os.path.join(sync_source_tmp, self.parent.build_instruction['lang'], self.parent.build_instruction['product'], self.parent.build_instruction['docset'], self.build_format)
+        sync_source_dir = os.path.join( sync_source_tmp,
+                                        self.parent.build_instruction['lang'],
+                                        self.parent.build_instruction['product'],
+                                        self.parent.build_instruction['docset'],
+                                        self.build_format
+                                      )
         commands[n] = {}
         commands[n]['cmd'] = "/usr/bin/mkdir -p %s" % (sync_source_dir)
         commands[n]['ret_val'] = 0
@@ -231,7 +236,8 @@ class Deliverable:
             s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = s.communicate()
             if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
-                logger.warning("Thread %i: Build failed! Unexpected return value %i for '%s'" % (thread_id, s.returncode, commands[i]['cmd']))
+                logger.warning("Thread %i: Build failed! Unexpected return value %i for '%s'" % (
+                    thread_id, s.returncode, commands[i]['cmd']))
                 logger.warning("Thread %i STDOUT: %s" % (thread_id, out.decode('utf-8')))
                 logger.warning("Thread %i STDERR: %s"% (thread_id, err.decode('utf-8')))
                 with self.parent.deliverables_open_lock:
@@ -446,7 +452,9 @@ class BuildInstructionHandler:
             return False
         xml_root = self.tree.getroot()
         logger.debug("Generating deliverables.")
-        for xml_deliverable in xml_root.findall(".//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/deliverable" % (self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])):
+        xpath = ".//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/deliverable" % (
+            self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])
+        for xml_deliverable in xml_root.findall(xpath):
             for build_format in xml_deliverable.find(".//format").attrib:
                 deliverable = Deliverable(self,
                                           xml_deliverable.find(".//dc").text,

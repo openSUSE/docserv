@@ -319,7 +319,8 @@ class Deliverable:
         with open(dc_path) as f:
             import re
             for line in f.readlines():
-                m = re.search('ROOTID=\"(.+?)\"', line)
+                #pylint: disable=W1401
+                m = re.search('^\s*ROOTID\s*=\s*[\"\']?(.+?)[\"\']?.*$', line.strip())
                 if m:
                     root_id = m.group(1)
                     break

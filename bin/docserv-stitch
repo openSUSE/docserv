@@ -3,9 +3,12 @@
 # together, so the docserv script can build from them.
 #
 # Arguments (in order of appearance):
-# [--make-positive] # Turn translation document blacklist into whitelist (optional)
-# INPUT_DIR         # Directory with config files
-# [OUTPUT_FILE]     # Output file (optional, if not set, outputs to stdout)
+# --valid-languages="en-us ..."   # Space-separated list of valid language codes
+#                                 # (optional)
+# --make-positive                 # Turn translation document blacklist into
+#                                 # whitelist (optional)
+# INPUT_DIR                       # Directory with config files
+# OUTPUT_DIR                      # Output directory
 #
 # XML tool deps: xmlstarlet, jing, xmllint
 
@@ -20,6 +23,11 @@ mydir=$(dirname $me)
 
 source $mydir/docserv-dirs
 
+app_help() {
+  sed -rn '/#!/{n; p; :loop n; p; /^[ \t]*$/q; b loop}' $me | sed -r -e 's/^# ?//' -e "s/\\\$0/$(basename $0)/"
+  exit
+}
+
 xmllint='xmllint'
 jing='jing'
 starlet='xmlstarlet'
@@ -31,18 +39,52 @@ schema_file=$share_dir/schema/config-validation.rnc
 positive_xslt_file=$share_dir/xslt/positive-config.xsl
 
 [[ ! -f $schema_file ]] && out "Schema $schema_file does not exist."
+[[ ! -f $positive_xslt_file ]] && out "Schema $positive_xslt_file does not exist."
 
 make_positive=0
-if [[ $1 == '--make-positive' ]]; then
-  [[ ! -f $positive_xslt_file ]] && out "Schema $positive_xslt_file does not exist."
-  make_positive=1
-  shift
-fi
+valid_languages=""
+unknown=""
+input_dir=""
+output_dir=""
 
-[[ ! -d $(readlink -f $1) ]] && out "Directory $1 does not exist."
-indir=$(readlink -f $1)
+for i in "$@"
+  do
+    case $i in
+      -h|--help)
+        app_help
+      ;;
+      --make-positive)
+        make_positive=1
+      ;;
+      --valid-languages=*)
+        valid_languages=" ${i#*=}"
+      ;;
+      *)
+        if [[ -d $(readlink -f $i) ]] && [[ ! $input_dir ]]; then
+          input_dir=$(readlink -f $i)
+        elif [[ -d $(readlink -f $i) ]] && [[ ! $output_dir ]]; then
+          output_dir=$(readlink -f $i)
+        else
+          unknown+="  $i\n"
+        fi
+      ;;
+    esac
+done
 
-cd $indir
+[[ "$unknown" ]] && \
+  out "There are unknown parameters:\n$unknown\n(Note that input and output directories must exist before running this script.)"
+
+[[ $(echo "$valid_languages" | sed -r 's/( +[a-z]{2}(-[a-z]{2,8})?)*//') ]] && \
+  out "Language codes parameter string does not conform to scheme (must be la-ng scheme, space-separated."
+
+
+cd $input_dir
+
+# "all" is actually only recognized for the extralinks tags. Adding it here is
+# bit dirty, because if we did not also validate with the RNG, we'd be allowing
+# invalid values for lang within builddocs elements. Though, as long as we have
+# both, there is no harm done.
+valid_languages_sorted=$(echo -e "all $valid_languages" | tr ' ' '\n' | sort -u)
 
 for file in *.xml; do
 
@@ -50,11 +92,11 @@ for file in *.xml; do
   # run that first
 
   wellformed=$(2>&1 xmllint --noout --noent $file)
-  [[ $? -gt 0 ]] && out "$indir/$file is not well-formed:\n$wellformed"
+  [[ $? -gt 0 ]] && out "$input_dir/$file is not well-formed:\n$wellformed"
 
   valid=$(2>&1 ADDITIONAL_FLAGS="$java_flags" ADDITIONAL_OPTIONS="$java_flags" \
     $jing -ci $schema_file $file)
-  [[ $? -gt 0 ]] && out "$indir/$file is not valid:\n$valid"
+  [[ $? -gt 0 ]] && out "$input_dir/$file is not valid:\n$valid"
 
   # we want to allow IDs that start with a digit, hence we can't use RelaxNG's
   # xsd:ID data type, but we can use xmlstarlet to check
@@ -63,7 +105,15 @@ for file in *.xml; do
   uniquesetids=$(echo -e "$setids" | sort -u)
   [[ ! "$setids" == "$uniquesetids" ]] && \
     out \
-      "Some setid values in $indir/$file are not unique. Check the setid(s): "$(comm -2 -3 <(echo -e "$setids") <(echo -e "$uniquesetids") | tr '\n' ' ')"."
+      "Some setid values in $input_dir/$file are not unique. Check the setid(s): "$(comm -2 -3 <(echo -e "$setids") <(echo -e "$uniquesetids") | tr '\n' ' ')"."
+
+  if [[ "$valid_languages" ]]; then
+    languages=$($starlet sel -t -v "//@lang" $file | sort -u)
+    unrecognized_languages=$(comm -1 -3 <(echo -e "$valid_languages_sorted") <(echo -e "$languages"))
+    [[ "$unrecognized_languages" ]] && \
+      out \
+        "Some lang attributes in $input_dir/$file are not supported by your configuration INI. Check the lang attribute(s):\n$unrecognized_languages"
+  fi
 
 done
 
@@ -84,16 +134,10 @@ uniqueproductids=$(echo -e "$productids" | sort -u)
 
 [[ ! "$productids" == "$uniqueproductids" ]] && \
     out \
-      "Some productid values in $indir are not unique. Check the productid(s): "$(comm -2 -3 <(echo -e "$productids") <(echo -e "$uniqueproductids") | tr '\n' ' ')"."
+      "Some productid values in $input_dir are not unique. Check the productid(s): "$(comm -2 -3 <(echo -e "$productids") <(echo -e "$uniqueproductids") | tr '\n' ' ')"."
 
 cd - >/dev/null
 
-if [[ $make_positive == 1 ]]; then
-  outfile=$(echo -e "$outfile" | xsltproc $positive_xslt_file -)
-fi
-
-if [[ $2 ]]; then
-  echo -e "$outfile" > $2
-else
-  echo -e "$outfile"
-fi
+echo -e "$outfile" > $output_dir/docserv_config_full.xml
+[[ $make_positive == 1 ]] && \
+  echo -e "$outfile" | xsltproc $positive_xslt_file - > $output_dir/docserv_config_full-positive.xml

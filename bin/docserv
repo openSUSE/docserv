@@ -265,8 +265,9 @@ class Deliverable:
     def finish(self, result):
         with self.parent.deliverables_building_lock:
             self.parent.deliverables_building.remove(self.id)
-        with self.parent.deliverables_open_lock:
-            self.parent.deliverables[self.id]['successful_build_commit'] = self.parent.build_instruction['commit']
+        if result:
+            with self.parent.deliverables_open_lock:
+                self.parent.deliverables[self.id]['successful_build_commit'] = self.parent.build_instruction['commit']
         return result
 
     def parse_d2d_filelist(self, command):

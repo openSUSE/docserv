@@ -129,7 +129,7 @@ class Deliverable:
                                                                 self.build_format,
                                                                 self.parent.build_instruction['id']
                                                              ))
-            return self.finish()
+            return self.finish(True)
         with self.parent.deliverables_open_lock:
             self.parent.deliverables[self.id]['last_build_attempt_commit'] = self.parent.build_instruction['commit']
         commands = {}
@@ -192,7 +192,8 @@ class Deliverable:
         commands[n] = {}
         commands[n]['cmd'] = "rsync --exclude '*_bigfile.xml' -r __FILELIST__  %s" % (sync_source_dir)
         commands[n]['ret_val'] = 0
-        commands[n]['replace'] = {'string': '__FILELIST__', 'source': 'file', 'filepath': os.path.join(tmp_build_target,'filelist')}
+        commands[n]['pre_cmd_hook'] = 'parse_d2d_filelist'
+        commands[n]['tmp_build_target'] = tmp_build_target
 
         # rsync build target directory to backup path
         backup_path = self.parent.config['targets'][self.parent.build_instruction['target']]['backup_path']
@@ -232,41 +233,49 @@ class Deliverable:
         commands[n]['ret_val'] = 0
 
         for i in range(0,n + 1):
-            cmd = self.parse_command(commands[i], thread_id)
-            s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            out, err = s.communicate()
-            if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
-                logger.warning("Thread %i: Build failed! Unexpected return value %i for '%s'" % (
-                    thread_id, s.returncode, commands[i]['cmd']))
-                logger.warning("Thread %i STDOUT: %s" % (thread_id, out.decode('utf-8')))
-                logger.warning("Thread %i STDERR: %s"% (thread_id, err.decode('utf-8')))
-                with self.parent.deliverables_open_lock:
-                    self.parent.deliverables[self.id]['status'] = "fail"
-                return self.dict()
-        with self.parent.deliverables_open_lock:
-            self.parent.deliverables[self.id]['status'] = "success"
-        return self.finish()
+            if commands[i]['pre_cmd_hook'] is not None:
+                commands[i] = getattr(self, commands[i]['pre_cmd_hook'])(commands[i])
 
-    def finish(self):
+            result = self.execute(commands[i], thread_id)
+            with self.parent.deliverables_open_lock:
+                if result:
+                    self.parent.deliverables[self.id]['status'] = "success"
+                else:
+                    self.parent.deliverables[self.id]['status'] = "fail"
+
+            if commands[i]['post_cmd_hook'] is not None:
+                getattr(self, commands[i]['post_cmd_hook'])(commands[i])
+
+        return self.finish(result)
+
+    def execute(self, command, thread_id):
+        cmd = shlex.split(command['cmd'])
+        logger.debug("Thread %i: %s" % (thread_id, cmd))
+        s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.out, self.err = s.communicate()
+
+        if command['ret_val'] is not None and not command['ret_val'] == int(s.returncode):
+            logger.warning("Thread %i: Build failed! Unexpected return value %i for '%s'" % (
+                thread_id, s.returncode, command['cmd']))
+            logger.warning("Thread %i STDOUT: %s" % (thread_id, self.out.decode('utf-8')))
+            logger.warning("Thread %i STDERR: %s"% (thread_id, self.err.decode('utf-8')))
+            return False
+        return True
+
+    def finish(self, result):
         with self.parent.deliverables_building_lock:
             self.parent.deliverables_building.remove(self.id)
         with self.parent.deliverables_open_lock:
             self.parent.deliverables[self.id]['successful_build_commit'] = self.parent.build_instruction['commit']
-        return True
+        return result
 
-    def parse_command(self, command, thread_id):
-        if 'replace' in command:
-            # currently only read from file logic
-            logger.debug("Reading %s" % command['replace']['filepath'])
-            f = open(command['replace']['filepath'], 'r')
-            content = str(f.read()).strip()
-            logger.debug("Content: %s" % content)
-            cmd = command['cmd'].replace(command['replace']['string'], content)
-        else:
-            cmd = command['cmd']
-        logger.debug("Thread %i: %s" % (thread_id, cmd))
-        cmd = shlex.split(cmd)
-        return cmd
+    def parse_d2d_filelist(self, command):
+        # currently only read from file logic
+        f = open(os.path.join(command['tmp_build_target'],'filelist'), 'r')
+        content = str(f.read()).strip()
+        logger.debug("Content: %s" % content)
+        command['cmd'] = command['cmd'].replace('__FILELIST__', content)
+        return command
 
 
 class BuildInstructionHandler:

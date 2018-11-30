@@ -335,8 +335,10 @@ class BuildInstructionHandler:
         # pylint: disable=unused-variable
         tmp_handle, tmp_filename = tempfile.mkstemp(text=True)
         logger.debug("Stitching XML config directory to %s" % tmp_filename)
-        cmd = '/usr/bin/docserv-stitch %s %s %s' % (
-            '--make-positive', self.config['targets'][target]['config_dir'], tmp_filename)
+        cmd = '/usr/bin/docserv-stitch --make-positive --valid-languages="%s" %s %s' % (
+            self.config['targets'][target]['languages'],
+            self.config['targets'][target]['config_dir'],
+            tmp_filename)
         logger.debug("Stitching command: %s" % cmd)
         cmd = shlex.split(cmd)
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE,

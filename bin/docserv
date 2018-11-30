@@ -332,13 +332,12 @@ class BuildInstructionHandler:
         if not self.config['targets'][target]['active'] == "yes":
             logger.debug("Target %s not active." % target)
             return False
-        # pylint: disable=unused-variable
-        tmp_handle, tmp_filename = tempfile.mkstemp(text=True)
-        logger.debug("Stitching XML config directory to %s" % tmp_filename)
+        stitch_tmp_dir = tempfile.mkdtemp(prefix="docserv_stitch_")
+        logger.debug("Stitching XML config directory to %s" % stitch_tmp_dir)
         cmd = '/usr/bin/docserv-stitch --make-positive --valid-languages="%s" %s %s' % (
             self.config['targets'][target]['languages'],
             self.config['targets'][target]['config_dir'],
-            tmp_filename)
+            stitch_tmp_dir)
         logger.debug("Stitching command: %s" % cmd)
         cmd = shlex.split(cmd)
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
@@ -354,7 +353,7 @@ class BuildInstructionHandler:
             self.initialized = False
             return False
         # then read all files into an xml tree
-        self.tree = ElementTree.parse(tmp_filename)
+        self.tree = ElementTree.parse(os.path.join(stitch_tmp_dir, "docserv_config_full-positive.xml"))
         xml_root = self.tree.getroot()
         try:
             xpath = ".//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/branch" % (

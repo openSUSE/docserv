@@ -172,7 +172,7 @@ class Deliverable:
         n += 1
         tmp_build_target = tempfile.mkdtemp(prefix="docserv_out_")
         commands[n] = {}
-        commands[n]['cmd'] = "/usr/bin/d2d_runner --create-bigfile=1 -v=1 -u=1 -x=%s -d=%s -o=%s -i=%s -f=%s %s" % (
+        commands[n]['cmd'] = "/usr/bin/d2d_runner -b=1 -v=1 -u=1 -x=%s -d=%s -o=%s -i=%s -f=%s %s" % (
                                                 xslt_params_file[1],       # -x
                                                 daps_params_file[1],       # -d
                                                 tmp_build_target,          # -o
@@ -213,18 +213,19 @@ class Deliverable:
         n += 1
         commands[n] = {}
         commands[n]['cmd'] = "mkdir -p %s" % deliverable_cache_dir
+        commands[n]['ret_val'] = 0
         commands[n]['tmp_build_target'] = tmp_build_target
         commands[n]['pre_cmd_hook'] = 'extract_root_id' # get root id from bigfile
 
         # (re-)generate overview page
         n += 1
         commands[n] = {}
-        print(self.parent.config)
         commands[n]['cmd'] = "docserv-build-overview --cache-dir=%s --language=%s --template_dir=%s --ouput_dir=%s" % (
             deliverable_cache_dir,
             self.parent.build_instruction['lang'],
             self.parent.config['targets'][self.parent.build_instruction['target']]['template_dir'],
             sync_source_tmp)
+        commands[n]['ret_val'] = 0
         commands[n]['deliverable_cache_dir'] = deliverable_cache_dir
         commands[n]['pre_cmd_hook'] = 'write_deliverable_cache' # write configuration for overview page
 
@@ -269,14 +270,14 @@ class Deliverable:
         # Now iterate through all commands and execute them
         #
         for i in range(0,n + 1):
-            if commands[i]['pre_cmd_hook'] is not None:
+            if 'pre_cmd_hook' in commands[i]:
                 commands[i] = getattr(self, commands[i]['pre_cmd_hook'])(commands[i], thread_id)
 
             result = self.execute(commands[i], thread_id)
             if not result: # abort if one command failed
                 return self.finish(False)
 
-            if commands[i]['post_cmd_hook'] is not None:
+            if 'post_cmd_hook' in commands[i]:
                 getattr(self, commands[i]['post_cmd_hook'])(commands[i], thread_id)
 
         return self.finish(result)
@@ -310,11 +311,13 @@ class Deliverable:
 
     def parse_d2d_filelist(self, command, thread_id):
         # currently only read from file logic
+        self.path = []
         f = open(os.path.join(command['tmp_build_target'],'filelist'), 'r')
-        for line in f.readline().strip():
-            if '_bigfile.xml' not in line:
+        for line in f.readlines():
+            line = line.strip()
+            if '_bigfile.xml' not in line and line != "":
                 self.path.append(line)
-        logger.debug("Deliverable build results: %s" % str(self.path))
+        logger.debug("Deliverable build results: %s" % ''.join(self.path))
         command['cmd'] = command['cmd'].replace('__FILELIST__', ' '.join(self.path))
         return command
 
@@ -325,7 +328,7 @@ class Deliverable:
             import re
             for line in f.readlines():
                 #pylint: disable=W1401
-                m = re.search('^\s*ROOTID\s*=\s*[\"\']?(.+?)[\"\']?.*$', line.strip())
+                m = re.search('^\s*ROOTID\s*=\s*[\"\']?([^\"\']+)[\"\']?.*', line.strip())
                 if m:
                     self.root_id = m.group(1)
                     break
@@ -334,19 +337,20 @@ class Deliverable:
         if self.root_id:
             bigfile = self.root_id
             logger.debug("Found ROOTID for %s: %s" % ( self.id, self.root_id ))
-            bigfile_path = (os.path.join(command['tmp_build_target'], '%s_bigfile.xml' % bigfile))
+            bigfile_path = (os.path.join(command['tmp_build_target'], '.tmp', '%s_bigfile.xml' % bigfile))
             xpath = "(//*[@*[local-name(.)='id']='%s']/*[contains(local-name(.),'info')]/*[local-name(.)='title']|//*[@*[local-name(.)='id']='%s']/*[local-name(.)='title'])[1]" % (
                 self.root_id, self.root_id)
             xmlstarlet['cmd'] = "xmlstarlet sel -t -v \"%s\" %s" % (xpath, bigfile_path)
         else:
             bigfile = self.dc_file.replace('DC-', '')
             logger.debug("No ROOTID found for %s, using DC file name: %s" % ( self.id, self.dc_file ))
-            bigfile_path = (os.path.join(command['tmp_build_target'], '%s_bigfile.xml' % bigfile))
+            bigfile_path = (os.path.join(command['tmp_build_target'], '.tmp', '%s_bigfile.xml' % bigfile))
             xpath = "(/*/*[contains(local-name(.),'info')]/*[local-name(.)='title']|/*/*[local-name(.)='title'])[1]"
             xmlstarlet['cmd'] = "xmlstarlet sel -t -v \"%s\" %s" % (xpath, bigfile_path)
         self.execute(xmlstarlet, thread_id)
+        self.title = self.out.decode('utf-8')
         with self.parent.deliverables_open_lock:
-            self.parent.deliverables[self.id]['title'] = self.out
+            self.parent.deliverables[self.id]['title'] = self.title
             self.parent.deliverables[self.id]['path'] = self.path
         return command
 
@@ -356,10 +360,13 @@ class Deliverable:
             self.parent.build_instruction['lang'],
             self.parent.build_instruction['product'],
             self.parent.build_instruction['docset'])
-        os.makedirs(path)
+        try:
+            os.makedirs(path)
+        except FileExistsError:
+            pass
         root = cElementTree.Element("docset")
         doc = cElementTree.SubElement(root, "document", dc=self.dc_file, rootid=self.root_id, format=self.build_format)
-        cElementTree.SubElement(doc, "commit").text = self.last_build_attempt_commit
+        cElementTree.SubElement(doc, "commit").text = self.parent.deliverables[self.id]['last_build_attempt_commit']
         cElementTree.SubElement(doc, "title").text = self.title
         # assume that self.path currently only has one entry
         cElementTree.SubElement(doc, "path").text = ' '.join(self.path).strip()

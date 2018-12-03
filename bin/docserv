@@ -219,6 +219,7 @@ class Deliverable:
         # (re-)generate overview page
         n += 1
         commands[n] = {}
+        print(self.parent.config)
         commands[n]['cmd'] = "docserv-build-overview --cache-dir=%s --language=%s --template_dir=%s --ouput_dir=%s" % (
             deliverable_cache_dir,
             self.parent.build_instruction['lang'],
@@ -784,7 +785,7 @@ class Docserv(DocservState):
                     continue
                 self.config['targets'][config[section]['name']] =                  {}
                 self.config['targets'][config[section]['name']]['name'] =          config[section]['name']
-                self.config['targets'][config[section]['name']]['templdate_dir'] = config[section]['template_dir']
+                self.config['targets'][config[section]['name']]['template_dir'] = config[section]['template_dir']
                 self.config['targets'][config[section]['name']]['active'] =        config[section]['active']
                 self.config['targets'][config[section]['name']]['draft'] =         config[section]['draft']
                 self.config['targets'][config[section]['name']]['remarks'] =       config[section]['remarks']

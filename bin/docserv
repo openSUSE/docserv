@@ -185,12 +185,15 @@ class Deliverable:
         # Create correct directory structure
         n += 1
         sync_source_tmp = tempfile.mkdtemp(prefix="docserv_sync_")
-        sync_source_dir = os.path.join( sync_source_tmp,
-                                        self.parent.build_instruction['lang'],
-                                        self.parent.build_instruction['product'],
-                                        self.parent.build_instruction['docset'],
-                                        self.build_format
-                                      )
+        self.deliverable_relative_path = "%s/%s/%s/%s/" % (
+            self.parent.build_instruction['lang'],
+            self.parent.build_instruction['product'],
+            self.parent.build_instruction['docset'],
+            self.build_format
+        )
+        sync_source_dir = os.path.join(
+            sync_source_tmp,
+            self.deliverable_relative_path)
         commands[n] = {}
         commands[n]['cmd'] = "/usr/bin/mkdir -p %s" % (sync_source_dir)
         commands[n]['ret_val'] = 0
@@ -369,7 +372,7 @@ class Deliverable:
         cElementTree.SubElement(doc, "commit").text = self.parent.deliverables[self.id]['last_build_attempt_commit']
         cElementTree.SubElement(doc, "title").text = self.title
         # assume that self.path currently only has one entry
-        cElementTree.SubElement(doc, "path").text = ' '.join(self.path).strip()
+        cElementTree.SubElement(doc, "path").text = ("%s/%s" % (self.deliverable_relative_path, self.path[0].split('/')[-1])).replace('//', '/')
         tree = cElementTree.ElementTree(root)
         tree.write(os.path.join(path, "%s.xml" % self.dc_file))
         return command

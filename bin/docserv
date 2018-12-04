@@ -449,7 +449,7 @@ class BuildInstructionHandler:
         stitch_tmp_dir = tempfile.mkdtemp(prefix="docserv_stitch_")
         logger.debug("Stitching XML config directory to %s" % stitch_tmp_dir)
         cmd = '/usr/bin/docserv-stitch --make-positive --valid-languages="%s" %s %s' % (
-            self.config['targets'][target]['languages'],
+            self.config['server']['valid_languages'],
             self.config['targets'][target]['config_dir'],
             stitch_tmp_dir)
         logger.debug("Stitching command: %s" % cmd)

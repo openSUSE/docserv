@@ -223,7 +223,7 @@ class Deliverable:
         # (re-)generate overview page
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "docserv-build-overview --server-languages=\"%s\" --cache-dir=%s --language=%s --template_dir=%s --ouput_dir=%s" % (
+        commands[n]['cmd'] = "docserv-buildoverview --server-languages=\"%s\" --cache-dir=%s --language=%s --template_dir=%s --ouput_dir=%s" % (
             self.parent.config['targets'][self.parent.build_instruction['target']]['languages'],
             deliverable_cache_dir,
             self.parent.build_instruction['lang'],

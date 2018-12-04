@@ -370,8 +370,10 @@ class Deliverable:
         except FileExistsError:
             pass
         root = cElementTree.Element("docset")
-        doc = cElementTree.SubElement(root, "document", dc=self.dc_file, rootid=self.root_id, format=self.build_format)
-        logger.debug("dc: %s, rootid: %s, format: %s, commit: %s, title: %s" % (self.dc_file, self.root_id, self.build_format, self.parent.deliverables[self.id]['last_build_attempt_commit'], self.title))
+        if self.root_id is not None:
+            doc = cElementTree.SubElement(root, "document", dc=self.dc_file, rootid=self.root_id, format=self.build_format)
+        else:
+            doc = cElementTree.SubElement(root, "document", dc=self.dc_file, format=self.build_format)
         cElementTree.SubElement(doc, "commit").text = self.parent.deliverables[self.id]['last_build_attempt_commit']
         cElementTree.SubElement(doc, "title").text = self.title
         # assume that self.path currently only has one entry

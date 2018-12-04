@@ -788,7 +788,7 @@ class Docserv(DocservState):
             self.config['server']['port'] =         int(config['server']['port'])
             self.config['server']['repo_dir'] =         config['server']['repo_dir']
             self.config['server']['temp_repo_dir'] =    config['server']['temp_repo_dir']
-            self.config['server']['valid_languages'] =  config['server']['temp_repo_dir']
+            self.config['server']['valid_languages'] =  config['server']['valid_languages']
             self.config['server']['max_threads'] =  int(config['server']['max_threads'])
             self.config['targets'] = {}
             for section in config.sections():

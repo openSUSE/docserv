@@ -328,14 +328,14 @@ class Deliverable:
 
     def parse_d2d_filelist(self, command, thread_id):
         # currently only read from file logic
-        self.path = []
         f = open(os.path.join(command['tmp_build_target'],'filelist'), 'r')
         for line in f.readlines():
             line = line.strip()
             if '_bigfile.xml' not in line and line != "":
-                self.path.append(line)
-        logger.debug("Deliverable build results: %s" % ''.join(self.path))
-        command['cmd'] = command['cmd'].replace('__FILELIST__', ' '.join(self.path))
+                self.d2d_out_dir = line
+                self.path = ("%s/%s" % (self.deliverable_relative_path, line.split('/')[-1])).replace('//', '/')
+        logger.debug("Deliverable build results: %s" % self.d2d_out_dir)
+        command['cmd'] = command['cmd'].replace('__FILELIST__', self.d2d_out_dir)
         return command
 
     def extract_root_id(self, command, thread_id):
@@ -386,9 +386,7 @@ class Deliverable:
         else:
             doc = cElementTree.SubElement(root, "document", dc=self.dc_file, format=self.build_format)
         cElementTree.SubElement(doc, "commit").text = self.parent.deliverables[self.id]['last_build_attempt_commit']
-        cElementTree.SubElement(doc, "path").text = ("%s/%s" % (self.deliverable_relative_path, self.path[0].split('/')[-1])).replace('//', '/')
-        # assume that self.path currently only has one entry
-        cElementTree.SubElement(doc, "path").text = ("%s/%s" % (self.deliverable_relative_path, self.path[0].split('/')[-1])).replace('//', '/')
+        cElementTree.SubElement(doc, "path").text = self.path
         for subdeliverable in self.subdeliverables:
             cElementTree.SubElement(doc, "subdeliverable", id=subdeliverable).text = self.subdeliverable_titles[subdeliverable]
         tree = cElementTree.ElementTree(root)

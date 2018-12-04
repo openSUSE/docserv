@@ -216,10 +216,9 @@ class Deliverable:
         commands[n]['tmp_build_target'] = tmp_build_target
 
         # create directory for Deliverable cache file
-        deliverable_cache_base_dir =  '/var/cache/docserv/'
+        deliverable_cache_base_dir =  '/var/cache/docserv/%s' % self.parent.config['server']['name']
         self.deliverable_cache_dir = os.path.join(
                                         deliverable_cache_base_dir,
-                                        self.parent.config['server']['name'],
                                         self.parent.build_instruction['lang'],
                                         self.parent.build_instruction['product'],
                                         self.parent.build_instruction['docset'],
@@ -235,7 +234,7 @@ class Deliverable:
         # (re-)generate overview page
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "docserv-buildoverview --stitched_config=\"%s\" --ui-languages=\"%s\" --default-ui-language=%s --cache-dir=%s --doc-language=%s --template_dir=%s --ouput_dir=%s" % (
+        commands[n]['cmd'] = "docserv-buildoverview --stitched_config=\"%s\" --ui-languages=\"%s\" --default-ui-language=%s --cache-dir=%s --doc-language=%s --template_dir=%s --output_dir=%s" % (
             os.path.join(self.parent.stitch_tmp_dir, "docserv_config_full.xml"),
             self.parent.config['targets'][self.parent.build_instruction['target']]['languages'],
             self.parent.config['targets'][self.parent.build_instruction['target']]['default_lang'],

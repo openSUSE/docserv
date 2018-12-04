@@ -223,7 +223,8 @@ class Deliverable:
         # (re-)generate overview page
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "docserv-buildoverview --server-languages=\"%s\" --cache-dir=%s --language=%s --template_dir=%s --ouput_dir=%s" % (
+        commands[n]['cmd'] = "docserv-buildoverview --stitched_config=\"%s\" --server-languages=\"%s\" --cache-dir=%s --language=%s --template_dir=%s --ouput_dir=%s" % (
+            os.path.join(self.parent.stitch_tmp_dir, "docserv_config_full.xml"),
             self.parent.config['targets'][self.parent.build_instruction['target']]['languages'],
             deliverable_cache_dir,
             self.parent.build_instruction['lang'],
@@ -370,6 +371,7 @@ class Deliverable:
             pass
         root = cElementTree.Element("docset")
         doc = cElementTree.SubElement(root, "document", dc=self.dc_file, rootid=self.root_id, format=self.build_format)
+        logger.debug("dc: %s, rootid: %s, format: %s, commit: %s, title: %s" % (self.dc_file, self.root_id, self.build_format, self.parent.deliverables[self.id]['last_build_attempt_commit'], self.title))
         cElementTree.SubElement(doc, "commit").text = self.parent.deliverables[self.id]['last_build_attempt_commit']
         cElementTree.SubElement(doc, "title").text = self.title
         # assume that self.path currently only has one entry
@@ -447,12 +449,12 @@ class BuildInstructionHandler:
         if not self.config['targets'][target]['active'] == "yes":
             logger.debug("Target %s not active." % target)
             return False
-        stitch_tmp_dir = tempfile.mkdtemp(prefix="docserv_stitch_")
-        logger.debug("Stitching XML config directory to %s" % stitch_tmp_dir)
+        self.stitch_tmp_dir = tempfile.mkdtemp(prefix="docserv_stitch_")
+        logger.debug("Stitching XML config directory to %s" % self.stitch_tmp_dir)
         cmd = '/usr/bin/docserv-stitch --make-positive --valid-languages="%s" %s %s' % (
             self.config['server']['valid_languages'],
             self.config['targets'][target]['config_dir'],
-            stitch_tmp_dir)
+            self.stitch_tmp_dir)
         logger.debug("Stitching command: %s" % cmd)
         cmd = shlex.split(cmd)
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
@@ -468,7 +470,7 @@ class BuildInstructionHandler:
             self.initialized = False
             return False
         # then read all files into an xml tree
-        self.tree = ElementTree.parse(os.path.join(stitch_tmp_dir, "docserv_config_full-positive.xml"))
+        self.tree = ElementTree.parse(os.path.join(self.stitch_tmp_dir, "docserv_config_full-positive.xml"))
         xml_root = self.tree.getroot()
         try:
             xpath = ".//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/branch" % (

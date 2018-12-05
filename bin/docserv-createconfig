@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+#
+# Copyright (c) 2018 SUSE Linux GmbH
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of version 3 of the GNU General Public License as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, contact SUSE LLC.
+#
+# To contact SUSE about this file by physical or electronic mail,
+# you may find current contact information at www.suse.com
+
+import os
+import sys
+import re
+import pygit2
+from xml.etree import cElementTree
+
+
+def print_help():
+    print("""This tool generates a basic default XML configuration for docserv.
+
+Usage: docserv-createconfig [--languages="la-ng la-ng ..."] PATH_TO_REPO""")
+
+def generate_config(languages, dc_files, branches):
+    root = cElementTree.Element("product", productid="FIXME")
+    cElementTree.SubElement(root, "name").text = "FIXME"
+    cElementTree.SubElement(root, "shortname").text = "FIXME"
+    maintainers = cElementTree.SubElement(root, "maintainers")
+    cElementTree.SubElement(maintainers, "contact").text = "FIXME"
+    for language in languages:
+        description = cElementTree.SubElement(root, "desc", default="0", lang=language)
+        cElementTree.SubElement(description, "p").text = "FIXME"
+    for branch in branches:
+        docset = cElementTree.SubElement(root, "docset", setid=branch.replace("maintenance/", ""), lifecycle="FIXME")
+        cElementTree.SubElement(docset, "version").text = "FIXME"
+        builddocs = cElementTree.SubElement(docset, "builddocs")
+        git = cElementTree.SubElement(builddocs, "git")
+        cElementTree.SubElement(git, "remote").text = "FIXME"
+        for language in languages:
+            if language == "en-us":
+                language = cElementTree.SubElement(builddocs, "language", default="1 FIXME", lang="en-us")
+                cElementTree.SubElement(language, "branch").text = branch + " FIXME"
+                for dc_file in dc_files:
+                    deliverable = cElementTree.SubElement(language, "deliverable")
+                    cElementTree.SubElement(deliverable, "dc", ).text = dc_file
+                    if dc_file.endswith("-all"):
+                        format = cElementTree.SubElement(deliverable, "format", pdf="0", html="1", epub="0")
+                        format.set('single-html', '0')
+                    else:
+                        format = cElementTree.SubElement(deliverable, "format", pdf="1", html="0 FIXME", epub="1")
+                        format.set('single-html', '1')
+            else:
+                language = cElementTree.SubElement(builddocs, "language", default="0", language=language)
+                cElementTree.SubElement(language, "branch").text = branch + " FIXME"
+                cElementTree.SubElement(language, "subdir").text = "FIXME"
+                untrans = cElementTree.SubElement(language, "untranslated")
+                deliverable = cElementTree.SubElement(untrans, "deliverable")
+                cElementTree.SubElement(deliverable, "dc").text = "FIXME"
+        extralinks = cElementTree.SubElement(docset, "extralinks")
+        cElementTree.SubElement(extralinks, "link", href="FIXME").text = "SOME DESCRIPTION"
+    tree = cElementTree.ElementTree(root)
+    tree.write(os.path.dirname(os.path.realpath(__file__))+"/config.xml")
+
+def get_dc_files(path):
+    result = []
+    for f in os.listdir(path):
+        if os.path.isfile(os.path.join(path, f)):
+            if str(f).startswith("DC-"):
+                result.append(f)
+    return sorted(result)
+
+def get_git_branches(path):
+    repo = pygit2.Repository(path)
+    result = []
+    for branch in sorted((list(repo.listall_branches()) + list(repo.branches.remote))):
+        if str(branch).startswith('maintenance/'):
+            result.append(branch)
+        elif str(branch).startswith('origin/maintenance/'):
+            result.append(branch.replace("origin/", ""))
+    return result
+
+if __name__ == "__main__":
+    if "--help" in sys.argv or "-h" in sys.argv:
+        print_help()
+    else:
+        languages = "en-us de-de fr-fr pt-br ja-jp zh-cn es-es it-it ko-kr hu-hu zh-tw cs-cz ar-ar pl-pl ru-ru"
+        for arg in sys.argv:
+            if "--languages=" in arg:
+                m = re.search('^--languages=[\"\']?([^\"\']+)[\"\']$', arg)
+                if m:
+                    languages = m.group(1)
+            elif "docserv-createconfig" in sys.argv:
+                continue
+            else:
+                path = arg
+
+        dc_files = get_dc_files(path)
+        print(dc_files)
+        branches = get_git_branches(path)
+        print(branches)
+        generate_config(languages.split(" "), dc_files, branches)
+
+    sys.exit(0)

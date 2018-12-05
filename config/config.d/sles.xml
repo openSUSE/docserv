@@ -51,9 +51,6 @@
 
       <git>
         <remote>https://github.com/SUSE/doc-sle</remote>
-        <checkoutdir>doc-sle</checkoutdir>
-          <!-- checkoutdir is assumed to be located directly under the
-          <repodir/> configured in docserv.xml -->
       </git>
 
       <language default="1" lang="en-us">
@@ -131,7 +128,6 @@
 
       <git>
         <remote>https://svn.opensuse.org/viewvc/opensuse-doc/trunk/documents/sle/</remote>
-        <checkoutdir>doc-sle-legacy</checkoutdir>
       </git>
 
       <language default="1" lang="en-us">

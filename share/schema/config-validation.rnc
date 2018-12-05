@@ -206,18 +206,12 @@ ds.builddocs =
 
 ds.git =
   element git {
-    ds.remote,
-    ds.checkoutdir
+    ds.remote
   }
 
 ds.remote =
   element remote {
     ds.type.gitremote
-  }
-
-ds.checkoutdir =
-  element checkoutdir {
-    ds.type.dirname
   }
 
 ds.defaultlanguage =

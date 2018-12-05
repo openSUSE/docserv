@@ -107,7 +107,7 @@ class Deliverable:
             'dc': self.dc_file,
             'status': self.status,
             'title': self.title,
-            'path': self.path, # FIXME: self.path should contain the relative path. But we also need to store the temp build dir.
+            'path': self.path,
             'successful_build_commit': self.successful_build_commit,
             'last_build_attempt_commit': self.last_build_attempt_commit,
             'subdeliverables': self.subdeliverables,

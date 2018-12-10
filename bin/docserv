@@ -242,7 +242,8 @@ class Deliverable:
         # (re-)generate overview page
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "docserv-buildoverview --stitched_config=\"%s\" --ui-languages=\"%s\" --default-ui-language=%s --cache-dir=%s --doc-language=%s --template_dir=%s --output_dir=%s" % (
+        commands[n]['cmd'] = "docserv-buildoverview %s--stitched_config=\"%s\" --ui-languages=\"%s\" --default-ui-language=%s --cache-dir=%s --doc-language=%s --template_dir=%s --output_dir=%s" % (
+            "--internal-mode " if self.parent.config['targets'][self.parent.build_instruction['target']]['languages'] == "yes" else "",
             os.path.join(self.parent.stitch_tmp_dir, "docserv_config_full.xml"),
             self.parent.config['targets'][self.parent.build_instruction['target']]['languages'],
             self.parent.config['targets'][self.parent.build_instruction['target']]['default_lang'],
@@ -850,6 +851,7 @@ class Docserv(DocservState):
                 self.config['targets'][config[section]['name']]['config_dir'] =    config[section]['config_dir']
                 self.config['targets'][config[section]['name']]['languages'] =     config[section]['languages']
                 self.config['targets'][config[section]['name']]['default_lang'] =  config[section]['default_lang']
+                self.config['targets'][config[section]['name']]['internal'] =      config[section]['internal']
         except KeyError as error:
             logger.warning("Invalid configuration file, missing configuration key '%s'. Exiting." % error)
             sys.exit(1)

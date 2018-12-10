@@ -68,7 +68,7 @@ def generate_config(languages, branches):
         extralinks = cElementTree.SubElement(docset, "extralinks")
         cElementTree.SubElement(extralinks, "link", href="FIXME").text = "SOME DESCRIPTION"
     tree = cElementTree.ElementTree(root)
-    tree.write(os.path.dirname(os.getcwd()+"/config.xml"))
+    tree.write(os.getcwd()+"/config.xml")
 
 def get_dc_files(path, branches, filter_dc):
     repo = pygit2.Repository(path)
@@ -95,7 +95,9 @@ def get_git_branches(path):
     for branch in sorted((list(repo.listall_branches()) + list(repo.branches.remote))):
         if str(branch).startswith('maintenance/'):
             result[branch] = []
-        elif str(branch) == "develop" or str(branch) == "master":
+        elif str(branch).replace("origin/", "") == "develop":
+            result[branch] = []
+        elif str(branch).replace("origin/", "") == "master":
             result[branch] = []
         elif str(branch).startswith('origin/maintenance/'):
             result[branch.replace("origin/", "")] = []
@@ -109,7 +111,6 @@ if __name__ == "__main__":
         languages = "en-us de-de fr-fr pt-br ja-jp zh-cn es-es it-it ko-kr hu-hu zh-tw cs-cz ar-ar pl-pl ru-ru"
         filter_dc = None
         for arg in sys.argv:
-            print(arg)
             if "--languages=" in arg:
                 m = re.search('^--languages=[\"\']?([^\"\']+)[\"\']$', arg)
                 if m:

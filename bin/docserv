@@ -288,13 +288,16 @@ class Deliverable:
         for i in range(0,n + 1):
             if 'pre_cmd_hook' in commands[i]:
                 commands[i] = getattr(self, commands[i]['pre_cmd_hook'])(commands[i], thread_id)
+                if commands[i] == False:
+                    return self.finish(False)
 
             result = self.execute(commands[i], thread_id)
             if not result: # abort if one command failed
                 return self.finish(False)
 
             if 'post_cmd_hook' in commands[i]:
-                getattr(self, commands[i]['post_cmd_hook'])(commands[i], thread_id)
+                if not getattr(self, commands[i]['post_cmd_hook'])(commands[i], thread_id):
+                    return self.finish(False)
 
         return self.finish(result)
 
@@ -363,7 +366,9 @@ class Deliverable:
             bigfile_path = (os.path.join(command['tmp_build_target'], '.tmp', '%s_bigfile.xml' % bigfile))
             xpath = "(/*/*[contains(local-name(.),'info')]/*[local-name(.)='title']|/*/*[local-name(.)='title'])[1]"
             xmlstarlet['cmd'] = "xmlstarlet sel -t -v \"%s\" %s" % (xpath, bigfile_path)
-        self.execute(xmlstarlet, thread_id)
+        result = self.execute(xmlstarlet, thread_id)
+        if not result:
+            return False
         self.title = self.out.decode('utf-8')
         self.subdeliverable_titles = {}
         for subdeliverable in self.subdeliverables:
@@ -371,7 +376,9 @@ class Deliverable:
                 subdeliverable, subdeliverable)
             xmlstarlet['cmd'] = "xmlstarlet sel -t -v \"%s\" %s" % (xpath, bigfile_path)
             xmlstarlet['ret_val'] = 0
-            self.execute(xmlstarlet, thread_id)
+            result = self.execute(xmlstarlet, thread_id)
+            if not result:
+                return False
             self.subdeliverable_titles[subdeliverable] = self.out.decode('utf-8')
         with self.parent.deliverables_open_lock:
             self.parent.deliverables[self.id]['title'] = self.title
@@ -384,12 +391,13 @@ class Deliverable:
                 productid=self.parent.build_instruction['product'],
                 setid=self.parent.build_instruction['docset'],
                 dc=self.dc_file,
-                cachedate=int(time.time()))
+                cachedate=str(time.time()))
         cElementTree.SubElement(root, "commit").text = self.parent.deliverables[self.id]['last_build_attempt_commit']
         cElementTree.SubElement(root, "path", format=self.build_format).text = self.path
-        root_id=""
         if self.root_id is not None:
-            root_id=self.root_id
+            root_id = self.root_id
+        else:
+            root_id = ""
         cElementTree.SubElement(root, "title", rootid=root_id).text = self.title
 
         for subdeliverable in self.subdeliverables:

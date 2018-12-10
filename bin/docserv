@@ -73,6 +73,8 @@ class RepoLock:
         if self.acquired:
             self.gitLocks[self.resource_name].release()
             self.acquired = False
+            logger.debug("Thread %i: Released lock %s." % (self.thread_id,
+                                                           self.resource_name))
 
 class Deliverable:
     title = None
@@ -134,7 +136,13 @@ class Deliverable:
             return self.finish(True)
         with self.parent.deliverables_open_lock:
             self.parent.deliverables[self.id]['last_build_attempt_commit'] = self.parent.build_instruction['commit']
-
+        logger.info("Building deliverable %s (%s, %s) for BI %s. Commit: %s" % (
+                                                                        self.id,
+                                                                        self.dc_file,
+                                                                        self.build_format,
+                                                                        self.parent.build_instruction['id'],
+                                                                        self.parent.deliverables[self.id]['last_build_attempt_commit']
+                                                                    ))
         #
         # The following lines of code define all bash commands that
         # are required to build and publish the deliverable.

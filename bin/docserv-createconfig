@@ -39,6 +39,7 @@ def generate_config(languages, branches):
         description = cElementTree.SubElement(root, "desc", default="0", lang=language)
         cElementTree.SubElement(description, "p").text = "FIXME"
     for branch in branches:
+        branch = str(branch)
         docset = cElementTree.SubElement(root, "docset", setid=branch.replace("maintenance/", ""), lifecycle="FIXME")
         cElementTree.SubElement(docset, "version").text = "FIXME"
         builddocs = cElementTree.SubElement(docset, "builddocs")
@@ -67,24 +68,25 @@ def generate_config(languages, branches):
         extralinks = cElementTree.SubElement(docset, "extralinks")
         cElementTree.SubElement(extralinks, "link", href="FIXME").text = "SOME DESCRIPTION"
     tree = cElementTree.ElementTree(root)
-    tree.write(os.path.dirname(os.path.realpath(__file__))+"/config.xml")
+    tree.write(os.path.dirname(os.getcwd()+"/config.xml"))
 
 def get_dc_files(path, branches, filter_dc):
     repo = pygit2.Repository(path)
     tmp = branches
-    for branch in branches:
-        branch = repo.lookup_branch(branch)
-        repo.checkout(branch)
+    for branch in list(branches):
+        foo = repo.lookup_branch(branch)
+        repo.checkout(foo)
         result = []
         for f in os.listdir(path):
             if os.path.isfile(os.path.join(path, f)):
                 if filter_dc is not None:
                     if str(f).startswith("DC-") and filter_dc in str(f):
                         result.append(f)
-                    else:
-                        if str(f).startswith("DC-"):
-                            result.append(f)
+                else:
+                    if str(f).startswith("DC-"):
+                        result.append(f)
         tmp[branch] = sorted(result)
+    print(tmp)
     return tmp
 
 def get_git_branches(path):
@@ -105,19 +107,18 @@ if __name__ == "__main__":
         languages = "en-us de-de fr-fr pt-br ja-jp zh-cn es-es it-it ko-kr hu-hu zh-tw cs-cz ar-ar pl-pl ru-ru"
         filter_dc = None
         for arg in sys.argv:
+            print(arg)
             if "--languages=" in arg:
                 m = re.search('^--languages=[\"\']?([^\"\']+)[\"\']$', arg)
                 if m:
                     languages = m.group(1)
             elif "docserv-createconfig" in sys.argv:
                 continue
-            elif "--filter" in sys.argv:
-                m = re.search('^--filter=[\"\']?([^\"\']+)[\"\']$', arg)
-                if m:
-                    filter_dc = m.group(1)
+            elif "--filter" in arg:
+                filter_dc = arg
+                filter_dc = filter_dc.replace("--filter=", "")
             else:
                 path = arg
-
         branches = get_git_branches(path)
         dc_files = get_dc_files(path, branches, filter_dc)
         generate_config(languages.split(" "), branches)

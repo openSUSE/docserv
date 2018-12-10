@@ -95,6 +95,8 @@ def get_git_branches(path):
     for branch in sorted((list(repo.listall_branches()) + list(repo.branches.remote))):
         if str(branch).startswith('maintenance/'):
             result[branch] = []
+        elif str(branch) == "develop" or str(branch) == "master":
+            result[branch] = []
         elif str(branch).startswith('origin/maintenance/'):
             result[branch.replace("origin/", "")] = []
             #result[branch] = []

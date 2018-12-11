@@ -38,6 +38,7 @@
 
   <xsl:template match="product">
     <product productid="{@productid}">
+      <xsl:apply-templates select="maintainers" mode="take-all"/>
       <xsl:apply-templates select="docset"/>
     </product>
   </xsl:template>

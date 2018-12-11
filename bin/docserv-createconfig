@@ -110,9 +110,9 @@ def get_git_branches(path):
         if str(branch).startswith('maintenance/'):
             result[branch] = []
         elif str(branch).replace("origin/", "") == "develop":
-            result[branch] = []
+            result[branch.replace("origin/", "")] = []
         elif str(branch).replace("origin/", "") == "master":
-            result[branch] = []
+            result[branch.replace("origin/", "")] = []
         elif str(branch).startswith('origin/trans/'):
             result[branch.replace("origin/", "")] = []
         elif str(branch).startswith('trans/'):

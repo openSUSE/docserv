@@ -78,9 +78,8 @@ def generate_config(languages, branches, contact = None):
                 cElementTree.SubElement(language, "branch").text = branch
                 cElementTree.SubElement(language, "subdir").text = "FIXME"
                 untrans = cElementTree.SubElement(language, "untranslated")
-                for untranslate_dc in branches[branch]:
-                    deliverable = cElementTree.SubElement(untrans, "deliverable")
-                    cElementTree.SubElement(deliverable, "dc").text = untranslate_dc
+                deliverable = cElementTree.SubElement(untrans, "deliverable")
+                cElementTree.SubElement(deliverable, "dc").text = "FIXME"
         extralinks = cElementTree.SubElement(docset, "extralinks")
         cElementTree.SubElement(extralinks, "link", href="FIXME").text = "SOME DESCRIPTION"
     tree = cElementTree.ElementTree(root)

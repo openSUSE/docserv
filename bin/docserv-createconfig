@@ -93,9 +93,6 @@ def get_dc_files(path, branches, filter_dc):
         foo = repo.lookup_branch(branch)
         repo.checkout(foo)
         result = []
-        if trans_subdir is not None:
-            tmp = get_translation_dc_files(os.path.join(path, trans_subdir))
-            return tmp
         for f in os.listdir(path):
             if os.path.isfile(os.path.join(path, f)):
                 if filter_dc is not None:
@@ -106,21 +103,6 @@ def get_dc_files(path, branches, filter_dc):
                         result.append(f)
         tmp[branch] = sorted(result)
     return tmp
-
-def get_translation_dc_files(path):
-    result = []
-    for root, dirs, files in os.walk(path):
-        for lang in languages:
-            lang_short = lang.split("-")[0]
-            if root.endswith("/%s" % lang) or root.endswith("/%s" % lang_short):
-                for filename in files:
-                    if filter_dc is not None:
-                        if str(filename).startswith("DC-") and filter_dc in str(filename):
-                            result.append(root.replace(path, "")+filename)
-                    else:
-                        if str(filename).startswith("DC-"):
-                            result.append(root.replace(path, "")+filename)
-    return result
 
 def get_git_branches(path):
     repo = pygit2.Repository(path)

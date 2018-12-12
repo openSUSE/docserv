@@ -181,7 +181,8 @@ class Deliverable:
         n += 1
         tmp_build_target = tempfile.mkdtemp(prefix="docserv_out_")
         commands[n] = {}
-        commands[n]['cmd'] = "/usr/bin/d2d_runner -b=1 -v=1 -u=1 -x=%s -d=%s -o=%s -i=%s -f=%s %s" % (
+        commands[n]['cmd'] = "%s/d2d_runner -b=1 -v=1 -u=1 -x=%s -d=%s -o=%s -i=%s -f=%s %s" % (
+                                                BIN_DIR,
                                                 xslt_params_file[1],       # -x
                                                 daps_params_file[1],       # -d
                                                 tmp_build_target,          # -o
@@ -224,7 +225,7 @@ class Deliverable:
         commands[n]['tmp_build_target'] = tmp_build_target
 
         # create directory for Deliverable cache file
-        deliverable_cache_base_dir =  '/var/cache/docserv/%s' % self.parent.config['server']['name']
+        deliverable_cache_base_dir =  '%s/%s' % (CACHE_DIR, self.parent.config['server']['name'])
         self.deliverable_cache_dir = os.path.join(
                                         deliverable_cache_base_dir,
                                         self.parent.build_instruction['lang'],
@@ -486,7 +487,8 @@ class BuildInstructionHandler:
             return False
         self.stitch_tmp_dir = tempfile.mkdtemp(prefix="docserv_stitch_")
         logger.debug("Stitching XML config directory to %s" % self.stitch_tmp_dir)
-        cmd = '/usr/bin/docserv-stitch --make-positive --valid-languages="%s" %s %s' % (
+        cmd = '%s/docserv-stitch --make-positive --valid-languages="%s" %s %s' % (
+            BIN_DIR,
             self.config['server']['valid_languages'],
             self.config['targets'][target]['config_dir'],
             self.stitch_tmp_dir)
@@ -780,12 +782,12 @@ class DocservState:
         return deliverable
 
     def save_state(self):
-        f = open("/etc/docserv/%s.json" % self.config['server']['name'], "w")
+        f = open("%s/%s.json" % (CONF_DIR, self.config['server']['name']), "w")
         f.write(json.dumps(self.dict()))
 
     def load_state(self):
         logger.info("Reading previous state.")
-        filepath = "/etc/docserv/%s.json" % self.config['server']['name']
+        filepath = "%s/%s.json" % (CONF_DIR, self.config['server']['name'])
         if os.path.isfile(filepath):
             file = open(filepath, "r")
             try:
@@ -821,8 +823,8 @@ class Docserv(DocservState):
             config_file = "docserv"
         else:
             config_file = argv[1]
-        logger.info("Reading /etc/docserv/%s.ini" % config_file)
-        config.read("/etc/docserv/%s.ini" % config_file)
+        logger.info("Reading %s/%s.ini" % (CONF_DIR, config_file))
+        config.read("%s/%s.ini" % (CONF_DIR, config_file))
 
         try:
             self.config['server'] = {}
@@ -976,6 +978,11 @@ ch.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
+
+BIN_DIR = os.getenv('DOCSERV_BIN_DIR', "/usr/bin/")
+CONF_DIR = os.getenv('DOCSERV_CONFIG_DIR', "/etc/docserv/")
+SHARE_DIR = os.getenv('DOCSERV_SHARE_DIR', "/usr/share/docserv/")
+CACHE_DIR = os.getenv('DOCSERV_CACHE_DIR', "/var/cache/docserv/")
 
 if __name__ == "__main__":
     if "--help" in sys.argv or "-h" in sys.argv:

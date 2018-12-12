@@ -225,9 +225,8 @@ class Deliverable:
         commands[n]['tmp_build_target'] = tmp_build_target
 
         # create directory for Deliverable cache file
-        deliverable_cache_base_dir =  '%s/%s' % (CACHE_DIR, self.parent.config['server']['name'])
         self.deliverable_cache_dir = os.path.join(
-                                        deliverable_cache_base_dir,
+                                        self.parent.deliverable_cache_base_dir,
                                         self.parent.build_instruction['lang'],
                                         self.parent.build_instruction['product'],
                                         self.parent.build_instruction['docset'],
@@ -239,21 +238,7 @@ class Deliverable:
         commands[n]['ret_val'] = 0
         commands[n]['tmp_build_target'] = tmp_build_target
         commands[n]['pre_cmd_hook'] = 'extract_root_id' # get root id from bigfile
-
-        # (re-)generate overview page
-        n += 1
-        commands[n] = {}
-        commands[n]['cmd'] = "docserv-buildoverview %s--stitched_config=\"%s\" --ui-languages=\"%s\" --default-ui-language=%s --cache-dir=%s --doc-language=%s --template_dir=%s --output_dir=%s" % (
-            "--internal-mode " if self.parent.config['targets'][self.parent.build_instruction['target']]['languages'] == "yes" else "",
-            os.path.join(self.parent.stitch_tmp_dir, "docserv_config_full.xml"),
-            self.parent.config['targets'][self.parent.build_instruction['target']]['languages'],
-            self.parent.config['targets'][self.parent.build_instruction['target']]['default_lang'],
-            deliverable_cache_base_dir,
-            self.parent.build_instruction['lang'],
-            self.parent.config['targets'][self.parent.build_instruction['target']]['template_dir'],
-            sync_source_tmp)
-        commands[n]['ret_val'] = 0
-        commands[n]['pre_cmd_hook'] = 'write_deliverable_cache' # write configuration for overview page
+        commands[n]['post_cmd_hook'] = 'write_deliverable_cache' # write configuration for overview page
 
         # rsync build target directory to backup path
         backup_path = self.parent.config['targets'][self.parent.build_instruction['target']]['backup_path']
@@ -460,12 +445,53 @@ class BuildInstructionHandler:
 
     def __del__(self):
         logger.debug("Cleaning up %s" % json.dumps(self.build_instruction['id']))
-        if not hasattr(self, 'local_repo_build_dir'):
-            return
-        cmd = shlex.split("rm -rf %s" % self.local_repo_build_dir)
-        s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        s.communicate()[0]
+
+        commands = {}
+        n = 0
+        # (re-)generate overview page
+        sync_source_tmp = tempfile.mkdtemp(prefix="docserv_oview_")
+        commands[n] = {}
+        commands[n]['cmd'] = "docserv-buildoverview %s--stitched_config=\"%s\" --ui-languages=\"%s\" --default-ui-language=%s --cache-dir=%s --doc-language=%s --template_dir=%s --output_dir=%s" % (
+            "--internal-mode " if self.config['targets'][self.build_instruction['target']]['languages'] == "yes" else "",
+            os.path.join(self.stitch_tmp_dir, "docserv_config_full.xml"),
+            self.config['targets'][self.build_instruction['target']]['languages'],
+            self.config['targets'][self.build_instruction['target']]['default_lang'],
+            self.deliverable_cache_base_dir,
+            self.build_instruction['lang'],
+            self.config['targets'][self.build_instruction['target']]['template_dir'],
+            sync_source_tmp)
+        commands[n]['ret_val'] = 0
+
+        # rsync build target directory to backup path
+        backup_path = self.config['targets'][self.build_instruction['target']]['backup_path']
+        n += 1
+        commands[n] = {}
+        commands[n]['cmd'] = "rsync -lr %s/ %s" % (sync_source_tmp, backup_path)
+        commands[n]['ret_val'] = 0
+
+        # rsync built target directory with web server
+        target_path = self.config['targets'][self.build_instruction['target']]['target_path']
+        n += 1
+        commands[n] = {}
+        commands[n]['cmd'] = "rsync -lr %s/ %s" % (sync_source_tmp, target_path)
+        commands[n]['ret_val'] = 0
+
+        if hasattr(self, 'local_repo_build_dir'):
+            # build target directory
+            n += 1
+            commands[n] = {}
+            commands[n]['cmd'] = "rm -rf %s" % self.local_repo_build_dir
+            commands[n]['ret_val'] = 0
+
+        for i in range(0, n + 1):
+            cmd = shlex.split(commands[i]['cmd'])
+            logger.debug("Thread %i: %s" % (commands[i]['cmd']))
+            s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            s.communicate()
+            if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
+                logger.warning("Clean up failed! Unexpected return value %i for '%s'" % (
+                    s.returncode, commands[i]['cmd']))
+        return True
 
     def __str__(self):
         return json.dumps(self.build_instruction)
@@ -530,6 +556,7 @@ class BuildInstructionHandler:
         except AttributeError:
             logger.warning("Failed to parse xpath: %s" % xpath)
             return False
+        self.deliverable_cache_base_dir =  '%s/%s' % (CACHE_DIR, self.config['server']['name'])
         return True
 
     def prepare_repo(self, thread_id):

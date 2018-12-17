@@ -84,6 +84,7 @@ class Deliverable:
         self.successful_build_commit = None
         self.last_build_attempt_commit = None
         self.root_id = None # False if no root id exists
+        self.cleanup_done = False
 
         self.parent = parent # Reference to the parent BuildInstructionHandler
         self.dc_file = dc_file
@@ -427,7 +428,6 @@ class BuildInstructionHandler:
         self.deliverables_building = []
         self.deliverables_building_lock = threading.Lock()
 
-        logger.debug("Init BIH with %s" % build_instruction)
         if self.validate(build_instruction, config):
             self.initialized = True
             self.build_instruction = build_instruction
@@ -445,7 +445,7 @@ class BuildInstructionHandler:
             self.initialized = False
         return
 
-    def __del__(self):
+    def cleanup(self):
         logger.debug("Cleaning up %s" % json.dumps(self.build_instruction['id']))
 
         commands = {}
@@ -493,7 +493,11 @@ class BuildInstructionHandler:
             if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
                 logger.warning("Clean up failed! Unexpected return value %i for '%s'" % (
                     s.returncode, commands[i]['cmd']))
-        return True
+        self.cleanup_done = True
+
+    def __del__(self):
+        if not self.cleanup_done:
+            self.cleanup()
 
     def __str__(self):
         return json.dumps(self.build_instruction)
@@ -826,6 +830,7 @@ class DocservState:
             deliverable = self.bih_dict[build_instruction_id].get_deliverable()
             if deliverable == 'done':
                 self.finish_build_instruction(build_instruction_id)
+                deliverable.cleanup()
                 deliverable = None
             else: # build instruction is not yet finished, put its ID back on the queue
                 self.bih_queue.put(build_instruction_id)

@@ -77,14 +77,14 @@ class RepoLock:
                                                            self.resource_name))
 
 class Deliverable:
-    title = None
-    path = []
-    status = "building"
-    successful_build_commit = None
-    last_build_attempt_commit = None
-    root_id = None # False if no root id exists
-
     def __init__(self, parent, dc_file, build_format, subdeliverables):
+        self.title = None
+        self.path = []
+        self.status = "building"
+        self.successful_build_commit = None
+        self.last_build_attempt_commit = None
+        self.root_id = None # False if no root id exists
+
         self.parent = parent # Reference to the parent BuildInstructionHandler
         self.dc_file = dc_file
         self.build_format = build_format
@@ -401,31 +401,33 @@ class Deliverable:
         tree.write(os.path.join(self.deliverable_cache_dir, "%s.xml" % self.dc_file))
         return command
 
+
 class BuildInstructionHandler:
     # This object is created when a new build request
     # is coming in via the API. This object parses the
     # incoming request and with the help of the XML
     # configuration creates a set of Deliverables.
 
-    # A dict with meta information about a Deliverable.
-    # It is filled with Deliverable.dict().
-    deliverables = {}
-    deliverables_lock = threading.Lock()
-    # A dict that contains all Deliverable objects
-    # mapped with the Deliverable ID.
-    deliverable_objects = {}
-    deliverable_objects_lock = threading.Lock()
-    # A list of Deliverable IDs that have not yet been
-    # build / have to be built.
-    deliverables_open = []
-    deliverables_open_lock = threading.Lock()
-    # A list of Deliverable IDs that are currently
-    # building. That means a worker thread is currently
-    # running daps for them.
-    deliverables_building = []
-    deliverables_building_lock = threading.Lock()
-
     def __init__(self, build_instruction, config, gitLocks, gitLocksLock, thread_id):
+        # A dict with meta information about a Deliverable.
+        # It is filled with Deliverable.dict().
+        self.deliverables = {}
+        self.deliverables_lock = threading.Lock()
+        # A dict that contains all Deliverable objects
+        # mapped with the Deliverable ID.
+        self.deliverable_objects = {}
+        self.deliverable_objects_lock = threading.Lock()
+        # A list of Deliverable IDs that have not yet been
+        # build / have to be built.
+        self.deliverables_open = []
+        self.deliverables_open_lock = threading.Lock()
+        # A list of Deliverable IDs that are currently
+        # building. That means a worker thread is currently
+        # running daps for them.
+        self.deliverables_building = []
+        self.deliverables_building_lock = threading.Lock()
+
+        logger.debug("Init BIH with %s" % build_instruction)
         if self.validate(build_instruction, config):
             self.initialized = True
             self.build_instruction = build_instruction
@@ -485,7 +487,7 @@ class BuildInstructionHandler:
 
         for i in range(0, n + 1):
             cmd = shlex.split(commands[i]['cmd'])
-            logger.debug("Thread %i: %s" % (commands[i]['cmd']))
+            logger.debug("Cleaning up %s, %s" % (self.build_instruction['id'], commands[i]['cmd']))
             s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             s.communicate()
             if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
@@ -495,6 +497,9 @@ class BuildInstructionHandler:
 
     def __str__(self):
         return json.dumps(self.build_instruction)
+
+    def __repr__(self):
+        return self.build_instruction
 
     def dict(self):
         retval = self.build_instruction
@@ -660,8 +665,8 @@ class BuildInstructionHandler:
                 self.deliverables[deliverable.id] = deliverable.dict()
                 self.deliverable_objects[deliverable.id] = deliverable
                 self.deliverables_open.append(deliverable.id)
-            # after all deliverables are generated, we don't need the xml tree anymore
-            self.tree = None
+        # after all deliverables are generated, we don't need the xml tree anymore
+        self.tree = None
         return True
 
     def get_deliverable(self):
@@ -735,6 +740,9 @@ class DocservState:
 
     def __str__(self):
         return json.dumps(self.dict())
+
+    def __repr__(self):
+        return self.dict()
 
     def dict(self):
         retval = []
@@ -837,7 +845,7 @@ class DocservState:
             except json.decoder.JSONDecodeError:
                 return False
             for build_instruction in state:
-                if ("building" in build_instruction and len(build_instruction['building']) > 0) or ("open" in build_instruction and len(build_instruction['open']) > 0):
+                if ('building' in build_instruction and len(build_instruction['building']) > 0) or ('open' in build_instruction and len(build_instruction['open']) > 0):
                     self.queue_build_instruction(build_instruction)
                 else:
                     self.past_builds[build_instruction['id']] = build_instruction

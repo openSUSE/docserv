@@ -27,18 +27,25 @@ from xml.etree import cElementTree
 def print_help():
     print("""This tool generates a basic default XML configuration for docserv.
 
-Usage: docserv-createconfig [--languages="la-ng la-ng ..."] PATH_TO_REPO""")
+Usage: docserv-createconfig [OPTIONS] PATH_TO_REPO
 
-def generate_config(languages, branches):
+Available options:
+--languages="la-ng la-ng ..."
+--contact="mail@example.com"
+""")
+
+def generate_config(languages, branches, contact = None):
     root = cElementTree.Element("product", productid="FIXME")
     cElementTree.SubElement(root, "name").text = "FIXME"
     cElementTree.SubElement(root, "shortname").text = "FIXME"
     maintainers = cElementTree.SubElement(root, "maintainers")
-    cElementTree.SubElement(maintainers, "contact").text = "FIXME"
+    cElementTree.SubElement(maintainers, "contact").text = "FIXME" if not contact else contact
     for language in languages:
         description = cElementTree.SubElement(root, "desc", default="0", lang=language)
         cElementTree.SubElement(description, "p").text = "FIXME"
     for branch in branches:
+        if branch.startswith("trans/"):
+            continue
         branch = str(branch)
         docset = cElementTree.SubElement(root, "docset", setid=branch.replace("maintenance/", ""), lifecycle="FIXME")
         cElementTree.SubElement(docset, "version").text = "FIXME"
@@ -47,8 +54,12 @@ def generate_config(languages, branches):
         cElementTree.SubElement(git, "remote").text = "FIXME"
         for language in languages:
             if language == "en-us":
-                language = cElementTree.SubElement(builddocs, "language", default="1 FIXME", lang="en-us")
-                cElementTree.SubElement(language, "branch").text = branch + " FIXME"
+                language = cElementTree.SubElement(builddocs, "language", default="1", lang="en-us")
+                cElementTree.SubElement(language, "branch").text = branch
+                has_all_dc = "1"
+                for dc_file in branches[branch]:
+                    if "-all" in dc_file:
+                        has_all_dc = "0"
                 for dc_file in branches[branch]:
                     deliverable = cElementTree.SubElement(language, "deliverable")
                     cElementTree.SubElement(deliverable, "dc", ).text = dc_file
@@ -56,11 +67,15 @@ def generate_config(languages, branches):
                         format = cElementTree.SubElement(deliverable, "format", pdf="0", html="1", epub="0")
                         format.set('single-html', '0')
                     else:
-                        format = cElementTree.SubElement(deliverable, "format", pdf="1", html="0 FIXME", epub="1")
+                        format = cElementTree.SubElement(deliverable, "format", pdf="1", html=has_all_dc, epub="1")
                         format.set('single-html', '1')
             else:
                 language = cElementTree.SubElement(builddocs, "language", default="0", language=language)
-                cElementTree.SubElement(language, "branch").text = branch + " FIXME"
+                if branch.startswith("maintenance/") or branch.startswith("maint/"):
+                    tmp = branch.replace("maintenance/", "").replace("maint/", "")
+                    if "trans/%s" % tmp in branches:
+                        branch = "trans/%s" % tmp
+                cElementTree.SubElement(language, "branch").text = branch
                 cElementTree.SubElement(language, "subdir").text = "FIXME"
                 untrans = cElementTree.SubElement(language, "untranslated")
                 deliverable = cElementTree.SubElement(untrans, "deliverable")
@@ -68,7 +83,7 @@ def generate_config(languages, branches):
         extralinks = cElementTree.SubElement(docset, "extralinks")
         cElementTree.SubElement(extralinks, "link", href="FIXME").text = "SOME DESCRIPTION"
     tree = cElementTree.ElementTree(root)
-    tree.write(os.path.dirname(os.getcwd()+"/config.xml"))
+    tree.write(os.getcwd()+"/config.xml")
 
 def get_dc_files(path, branches, filter_dc):
     repo = pygit2.Repository(path)
@@ -86,7 +101,6 @@ def get_dc_files(path, branches, filter_dc):
                     if str(f).startswith("DC-"):
                         result.append(f)
         tmp[branch] = sorted(result)
-    print(tmp)
     return tmp
 
 def get_git_branches(path):
@@ -95,9 +109,16 @@ def get_git_branches(path):
     for branch in sorted((list(repo.listall_branches()) + list(repo.branches.remote))):
         if str(branch).startswith('maintenance/'):
             result[branch] = []
+        elif str(branch).replace("origin/", "") == "develop":
+            result[branch.replace("origin/", "")] = []
+        elif str(branch).replace("origin/", "") == "master":
+            result[branch.replace("origin/", "")] = []
+        elif str(branch).startswith('origin/trans/'):
+            result[branch.replace("origin/", "")] = []
+        elif str(branch).startswith('trans/'):
+            result[branch] = []
         elif str(branch).startswith('origin/maintenance/'):
             result[branch.replace("origin/", "")] = []
-            #result[branch] = []
     return result
 
 if __name__ == "__main__":
@@ -106,8 +127,9 @@ if __name__ == "__main__":
     else:
         languages = "en-us de-de fr-fr pt-br ja-jp zh-cn es-es it-it ko-kr hu-hu zh-tw cs-cz ar-ar pl-pl ru-ru"
         filter_dc = None
+        contact = None
+        trans_subdir = None
         for arg in sys.argv:
-            print(arg)
             if "--languages=" in arg:
                 m = re.search('^--languages=[\"\']?([^\"\']+)[\"\']$', arg)
                 if m:
@@ -115,12 +137,15 @@ if __name__ == "__main__":
             elif "docserv-createconfig" in sys.argv:
                 continue
             elif "--filter" in arg:
-                filter_dc = arg
-                filter_dc = filter_dc.replace("--filter=", "")
-            else:
-                path = arg
+                filter_dc = arg.replace("--filter=", "")
+            elif "--contact" in arg:
+                contact = arg.replace("--contact=", "")
+            elif "--translation-subdir" in arg:
+                trans_subdir = arg.replace("--translation-subdir=", "")
+        path = sys.argv[-1]
         branches = get_git_branches(path)
         dc_files = get_dc_files(path, branches, filter_dc)
-        generate_config(languages.split(" "), branches)
+        print(dc_files)
+        generate_config(languages.split(" "), branches, contact)
 
     sys.exit(0)

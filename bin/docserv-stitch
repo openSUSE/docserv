@@ -126,6 +126,17 @@ for file in *.xml; do
     add_issue \
       "$input_dir/$file: Some setid values are not unique. Check for occurrences of the following duplicated setid(s): "$(comm -2 -3 <(echo -e "$setids") <(echo -e "$uniquesetids") | tr '\n' ' ')"."
 
+
+  # make sure each language code appears only once within a given set
+  for set in $(seq 1 $(echo -e "$setids" | wc -l)); do
+    langcodes=$($starlet sel -t -v "//docset["$set"]/builddocs/language/@lang" $file | sort)
+    uniquelangcodes=$(echo -e "$langcodes" | sort -u)
+    [[ ! "$langcodes" == "$uniquelangcodes" ]] && \
+    add_issue \
+      "$input_dir/$file: Some language elements within a set have non-unique lang attributes. Check for occurrences of the following duplicated lang attribute(s) in docset \""$($starlet sel -t -v "//docset["$set"]/@setid" $file)"\": "$(comm -2 -3 <(echo -e "$langcodes") <(echo -e "$uniquelangcodes") | tr '\n' ' ')"."
+  done
+
+
   if [[ "$valid_languages" ]]; then
     languages=$($starlet sel -t -v "//@lang" $file | sort -u)
     unrecognized_languages=$(comm -1 -3 <(echo -e "$valid_languages_sorted") <(echo -e "$languages"))

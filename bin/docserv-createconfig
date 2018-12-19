@@ -35,7 +35,7 @@ Available options:
 """)
 
 def generate_config(languages, branches, contact = None):
-    root = cElementTree.Element("product", productid="FIXME")
+    root = cElementTree.Element("product", productid="FIXME", schemaversion="0.9.9")
     cElementTree.SubElement(root, "name").text = "FIXME"
     cElementTree.SubElement(root, "shortname").text = "FIXME"
     maintainers = cElementTree.SubElement(root, "maintainers")

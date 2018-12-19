@@ -7,68 +7,32 @@
   <xsl:output method="xml" indent="yes"/>
 
 
-  <xsl:template match="node()|@*"/>
+  <xsl:template match="comment()|processing-instruction()"/>
 
 
-  <xsl:template match="*" mode="take-all">
+  <xsl:template match="*" priority="-1">
     <xsl:element name="{local-name(.)}">
-      <xsl:apply-templates select="@*|*|text()" mode="take-all"/>
+      <xsl:apply-templates select="@*|*|text()"/>
     </xsl:element>
   </xsl:template>
 
 
-  <xsl:template match="@*" mode="take-all">
+  <xsl:template match="@*" priority="-1">
     <xsl:attribute name="{local-name(.)}">
       <xsl:value-of select="."/>
     </xsl:attribute>
   </xsl:template>
 
 
-  <xsl:template match="text()" mode="take-all">
+  <xsl:template match="text()" priority="-1">
     <xsl:value-of select="."/>
   </xsl:template>
 
 
   <xsl:template match="/docservconfig">
     <positivedocservconfig>
-      <xsl:apply-templates select="product"/>
+      <xsl:apply-templates select="@*|*"/>
     </positivedocservconfig>
-  </xsl:template>
-
-
-  <xsl:template match="product">
-    <product productid="{@productid}">
-      <xsl:apply-templates select="maintainers" mode="take-all"/>
-      <xsl:apply-templates select="docset"/>
-    </product>
-  </xsl:template>
-
-
-  <xsl:template match="docset">
-    <docset setid="{@setid}">
-      <xsl:apply-templates select="builddocs"/>
-    </docset>
-  </xsl:template>
-
-
-  <xsl:template match="builddocs">
-    <builddocs>
-      <xsl:apply-templates select="git|language"/>
-    </builddocs>
-  </xsl:template>
-
-
-  <xsl:template match="git">
-    <git>
-      <xsl:apply-templates select="*" mode="take-all"/>
-    </git>
-  </xsl:template>
-
-
-  <xsl:template match="language[@default='true' or @default='1']">
-    <language>
-      <xsl:apply-templates select="@*|*" mode="take-all"/>
-    </language>
   </xsl:template>
 
 
@@ -77,10 +41,10 @@
       <xsl:apply-templates select="untranslated/deliverable" mode="create-blacklist-param"/>
     </xsl:variable>
     <language>
-      <xsl:apply-templates select="@*" mode="take-all"/>
-      <xsl:apply-templates select="branch|subdir" mode="take-all"/>
-      <xsl:apply-templates select="./preceding-sibling::language[@default='true' or @default='1']/deliverable" mode="positize">
+      <xsl:apply-templates select="@*|*[not(self::deliverable)]"/>
+      <xsl:apply-templates select="preceding-sibling::language[@default='true' or @default='1']/deliverable" mode="positize">
         <xsl:with-param name="blacklist" select="$blacklist"/>
+        <xsl:with-param name="langcode" select="@lang"/>
       </xsl:apply-templates>
     </language>
   </xsl:template>
@@ -93,16 +57,17 @@
         <xsl:when test="subdeliverable">
           <xsl:variable name="translated-subdeliverables">
             <xsl:for-each select="subdeliverable">
-              <xsl:sort select="subdeliverable"/>
-              <xsl:value-of select="translate(subdeliverable, ' &#10;', '')"/>
+              <xsl:sort select="translate(., ' &#10;', '')" order="descending"/>
+              <xsl:value-of select="translate(., ' &#10;', '')"/>
+              <xsl:text> </xsl:text>
             </xsl:for-each>
           </xsl:variable>
           <xsl:variable name="original-subdeliverables">
-            <!-- Not sure if [1] make any sense here... -->
-            <xsl:if test="ancestor::builddocs/language[@default='true' or @default='1']/dc[. = $dc][subdeliverable]">
-              <xsl:for-each select="ancestor::builddocs/language[@default='true' or @default='1']/dc[. = $dc][subdeliverable][1]/subdeliverable">
-                <xsl:sort select="subdeliverable"/>
-                <xsl:value-of select="translate(subdeliverable, ' &#10;', '')"/>
+            <xsl:if test="ancestor::builddocs/language[@default='true' or @default='1']/deliverable[dc = $dc][subdeliverable]">
+              <xsl:for-each select="ancestor::builddocs/language[@default='true' or @default='1']/deliverable[dc = $dc][subdeliverable]/subdeliverable">
+                <xsl:sort select="translate(., ' &#10;', '')" order="descending"/>
+                <xsl:value-of select="translate(., ' &#10;', '')"/>
+                <xsl:text> </xsl:text>
               </xsl:for-each>
             </xsl:if>
           </xsl:variable>
@@ -124,12 +89,25 @@
 
   <xsl:template match="deliverable" mode="positize">
     <xsl:param name="blacklist" select="''"/>
+    <xsl:param name="langcode" select="''"/>
     <xsl:if test="not(contains(concat(' ', $blacklist, ' '), concat(' ', dc, ' ')))">
       <deliverable>
-        <xsl:apply-templates select="@*|*" mode="take-all"/>
+        <xsl:apply-templates select="@*|*[not(self::subdeliverable or self::untranslated)]"/>
+        <xsl:apply-templates select="subdeliverable" mode="positize">
+          <xsl:with-param name="langcode" select="$langcode"/>
+        </xsl:apply-templates>
       </deliverable>
     </xsl:if>
   </xsl:template>
 
+
+  <xsl:template match="subdeliverable" mode="positize">
+    <xsl:param name="langcode" select="''"/>
+    <xsl:variable name="dc" select="preceding-sibling::dc[1]"/>
+    <xsl:variable name="subdeliverable" select="."/>
+    <xsl:if test="not(ancestor::docset/builddocs/language[@lang = $langcode]/untranslated/deliverable[dc = $dc and subdeliverable = $subdeliverable])">
+      <xsl:apply-templates select="self::*"/>
+    </xsl:if>
+  </xsl:template>
 
 </xsl:stylesheet>

@@ -78,7 +78,7 @@ class BuildInstructionHandler:
 
     def cleanup(self):
         """
-        Remove temporary files when build failes or all deliverables
+        Remove temporary files when build fails or all deliverables
         are finished.
         """
         logger.debug("Cleaning up %s" % json.dumps(self.build_instruction['id']))

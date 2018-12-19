@@ -30,7 +30,6 @@ setup(
     version="0.9.16",
     packages=find_packages('src'),
     package_dir={'': 'src'},
-    py_modules=[splitext(basename(path))[0] for path in glob('src/*.py')],
     entry_points={
         'console_scripts': [
             'docserv = docserv.docserv:main',

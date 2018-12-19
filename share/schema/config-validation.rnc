@@ -6,6 +6,11 @@ default namespace = ""
 start = ds.product
 
 
+# CONSTANTS
+
+ds.schema.version = "0.9.9"
+
+
 # TYPES
 
 ds.type.class =
@@ -129,6 +134,7 @@ ds.product =
     # not make sense to use xsd:id here because there can only ever be one
     # of these ID per productconfig file.
     attribute productid { ds.type.id },
+    attribute schemaversion { ds.schema.version },
     ds.name,
     ds.shortname?,
     ds.maintainers,

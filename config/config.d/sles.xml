@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<product productid="sles">
+<product productid="sles" schemaversion="0.9.9">
   <!-- ID can be used for build commands, HTML IDs, etc. -->
   <!-- active="yes"/"no" configures whether  -->
   <!-- lifecycle="unpublished"/"beta"/"supported"/"unsupported":

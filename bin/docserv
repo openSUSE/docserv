@@ -37,6 +37,7 @@ import hashlib
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 from xml.etree import ElementTree, cElementTree
+from email.mime.text import MIMEText
 my_env = os.environ
 
 
@@ -48,6 +49,13 @@ def resource_to_filename(url):
         url = str(url).replace(char, '_')
     return url
 
+def mail(text, subject, to):
+    logger.debug("Sending mail to %s" % to)
+    msg = MIMEText( text )
+    msg["To"] = to
+    msg["Subject"] = subject
+    p = subprocess.Popen(["/usr/sbin/sendmail", "-t", "-oi"], stdin=subprocess.PIPE, universal_newlines=True)
+    p.communicate(msg.as_string())
 
 class RepoLock:
     def __init__(self, repo_dir, thread_id, gitLocks, gitLocksLock):
@@ -159,7 +167,6 @@ class Deliverable:
         commands[n] = {}
         commands[n]['cmd'] = "echo \"%s\" > %s" % (xslt_params,
                                                    xslt_params_file[1])
-        commands[n]['ret_val'] = 0
 
         # Write daps parameters to temp file
         n += 1
@@ -175,7 +182,6 @@ class Deliverable:
         commands[n] = {}
         commands[n]['cmd'] = "echo \"%s\" > %s" % (daps_params,
                                                    daps_params_file[1])
-        commands[n]['ret_val'] = 0
 
         # Run daps in the docker container, copy results to a
         # build target directory
@@ -191,7 +197,6 @@ class Deliverable:
                                                 self.build_format,         # -f
                                                 self.dc_file               # last param
                                                 )
-        commands[n]['ret_val'] = 0
 
         # Create correct directory structure
         n += 1
@@ -215,13 +220,11 @@ class Deliverable:
             self.deliverable_relative_path)
         commands[n] = {}
         commands[n]['cmd'] = "/usr/bin/mkdir -p %s" % (sync_source_dir)
-        commands[n]['ret_val'] = 0
 
         # Copy wanted files to sync source
         n += 1
         commands[n] = {}
         commands[n]['cmd'] = "rsync -r __FILELIST__  %s" % (sync_source_dir)
-        commands[n]['ret_val'] = 0
         commands[n]['pre_cmd_hook'] = 'parse_d2d_filelist'
         commands[n]['tmp_build_target'] = tmp_build_target
 
@@ -236,7 +239,6 @@ class Deliverable:
         n += 1
         commands[n] = {}
         commands[n]['cmd'] = "mkdir -p %s" % self.deliverable_cache_dir
-        commands[n]['ret_val'] = 0
         commands[n]['tmp_build_target'] = tmp_build_target
         commands[n]['pre_cmd_hook'] = 'extract_root_id' # get root id from bigfile
         commands[n]['post_cmd_hook'] = 'write_deliverable_cache' # write configuration for overview page
@@ -246,41 +248,38 @@ class Deliverable:
         n += 1
         commands[n] = {}
         commands[n]['cmd'] = "rsync -lr %s/ %s" % (sync_source_tmp, backup_path)
-        commands[n]['ret_val'] = 0
 
         # rsync built target directory with web server
         target_path = self.parent.config['targets'][self.parent.build_instruction['target']]['target_path']
         n += 1
         commands[n] = {}
         commands[n]['cmd'] = "rsync -lr %s/ %s" % (sync_source_tmp, target_path)
-        commands[n]['ret_val'] = 0
 
         # remove daps parameter file
         n += 1
         commands[n] = {}
         commands[n]['cmd'] = "rm %s" % (daps_params_file[1])
-        commands[n]['ret_val'] = 0
 
         # remove xslt parameter file
         n += 1
         commands[n] = {}
         commands[n]['cmd'] = "rm %s" % (xslt_params_file[1])
-        commands[n]['ret_val'] = 0
 
         # sync source directory
         commands[n] = {}
         commands[n]['cmd'] = "rm -rf %s" % (sync_source_tmp)
-        commands[n]['ret_val'] = 0
 
         # build target directory
         n += 1
         commands[n] = {}
         commands[n]['cmd'] = "rm -rf %s" % (tmp_build_target)
-        commands[n]['ret_val'] = 0
 
         #
         # Now iterate through all commands and execute them
         #
+        self.iterate_commands(commands, n, thread_id)
+
+    def iterate_commands(self, commands, n, thread_id):
         for i in range(0,n + 1):
             if 'pre_cmd_hook' in commands[i]:
                 commands[i] = getattr(self, commands[i]['pre_cmd_hook'])(commands[i], thread_id)
@@ -303,11 +302,13 @@ class Deliverable:
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.out, self.err = s.communicate()
 
-        if command['ret_val'] is not None and not command['ret_val'] == int(s.returncode):
+        if int(s.returncode) != 0:
+            self.failed_command = command['cmd']
             logger.warning("Thread %i: Build failed! Unexpected return value %i for '%s'" % (
                 thread_id, s.returncode, command['cmd']))
             logger.warning("Thread %i STDOUT: %s" % (thread_id, self.out.decode('utf-8')))
             logger.warning("Thread %i STDERR: %s" % (thread_id, self.err.decode('utf-8')))
+            self.mail()
             return False
         return True
 
@@ -323,6 +324,44 @@ class Deliverable:
             with self.parent.deliverables_open_lock:
                 self.parent.deliverables[self.id]['successful_build_commit'] = self.parent.build_instruction['commit']
         return result
+
+    def mail(self):
+        msg = """Sorry. docserv² failed to build deliverable:
+Repo/Branch: %s %s
+DC-File: %s %s
+Format: %s
+Language: %s
+
+=== Deliverable ===
+%s
+
+=== Build instruction ===
+%s
+
+=== Failed command ===
+%s
+
+=== STDOUT ===
+%s
+
+=== STDERR ===
+%s
+""" % (
+            self.parent.remote_repo,
+            self.parent.branch,
+            self.parent.build_source_dir,
+            self.dc_file,
+            self.build_format,
+            self.parent.build_instruction['lang'],
+            self.dict(),
+            self.parent.build_instruction,
+            self.failed_command,
+            self.out.decode('utf-8'),
+            self.err.decode('utf-8'),
+        )
+        to = ', '.join(self.parent.maintainers)
+        subject = "[docserv²] Failed building %s for %s " % (self.build_format, self.dc_file)
+        mail (msg, subject, to)
 
     def parse_d2d_filelist(self, command, thread_id):
         # currently only read from file logic
@@ -428,6 +467,8 @@ class BuildInstructionHandler:
         self.deliverables_building = []
         self.deliverables_building_lock = threading.Lock()
 
+        self.cleanup_done = False
+
         if self.validate(build_instruction, config):
             self.initialized = True
             self.build_instruction = build_instruction
@@ -462,37 +503,34 @@ class BuildInstructionHandler:
             self.build_instruction['lang'],
             self.config['targets'][self.build_instruction['target']]['template_dir'],
             sync_source_tmp)
-        commands[n]['ret_val'] = 0
 
         # rsync build target directory to backup path
         backup_path = self.config['targets'][self.build_instruction['target']]['backup_path']
         n += 1
         commands[n] = {}
         commands[n]['cmd'] = "rsync -lr %s/ %s" % (sync_source_tmp, backup_path)
-        commands[n]['ret_val'] = 0
 
         # rsync built target directory with web server
         target_path = self.config['targets'][self.build_instruction['target']]['target_path']
         n += 1
         commands[n] = {}
         commands[n]['cmd'] = "rsync -lr %s/ %s" % (sync_source_tmp, target_path)
-        commands[n]['ret_val'] = 0
 
         if hasattr(self, 'local_repo_build_dir'):
             # build target directory
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "rm -rf %s" % self.local_repo_build_dir
-            commands[n]['ret_val'] = 0
 
         for i in range(0, n + 1):
             cmd = shlex.split(commands[i]['cmd'])
             logger.debug("Cleaning up %s, %s" % (self.build_instruction['id'], commands[i]['cmd']))
             s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            s.communicate()
-            if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
+            out, err = s.communicate()
+            if int(s.returncode) != 0:
                 logger.warning("Clean up failed! Unexpected return value %i for '%s'" % (
                     s.returncode, commands[i]['cmd']))
+                self.mail(out, err, commands[i]['cmd'])
         self.cleanup_done = True
 
     def __del__(self):
@@ -514,6 +552,33 @@ class BuildInstructionHandler:
 
     def __getitem__(self, arg):
         return self.build_instruction
+
+    def mail(self, command, out, err):
+        msg = """Sorry. docserv² failed on build instruction:
+Repo/Branch: %s %s
+
+=== Build instruction ===
+%s
+
+=== Failed command ===
+%s
+
+=== STDOUT ===
+%s
+
+=== STDERR ===
+%s
+""" % (
+            self.remote_repo,
+            self.branch,
+            self.build_instruction,
+            command,
+            out,
+            err
+        )
+        to = ', '.join(self.maintainers)
+        subject = "[docserv²] Failed build preparation"
+        mail (msg, subject, to)
 
     def read_conf_dir(self):
         target = self.build_instruction['target']
@@ -549,6 +614,13 @@ class BuildInstructionHandler:
         self.tree = ElementTree.parse(os.path.join(self.stitch_tmp_dir, "docserv_config_full-positive.xml"))
         xml_root = self.tree.getroot()
         try:
+            xpath = ".//product[@productid='%s']/maintainers/contact" % (
+                self.build_instruction['product'])
+            self.maintainers = []
+            stuff = xml_root.findall(xpath)
+            for contact in stuff:
+                self.maintainers.append(contact.text)
+
             xpath = ".//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/branch" % (
                 self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])
             self.branch = xml_root.find(xpath).text
@@ -608,11 +680,12 @@ class BuildInstructionHandler:
                 self.git_lock.acquire()
             logger.debug("Thread %i: %s" % (thread_id, commands[i]['cmd']))
             s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            s.communicate()
+            out, err = s.communicate()
             self.git_lock.release()
             if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
                 logger.warning("Build failed! Unexpected return value %i for '%s'" % (
                     s.returncode, commands[i]['cmd']))
+                self.mail(commands[i]['cmd'], out.decode('utf-8'), err.decode('utf-8'))
                 self.initialized = False
                 return False
 

@@ -22,9 +22,9 @@ from setuptools import setup, find_packages
 
 setup(
     name="docserv",
-    version="0.9.15",
+    version="0.9.16",
     packages=find_packages(),
-    scripts=['bin/docserv', 'bin/docserv-stitch', 'bin/docserv-dirs'],
+    scripts=['bin/docserv', 'bin/docserv-stitch', 'bin/docserv-dirs', 'bin/docserv-createconfig'],
     install_requires=[],
     data_files=[
         ('/etc/docserv/', ['config/docserv.ini']),

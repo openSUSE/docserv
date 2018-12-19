@@ -137,6 +137,35 @@ for file in *.xml; do
   done
 
 
+  # make sure each dc appears only once within a language
+  languages=$($starlet sel -t -v "count(//language)" $file | sort)
+  for language in $(seq 1 "$languages"); do
+    currentlanguage=$($starlet sel -t -c "(//language)["$language"]" $file)
+    langcode=$(echo -e "$currentlanguage" | $starlet sel -t -v "(//@lang)[1]" $file)
+    setid=$($starlet sel -t -v "(//language)["$language"]/ancestor::docset/@setid" $file)
+    dcs=$(echo -e "$currentlanguage" | $starlet sel -t -v "//dc" | sort)
+    uniquedcs=$(echo -e "$dcs" | sort -u)
+    [[ ! "$dcs" == "$uniquedcs" ]] && \
+    add_issue \
+      "$input_dir/$file: Some dc elements within a language have non-unique values. Check for occurrences of the following duplicated lang attribute(s) in docset=$setid/language=$langcode: "$(comm -2 -3 <(echo -e "$dcs") <(echo -e "$uniquedcs") | tr '\n' ' ')"."
+  done
+
+  # make sure each subdeliverable appears only once within a dc
+  deliverables=$($starlet sel -t -v "count(//deliverable)" $file | sort)
+  for deliverable in $(seq 1 $deliverables); do
+    currentdeliverable=$($starlet sel -t -c "(//deliverable)["$deliverable"]" $file)
+    [[ ! $(echo -e "$currentdeliverable" | $starlet sel -t -c "(//subdeliverable)") ]] && continue
+    langcode=$($starlet sel -t -v "(//deliverable)["$deliverable"]/ancestor::language/@lang" $file)
+    setid=$($starlet sel -t -v "(//deliverable)["$deliverable"]/ancestor::docset/@setid" $file)
+    dc=$($starlet sel -t -v "(//deliverable)["$deliverable"]/dc" $file)
+    subdeliverables=$(echo -e "$currentdeliverable" | $starlet sel -t -v "//subdeliverable" | sort)
+    uniquesubdeliverables=$(echo -e "$subdeliverables" | sort -u)
+    [[ ! "$subdeliverables" == "$uniquesubdeliverables" ]] && \
+    add_issue \
+      "$input_dir/$file: Some subdeliverable elements within a deliverable have non-unique values. Check for occurrences of the following duplicated subdeliverable(s) in docset=$setid/language=$langcode/dc=$dc: "$(comm -2 -3 <(echo -e "$subdeliverables") <(echo -e "$uniquesubdeliverables") | tr '\n' ' ')"."
+  done
+
+
   if [[ "$valid_languages" ]]; then
     languages=$($starlet sel -t -v "//@lang" $file | sort -u)
     unrecognized_languages=$(comm -1 -3 <(echo -e "$valid_languages_sorted") <(echo -e "$languages"))

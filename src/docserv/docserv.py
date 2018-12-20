@@ -159,7 +159,7 @@ class DocservState:
         move the build instruction to the past_builds dict and remove
         it from the queued build instructions.
         """
-        logger.info("Aborting build instruction %s" % build_instruction_id)
+        logger.info("Aborting build instruction %s", build_instruction_id)
         with self.scheduled_build_instruction_lock:
             self.updating_build_instruction.remove(build_instruction_id)
             build_instruction = self.scheduled_build_instruction.pop(build_instruction_id, None)
@@ -175,7 +175,7 @@ class DocservState:
         After all deliverables are finished, dump a dict of the
         BuildInstructionHandler into the past_builds dict.
         """
-        logger.info("Finished build instruction %s" % build_instruction_id)
+        logger.info("Finished build instruction %s", build_instruction_id)
         self.bih_dict[build_instruction_id].cleanup()
         with self.bih_dict_lock:
             build_instruction = self.bih_dict.pop(build_instruction_id)
@@ -252,7 +252,7 @@ class DocservConfig:
             config_file = "docserv"
         else:
             config_file = argv[1]
-        logger.info("Reading %s/%s.ini" % (CONF_DIR, config_file))
+        logger.info("Reading %s/%s.ini", CONF_DIR, config_file)
         config.read("%s/%s.ini" % (CONF_DIR, config_file))
         self.config = {}
         try:
@@ -284,7 +284,7 @@ class DocservConfig:
                 self.config['targets'][config[section]['name']]['default_lang'] =  config[section]['default_lang']
                 self.config['targets'][config[section]['name']]['internal'] =      config[section]['internal']
         except KeyError as error:
-            logger.warning("Invalid configuration file, missing configuration key '%s'. Exiting." % error)
+            logger.warning("Invalid configuration file, missing configuration key '%s'. Exiting.", error)
             sys.exit(1)
 
 
@@ -312,7 +312,7 @@ class Docserv(DocservState, DocservConfig):
             thread_receive.start()
             workers = []
             for i in range(0, min([os.cpu_count(), self.config['server']['max_threads']])):
-                logger.info("Starting build thread %i" % i)
+                logger.info("Starting build thread %i", i)
                 worker = threading.Thread(target=self.worker, args=(i,))
                 worker.start()
                 workers.append(worker)

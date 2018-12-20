@@ -53,8 +53,9 @@ class RepoLock:
     def acquire(self, blocking=True):
         if self.gitLocks[self.resource_name].acquire(blocking):
             self.acquired = True
-            logger.debug("Thread %i: Acquired lock %s." % (self.thread_id,
-                                                           self.resource_name))
+            logger.debug("Thread %i: Acquired lock %s.",
+                         self.thread_id,
+                         self.resource_name)
             return True
         return False
 
@@ -62,5 +63,6 @@ class RepoLock:
         if self.acquired:
             self.gitLocks[self.resource_name].release()
             self.acquired = False
-            logger.debug("Thread %i: Released lock %s." % (self.thread_id,
-                                                           self.resource_name))
+            logger.debug("Thread %i: Released lock %s.",
+                         self.thread_id,
+                         self.resource_name)

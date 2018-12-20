@@ -23,12 +23,14 @@ from email.mime.text import MIMEText
 from docserv.deliverable import Deliverable
 from docserv.repolock import RepoLock
 from docserv.functions import resource_to_filename, mail
-logger = logging.getLogger('docserv')
 
 BIN_DIR = os.getenv('DOCSERV_BIN_DIR', "/usr/bin/")
 CONF_DIR = os.getenv('DOCSERV_CONFIG_DIR', "/etc/docserv/")
 SHARE_DIR = os.getenv('DOCSERV_SHARE_DIR', "/usr/share/docserv/")
 CACHE_DIR = os.getenv('DOCSERV_CACHE_DIR', "/var/cache/docserv/")
+
+logger = logging.getLogger('docserv')
+
 
 class BuildInstructionHandler:
     """
@@ -85,7 +87,7 @@ class BuildInstructionHandler:
         if not self.cleanup_lock.acquire(False):
             return False
 
-        logger.debug("Cleaning up %s" % json.dumps(self.build_instruction['id']))
+        logger.debug("Cleaning up %s", json.dumps(self.build_instruction['id']))
 
         commands = {}
         n = 0
@@ -94,7 +96,7 @@ class BuildInstructionHandler:
         commands[n] = {}
         commands[n]['cmd'] = "docserv-buildoverview %s--stitched_config=\"%s\" --ui-languages=\"%s\" --default-ui-language=%s --cache-dir=%s --doc-language=%s --template_dir=%s --output_dir=%s" % (
             "--internal-mode " if self.config['targets'][self.build_instruction['target']]['languages'] == "yes" else "",
-            os.path.join(self.stitch_tmp_dir, "docserv_config_full.xml"),
+            self.stitch_tmp_file,
             self.config['targets'][self.build_instruction['target']]['languages'],
             self.config['targets'][self.build_instruction['target']]['default_lang'],
             self.deliverable_cache_base_dir,
@@ -122,12 +124,12 @@ class BuildInstructionHandler:
 
         for i in range(0, n + 1):
             cmd = shlex.split(commands[i]['cmd'])
-            logger.debug("Cleaning up %s, %s" % (self.build_instruction['id'], commands[i]['cmd']))
+            logger.debug("Cleaning up %s, %s", self.build_instruction['id'], commands[i]['cmd'])
             s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = s.communicate()
             if int(s.returncode) != 0:
-                logger.warning("Clean up failed! Unexpected return value %i for '%s'" % (
-                    s.returncode, commands[i]['cmd']))
+                logger.warning("Clean up failed! Unexpected return value %i for '%s'",
+                               s.returncode, commands[i]['cmd'])
                 self.mail(out, err, commands[i]['cmd'])
         self.cleanup_done = True
         self.cleanup_lock.release()
@@ -187,26 +189,26 @@ Repo/Branch: %s %s
         """
         target = self.build_instruction['target']
         if not self.config['targets'][target]['active'] == "yes":
-            logger.debug("Target %s not active." % target)
+            logger.debug("Target %s not active.", target)
             return False
-        self.stitch_tmp_dir = tempfile.mkdtemp(prefix="docserv_stitch_")
-        logger.debug("Stitching XML config directory to %s" % self.stitch_tmp_dir)
+        self.stitch_tmp_file = os.path.join(tempfile.mkdtemp(prefix="docserv_stitch_"), 'docserv_config_full.xml')
+        logger.debug("Stitching XML config directory to %s", self.stitch_tmp_file)
         cmd = '%s/docserv-stitch --make-positive --valid-languages="%s" %s %s' % (
             BIN_DIR,
             self.config['server']['valid_languages'],
             self.config['targets'][target]['config_dir'],
-            self.stitch_tmp_dir)
-        logger.debug("Stitching command: %s" % cmd)
+            self.stitch_tmp_file)
+        logger.debug("Stitching command: %s", cmd)
         cmd = shlex.split(cmd)
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
         s.communicate()[0]
         rc = int(s.returncode)
         if rc == 0:
-            logger.debug("Stitching of %s successful" %
+            logger.debug("Stitching of %s successful",
                          self.config['targets'][target]['config_dir'])
         else:
-            logger.warning("Stitching of %s failed!" %
+            logger.warning("Stitching of %s failed!",
                            self.config['targets'][target]['config_dir'])
             self.initialized = False
             return False
@@ -215,7 +217,7 @@ Repo/Branch: %s %s
             random.choices(string.ascii_uppercase + string.digits, k=12)))
 
         # then read all files into an xml tree
-        self.tree = ElementTree.parse(os.path.join(self.stitch_tmp_dir, "docserv_config_full-positive.xml"))
+        self.tree = ElementTree.parse(self.stitch_tmp_file)
         xml_root = self.tree.getroot()
         try:
             xpath = ".//product[@productid='%s']/maintainers/contact" % (
@@ -239,7 +241,7 @@ Repo/Branch: %s %s
                 self.build_instruction['product'], self.build_instruction['docset'])
             self.remote_repo = xml_root.find(xpath).text
         except AttributeError:
-            logger.warning("Failed to parse xpath: %s" % xpath)
+            logger.warning("Failed to parse xpath: %s", xpath)
             return False
         self.deliverable_cache_base_dir =  '%s/%s' % (CACHE_DIR, self.config['server']['name'])
         return True
@@ -289,13 +291,13 @@ Repo/Branch: %s %s
             cmd = shlex.split(commands[i]['cmd'])
             if commands[i]['repo_lock'] is not None:
                 self.git_lock.acquire()
-            logger.debug("Thread %i: %s" % (thread_id, commands[i]['cmd']))
+            logger.debug("Thread %i: %s", thread_id, commands[i]['cmd'])
             s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = s.communicate()
             self.git_lock.release()
             if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
-                logger.warning("Build failed! Unexpected return value %i for '%s'" % (
-                    s.returncode, commands[i]['cmd']))
+                logger.warning("Build failed! Unexpected return value %i for '%s'",
+                    s.returncode, commands[i]['cmd'])
                 self.mail(commands[i]['cmd'], out.decode('utf-8'), err.decode('utf-8'))
                 self.initialized = False
                 return False
@@ -311,7 +313,7 @@ Repo/Branch: %s %s
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
         self.build_instruction['commit'] = s.communicate()[0].decode('utf-8').rstrip()
-        logger.debug("Current commit hash: %s" % self.build_instruction['commit'])
+        logger.debug("Current commit hash: %s", self.build_instruction['commit'])
 
     def validate(self, build_instruction, config):
         """
@@ -334,7 +336,7 @@ Repo/Branch: %s %s
         if not isinstance(build_instruction['target'], str):
             logger.warning("Validation: target is not a string")
             return False
-        logger.debug("Valid build instruction: %s" % build_instruction['id'])
+        logger.debug("Valid build instruction: %s", build_instruction['id'])
         return True
 
     def generate_deliverables(self):

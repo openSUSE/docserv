@@ -3,7 +3,7 @@ Docserv² is a set of scripts and configuration files to automatically build
 DocBook XML documentation in several languages and publish the result as
 static web content.
 
-# Installing Docsev²
+# Installing Docserv²
 Automatic RPM builds are available in the openSUSE Build Service in the
 [`Documentation:Tools` repository](https://build.opensuse.org/project/show/Documentation:Tools).
 
@@ -27,7 +27,7 @@ set up a development environment:
    5. Install Docserv² with setuptools in develop mode: `python3 setup.py develop`
 
 
-# Parts
+# Scripts in This Repository
 
 Parts of Docserv² that can be run individually:
   * `docserv`: The main build scheduling script (see below).

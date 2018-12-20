@@ -96,7 +96,7 @@ class BuildInstructionHandler:
         commands[n] = {}
         commands[n]['cmd'] = "docserv-buildoverview %s--stitched_config=\"%s\" --ui-languages=\"%s\" --default-ui-language=%s --cache-dir=%s --doc-language=%s --template_dir=%s --output_dir=%s" % (
             "--internal-mode " if self.config['targets'][self.build_instruction['target']]['languages'] == "yes" else "",
-            os.path.join(self.stitch_tmp_dir, "docserv_config_full.xml"),
+            self.stitch_tmp_file,
             self.config['targets'][self.build_instruction['target']]['languages'],
             self.config['targets'][self.build_instruction['target']]['default_lang'],
             self.deliverable_cache_base_dir,
@@ -191,13 +191,13 @@ Repo/Branch: %s %s
         if not self.config['targets'][target]['active'] == "yes":
             logger.debug("Target %s not active.", target)
             return False
-        self.stitch_tmp_dir = tempfile.mkdtemp(prefix="docserv_stitch_")
-        logger.debug("Stitching XML config directory to %s", self.stitch_tmp_dir)
+        self.stitch_tmp_file = os.path.join(tempfile.mkdtemp(prefix="docserv_stitch_"), 'docserv_config_full.xml')
+        logger.debug("Stitching XML config directory to %s", self.stitch_tmp_file)
         cmd = '%s/docserv-stitch --make-positive --valid-languages="%s" %s %s' % (
             BIN_DIR,
             self.config['server']['valid_languages'],
             self.config['targets'][target]['config_dir'],
-            self.stitch_tmp_dir)
+            self.stitch_tmp_file)
         logger.debug("Stitching command: %s", cmd)
         cmd = shlex.split(cmd)
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
@@ -217,7 +217,7 @@ Repo/Branch: %s %s
             random.choices(string.ascii_uppercase + string.digits, k=12)))
 
         # then read all files into an xml tree
-        self.tree = ElementTree.parse(os.path.join(self.stitch_tmp_dir, "docserv_config_full-positive.xml"))
+        self.tree = ElementTree.parse(self.stitch_tmp_file)
         xml_root = self.tree.getroot()
         try:
             xpath = ".//product[@productid='%s']/maintainers/contact" % (

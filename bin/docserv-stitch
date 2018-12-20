@@ -8,7 +8,7 @@
 # --make-positive                 # Turn translation document blacklist into
 #                                 # whitelist (optional)
 # INPUT_DIR                       # Directory with config files
-# OUTPUT_DIR                      # Output directory
+# OUTPUT_FILE                     # Output file name (parent directory must exist)
 #
 # XML tool deps: xmlstarlet, jing, xmllint
 
@@ -53,7 +53,7 @@ make_positive=0
 valid_languages=""
 unknown=""
 input_dir=""
-output_dir=""
+output_file=""
 
 for i in "$@"
   do
@@ -70,8 +70,8 @@ for i in "$@"
       *)
         if [[ -d $(readlink -f $i) ]] && [[ ! $input_dir ]]; then
           input_dir=$(readlink -f $i)
-        elif [[ -d $(readlink -f $i) ]] && [[ ! $output_dir ]]; then
-          output_dir=$(readlink -f $i)
+        elif [[ -d $(readlink -f $(dirname $i)) ]] && [[ ! $output_file ]]; then
+          output_file=$(readlink -f $i)
         else
           unknown+="  $i\n"
         fi
@@ -83,7 +83,7 @@ done
   out "There are unknown parameters:\n$unknown\n(Note that input and output directories must exist before running this script.)"
 
 [[ $(echo "$valid_languages" | sed -r 's/( +[a-z]{2}(-[a-z]{2,8})?)*//') ]] && \
-  out "Language codes parameter string does not conform to scheme (must be la-ng scheme, space-separated."
+  out "Language codes parameter string does not conform to scheme (must be la-ng scheme, with entries space-separated)."
 
 
 cd $input_dir
@@ -202,6 +202,9 @@ uniqueproductids=$(echo -e "$productids" | sort -u)
 
 cd - >/dev/null
 
-echo -e "$outfile" > $output_dir/docserv_config_full.xml
-[[ $make_positive == 1 ]] && \
-  echo -e "$outfile" | xsltproc $positive_xslt_file - > $output_dir/docserv_config_full-positive.xml
+
+if [[ $make_positive == 1 ]]; then
+  echo -e "$outfile" | xsltproc $positive_xslt_file - > $output_file
+else
+  echo -e "$outfile" > $output_file
+fi

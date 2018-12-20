@@ -10,10 +10,6 @@ RPM builds are available in the openSUSE Build Service in the
 ## openSUSE Leap 15.0
    1. ```zypper ar --refresh https://download.opensuse.org/repositories/Documentation:/Tools/openSUSE_Leap_15.0/Documentation:Tools.repo```
    2. ```zypper in docserv```
-   3. ```systemctl enable docker.service && systemctl start docker.service```
-   4. Change the configuration in ```/etc/docserv```
-   5. ```systemctl enable docserv@docserv.service && systemctl start docserv@docserv.service```
-
 
 # Running Docserv² From the Git Repository
 
@@ -24,10 +20,24 @@ set up a development environment:
    2. Source the dev-mode.sh script: `. dev-mode.sh`
    3. Create a virtual environment with Python: `python3 -m venv .venv`
    4. Activate the virtual environment: `source .venv/bin/activate`
-   5. Install Docserv² with setuptools in develop mode: `python3 setup.py develop`
+   5. Update the pip Python package manager: `pip install -U pip setuptools`
+   6. Install requirements via pip: `pip install -r requirements.txt`
+   7. Install Docserv² with setuptools in develop mode: `python3 setup.py develop`
 
+# Dependencies
 
-# Scripts in This Repository
+Docserv² depends on the following software:
+
+  * Linux with systemd
+  * Python 3.4, 3.5, or 3.6
+  * `pygit2`
+  * Docker Engine
+  * Bash
+  * `xmllint`, `xsltproc`
+  * `xmlstarlet`
+  * Jing (needs a JVM)
+
+# Scripts That Are Part of Docserv²
 
 Parts of Docserv² that can be run individually:
   * `docserv`: The main build scheduling script (see below).
@@ -50,8 +60,19 @@ The Docserv² configuration consists of three parts:
 
 # Running Docserv² Itself
 
-   1. Start the server with `docserv docserv`
-   2. Send a build instruction, for example: `curl --header "Content-Type: application/json" --request POST --data '[{"docset": "15ga","lang": "de-de", "product": "sles", "target": "internal"}, {"docset": "15ga","lang": "en-us", "product": "sles", "target": "internal"}]' http://localhost:8080`
+Preparation:
+
+   1. Enable/start the Docker engine: `systemctl enable docker.service && systemctl start docker.service`
+   2. Adapt the configuration in `/etc/docserv` to your needs.
+   3. Choose how to run Docserv²:
+      * When running from an installed system package, you can run Docserv²
+        as a service: `systemctl enable --now docserv@docserv.service`
+      * When running from the Git repostory or you are just trying out
+        Docserv², use: `docserv docserv`
+        The second `docserv` denotes the name of your INI file.
+
+Test your installation:
+Send a build instruction, for example: `curl --header "Content-Type: application/json" --request POST --data '[{"docset": "15ga","lang": "de-de", "product": "sles", "target": "internal"}, {"docset": "15ga","lang": "en-us", "product": "sles", "target": "internal"}]' http://localhost:8080`
 
 
 # Using `docserv-createconfig`

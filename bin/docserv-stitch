@@ -46,8 +46,8 @@ java_flags="-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=org.apache.xer
 schema_file=$share_dir/schema/config-validation.rnc
 positive_xslt_file=$share_dir/xslt/positive-config.xsl
 
-[[ ! -f $schema_file ]] && out "Schema $schema_file does not exist."
-[[ ! -f $positive_xslt_file ]] && out "Schema $positive_xslt_file does not exist."
+[[ ! -f $schema_file ]] && out "Schema $schema_file does not exist.$(readme_message)"
+[[ ! -f $positive_xslt_file ]] && out "Schema $positive_xslt_file does not exist.$(readme_message)"
 
 make_positive=0
 valid_languages=""

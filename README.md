@@ -7,6 +7,9 @@ Automatic RPM builds are available in the openSUSE Build Service in the Document
 ## openSUSE 15.0
    1. ```zypper ar --refresh https://download.opensuse.org/repositories/Documentation:/Tools/openSUSE_Leap_15.0/Documentation:Tools.repo```
    2. ```zypper in docserv```
+   3. ```systemctl enable docker.service && systemctl start docker.service```
+   4. Change the configuration in ```/etc/docserv```
+   5. ```systemctl enable docserv@docserv.service && systemctl start docserv@docserv.service```
 
 # Running Docserv² From the Git Repository
 

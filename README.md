@@ -21,4 +21,4 @@ variables for Docserv².
    5. Install docserv with setuptools in develop mode: `python3 setup.py develop`
    6. Adapt the configuration files to your needs.
    7. Start the server with `docserv docserv`
-   8. Send a build instruction: `curl --header "Content-Type: application/json" --request POST --data '[{"docset": "12sp2","lang": "de-de", "product": "sles", "target": "internal"}, {"docset": "15ga","lang": "en-us", "product": "sles", "target": "internal"}]' http://localhost:8080`
+   8. Send a build instruction: `curl --header "Content-Type: application/json" --request POST --data '[{"docset": "15ga","lang": "de-de", "product": "sles", "target": "internal"}, {"docset": "15ga","lang": "en-us", "product": "sles", "target": "internal"}]' http://localhost:8080`

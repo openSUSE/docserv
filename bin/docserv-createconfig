@@ -17,22 +17,16 @@
 # To contact SUSE about this file by physical or electronic mail,
 # you may find current contact information at www.suse.com
 
+"""
+Generates a basic default XML configuration for docserv from
+Git repositories.
+"""
+
 import os
 import sys
 import re
-import pygit2
 from xml.etree import cElementTree
 
-
-def print_help():
-    print("""This tool generates a basic default XML configuration for docserv.
-
-Usage: docserv-createconfig [OPTIONS] PATH_TO_REPO
-
-Available options:
---languages="la-ng la-ng ..."
---contact="mail@example.com"
-""")
 
 def generate_config(languages, branches, contact = None):
     root = cElementTree.Element("product", productid="FIXME", schemaversion="0.9.9")
@@ -83,7 +77,9 @@ def generate_config(languages, branches, contact = None):
         extralinks = cElementTree.SubElement(docset, "extralinks")
         cElementTree.SubElement(extralinks, "link", href="FIXME").text = "SOME DESCRIPTION"
     tree = cElementTree.ElementTree(root)
-    tree.write(os.getcwd()+"/config.xml")
+    configfile = os.getcwd()+"/config.xml"
+    tree.write(configfile)
+    print("Find the config file at {!r}".format(configfile))
 
 def get_dc_files(path, branches, filter_dc):
     repo = pygit2.Repository(path)
@@ -121,31 +117,59 @@ def get_git_branches(path):
             result[branch.replace("origin/", "")] = []
     return result
 
-if __name__ == "__main__":
-    if "--help" in sys.argv or "-h" in sys.argv:
-        print_help()
-    else:
-        languages = "en-us de-de fr-fr pt-br ja-jp zh-cn es-es it-it ko-kr hu-hu zh-tw cs-cz ar-ar pl-pl ru-ru"
-        filter_dc = None
-        contact = None
-        trans_subdir = None
-        for arg in sys.argv:
-            if "--languages=" in arg:
-                m = re.search('^--languages=[\"\']?([^\"\']+)[\"\']$', arg)
-                if m:
-                    languages = m.group(1)
-            elif "docserv-createconfig" in sys.argv:
-                continue
-            elif "--filter" in arg:
-                filter_dc = arg.replace("--filter=", "")
-            elif "--contact" in arg:
-                contact = arg.replace("--contact=", "")
-            elif "--translation-subdir" in arg:
-                trans_subdir = arg.replace("--translation-subdir=", "")
-        path = sys.argv[-1]
-        branches = get_git_branches(path)
-        dc_files = get_dc_files(path, branches, filter_dc)
-        print(dc_files)
-        generate_config(languages.split(" "), branches, contact)
 
+def parse_cli(cliargs=None):
+    """Parse CLI with :class:`argparse.ArgumentParser` and return parsed result.
+
+    :param list cliargs: Arguments to parse or None (=use sys.argv)
+    :return: parsed CLI result
+    :rtype: :class:`argparse.Namespace`
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("-l", "--languages",
+                        help=("Uses one or more languages in the format "
+                              "'language_country'. "
+                              "Upper and lower case is irrelevant."
+                              ),
+                        )
+    parser.add_argument("-f", "--filter",
+                        help="Expects DC files which to focus on",
+                        )
+    parser.add_argument("-m", "--contact",
+                        help="The contact email address",
+                        )
+    parser.add_argument("-t", "--translation-subdir",
+                        metavar="DIR",
+                        help="???",
+                        )
+    parser.add_argument("path",
+                        metavar="PATH",
+                        help="Path to the repository",
+                        )
+    args = parser.parse_args(args=cliargs)
+    args.LANGUAGES = ("en-us de-de fr-fr pt-br ja-jp zh-cn es-es "
+                      "it-it ko-kr hu-hu zh-tw cs-cz ar-ar pl-pl "
+                      "ru-ru").split(" ")
+
+    # do some checks:
+    args.langs = set(args.languages.replace("_", "-").lower().split(" "))
+    if not args.langs.intersection(args.LANGUAGES):
+        parser.error("Unknown language {!r} found.\n"
+                     "Expected one or more of these:\n"
+                     "{}".format(args.languages, ", ".join(args.LANGUAGES))
+                     )
+    return args
+
+
+if __name__ == "__main__":
+    args = parse_cli()
+    # print(args)
+
+    import pygit2
+    branches = get_git_branches(args.path)
+    dc_files = get_dc_files(args.path, branches, args.filter)
+    print(dc_files)
+    generate_config(args.LANGUAGES, branches, args.contact)
     sys.exit(0)

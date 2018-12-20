@@ -140,10 +140,6 @@ def parse_cli(cliargs=None):
     parser.add_argument("-m", "--contact",
                         help="The contact email address",
                         )
-    parser.add_argument("-t", "--translation-subdir",
-                        metavar="DIR",
-                        help="???",
-                        )
     parser.add_argument("path",
                         metavar="PATH",
                         help="Path to the repository",

@@ -27,7 +27,7 @@ from glob import glob
 
 setup(
     name="docserv",
-    version="0.9.16",
+    version="0.9.18",
     packages=find_packages('src'),
     package_dir={'': 'src'},
     entry_points={

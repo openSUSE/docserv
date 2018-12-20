@@ -195,7 +195,7 @@ class DocservState:
             deliverable = self.bih_dict[build_instruction_id].get_deliverable()
             if deliverable == 'done':
                 self.finish_build_instruction(build_instruction_id)
-                deliverable.cleanup()
+                self.bih_dict[build_instruction_id].cleanup()
                 deliverable = None
             else: # build instruction is not yet finished, put its ID back on the queue
                 self.bih_queue.put(build_instruction_id)

@@ -58,6 +58,7 @@ class BuildInstructionHandler:
         self.deliverables_building_lock = threading.Lock()
 
         self.cleanup_done = False
+        self.cleanup_lock = threading.Lock()
 
         if self.validate(build_instruction, config):
             self.initialized = True
@@ -81,6 +82,9 @@ class BuildInstructionHandler:
         Remove temporary files when build fails or all deliverables
         are finished.
         """
+        if not self.cleanup_lock.acquire(False):
+            return False
+
         logger.debug("Cleaning up %s" % json.dumps(self.build_instruction['id']))
 
         commands = {}
@@ -126,6 +130,7 @@ class BuildInstructionHandler:
                     s.returncode, commands[i]['cmd']))
                 self.mail(out, err, commands[i]['cmd'])
         self.cleanup_done = True
+        self.cleanup_lock.release()
 
     def __del__(self):
         if not self.cleanup_done:

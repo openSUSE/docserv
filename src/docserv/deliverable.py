@@ -50,12 +50,12 @@ class Deliverable:
         self.subdeliverables = subdeliverables
         self.id = self.generate_id()
         self.prev_state()
-        logger.debug("Created deliverable %s (%s, %s) for BI %s" % (
-                                                                self.id,
-                                                                self.dc_file,
-                                                                self.build_format,
-                                                                self.parent.build_instruction['id']
-                                                             ))
+        logger.debug("Created deliverable %s (%s, %s) for BI %s",
+                     self.id,
+                     self.dc_file,
+                     self.build_format,
+                     self.parent.build_instruction['id']
+                     )
 
     def prev_state(self):
         """
@@ -95,22 +95,22 @@ class Deliverable:
         Create a dict of commands that build the document.
         """
         if self.parent.build_instruction['commit'] == self.parent.deliverables[self.id]['successful_build_commit']:
-            logger.debug("Deliverable %s (%s, %s) for BI %s already up to date. Skipping daps run." % (
-                                                                self.id,
-                                                                self.dc_file,
-                                                                self.build_format,
-                                                                self.parent.build_instruction['id']
-                                                             ))
+            logger.debug("Deliverable %s (%s, %s) for BI %s already up to date. Skipping daps run.",
+                         self.id,
+                         self.dc_file,
+                         self.build_format,
+                         self.parent.build_instruction['id'],
+                         )
             return self.finish(True)
         with self.parent.deliverables_open_lock:
             self.parent.deliverables[self.id]['last_build_attempt_commit'] = self.parent.build_instruction['commit']
-        logger.info("Building deliverable %s (%s, %s) for BI %s. Commit: %s" % (
-                                                                        self.id,
-                                                                        self.dc_file,
-                                                                        self.build_format,
-                                                                        self.parent.build_instruction['id'],
-                                                                        self.parent.deliverables[self.id]['last_build_attempt_commit']
-                                                                    ))
+        logger.info("Building deliverable %s (%s, %s) for BI %s. Commit: %s",
+                    self.id,
+                    self.dc_file,
+                    self.build_format,
+                    self.parent.build_instruction['id'],
+                    self.parent.deliverables[self.id]['last_build_attempt_commit'],
+                    )
         #
         # The following lines of code define all bash commands that
         # are required to build and publish the deliverable.
@@ -270,10 +270,10 @@ class Deliverable:
 
         if int(s.returncode) != 0:
             self.failed_command = command['cmd']
-            logger.warning("Thread %i: Build failed! Unexpected return value %i for '%s'" % (
-                thread_id, s.returncode, command['cmd']))
-            logger.warning("Thread %i STDOUT: %s" % (thread_id, self.out.decode('utf-8')))
-            logger.warning("Thread %i STDERR: %s" % (thread_id, self.err.decode('utf-8')))
+            logger.warning("Thread %i: Build failed! Unexpected return value %i for '%s'",
+                           thread_id, s.returncode, command['cmd'])
+            logger.warning("Thread %i STDOUT: %s", thread_id, self.out.decode('utf-8'))
+            logger.warning("Thread %i STDERR: %s", thread_id, self.err.decode('utf-8'))
             self.mail()
             return False
         return True
@@ -347,7 +347,7 @@ Language: %s
             if '_bigfile.xml' not in line and line != "":
                 self.d2d_out_dir = line
                 self.path = ("%s/%s" % (self.deliverable_relative_path, line.split('/')[-1])).replace('//', '/')
-        logger.debug("Deliverable build results: %s" % self.d2d_out_dir)
+        logger.debug("Deliverable build results: %s", self.d2d_out_dir)
         command['cmd'] = command['cmd'].replace('__FILELIST__', self.d2d_out_dir)
         return command
 
@@ -371,14 +371,14 @@ Language: %s
         xmlstarlet['ret_val'] = 0
         if self.root_id:
             bigfile = self.root_id
-            logger.debug("Found ROOTID for %s: %s" % ( self.id, self.root_id ))
+            logger.debug("Found ROOTID for %s: %s", self.id, self.root_id)
             bigfile_path = (os.path.join(command['tmp_build_target'], '.tmp', '%s_bigfile.xml' % bigfile))
             xpath = "(//*[@*[local-name(.)='id']='%s']/*[contains(local-name(.),'info')]/*[local-name(.)='title']|//*[@*[local-name(.)='id']='%s']/*[local-name(.)='title'])[1]" % (
                 self.root_id, self.root_id)
             xmlstarlet['cmd'] = "xmlstarlet sel -t -v \"%s\" %s" % (xpath, bigfile_path)
         else:
             bigfile = self.dc_file.replace('DC-', '')
-            logger.debug("No ROOTID found for %s, using DC file name: %s" % ( self.id, self.dc_file ))
+            logger.debug("No ROOTID found for %s, using DC file name: %s", self.id, self.dc_file)
             bigfile_path = (os.path.join(command['tmp_build_target'], '.tmp', '%s_bigfile.xml' % bigfile))
             xpath = "(/*/*[contains(local-name(.),'info')]/*[local-name(.)='title']|/*/*[local-name(.)='title'])[1]"
             xmlstarlet['cmd'] = "xmlstarlet sel -t -v \"%s\" %s" % (xpath, bigfile_path)

@@ -23,6 +23,7 @@ my_env = os.environ
 
 logger = logging.getLogger('docserv')
 
+
 def resource_to_filename(url):
     """
     To create valid directory names, transform URLs like https://github.com/SUSE/doc-sle
@@ -37,7 +38,7 @@ def mail(text, subject, to):
     """
     Send mail via the local sendmail command.
     """
-    logger.debug("Sending mail to %s" % to)
+    logger.debug("Sending mail to %s", to)
     msg = MIMEText( text )
     msg["To"] = to
     msg["Subject"] = subject

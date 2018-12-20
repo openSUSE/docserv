@@ -176,6 +176,7 @@ class DocservState:
         BuildInstructionHandler into the past_builds dict.
         """
         logger.info("Finished build instruction %s" % build_instruction_id)
+        self.bih_dict[build_instruction_id].cleanup()
         with self.bih_dict_lock:
             build_instruction = self.bih_dict.pop(build_instruction_id)
         with self.past_builds_lock:
@@ -195,7 +196,6 @@ class DocservState:
             deliverable = self.bih_dict[build_instruction_id].get_deliverable()
             if deliverable == 'done':
                 self.finish_build_instruction(build_instruction_id)
-                self.bih_dict[build_instruction_id].cleanup()
                 deliverable = None
             else: # build instruction is not yet finished, put its ID back on the queue
                 self.bih_queue.put(build_instruction_id)

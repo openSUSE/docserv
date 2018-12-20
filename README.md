@@ -4,10 +4,10 @@ DocBook XML documentation in several languages and publish the result as
 static web content.
 
 # Installing Docserv²
-Automatic RPM builds are available in the openSUSE Build Service in the
+RPM builds are available in the openSUSE Build Service in the
 [`Documentation:Tools` repository](https://build.opensuse.org/project/show/Documentation:Tools).
 
-## openSUSE 15.0
+## openSUSE Leap 15.0
    1. ```zypper ar --refresh https://download.opensuse.org/repositories/Documentation:/Tools/openSUSE_Leap_15.0/Documentation:Tools.repo```
    2. ```zypper in docserv```
    3. ```systemctl enable docker.service && systemctl start docker.service```

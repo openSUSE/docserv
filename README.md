@@ -25,3 +25,12 @@ variables for Docserv².
    6. Adapt the configuration files to your needs.
    7. Start the server with `docserv docserv`
    8. Send a build instruction: `curl --header "Content-Type: application/json" --request POST --data '[{"docset": "15ga","lang": "de-de", "product": "sles", "target": "internal"}, {"docset": "15ga","lang": "en-us", "product": "sles", "target": "internal"}]' http://localhost:8080`
+
+# Using docserv-createconfig
+
+The `docserv-createconfig` tool helps to create a template for the XML configuration from an DocBook XML repository. It scans through available branches and DC files and creates an XML file that then needs to be fixed. The script will guess some basic values, but everything should be checked.
+
+Example:
+```
+docserv-createconfig --languages="en-us de-de" --contact="mail@example.com" /path/to/repo
+```

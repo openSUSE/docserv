@@ -19,12 +19,23 @@
 
 
 from setuptools import setup, find_packages
+from os.path import basename
+from os.path import dirname
+from os.path import join
+from os.path import splitext
+from glob import glob
 
 setup(
     name="docserv",
     version="0.9.16",
-    packages=find_packages(),
-    scripts=['bin/docserv', 'bin/docserv-stitch', 'bin/docserv-dirs', 'bin/docserv-createconfig'],
+    packages=find_packages('src'),
+    package_dir={'': 'src'},
+    entry_points={
+        'console_scripts': [
+            'docserv = docserv.docserv:main',
+        ]
+    },
+    scripts=['bin/docserv-stitch', 'bin/docserv-dirs', 'bin/docserv-createconfig'],
     install_requires=[],
     data_files=[
         ('/etc/docserv/', ['config/docserv.ini']),

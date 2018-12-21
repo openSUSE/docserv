@@ -18,12 +18,10 @@
 # you may find current contact information at www.suse.com
 
 
-from setuptools import setup, find_packages
-from os.path import basename
-from os.path import dirname
-from os.path import join
-from os.path import splitext
 from glob import glob
+from os.path import basename, dirname, join, splitext
+
+from setuptools import find_packages, setup
 
 setup(
     name="docserv",

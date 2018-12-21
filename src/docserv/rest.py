@@ -1,7 +1,7 @@
 import json
-from socketserver import ThreadingMixIn
-from http.server import HTTPServer, BaseHTTPRequestHandler
 import logging
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from socketserver import ThreadingMixIn
 
 logger = logging.getLogger('docserv')
 

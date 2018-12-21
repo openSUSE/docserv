@@ -1,27 +1,29 @@
-import json
-import time
-import subprocess
-import shlex
-import datetime
-import os
-import sys
-import threading
-import queue
-import socket
 import configparser
-import logging
-import signal
-import tempfile
-import string
-import random
+import datetime
 import hashlib
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import json
+import logging
+import os
+import queue
+import random
+import shlex
+import signal
+import socket
+import string
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+from email.mime.text import MIMEText
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
 from xml.etree import ElementTree, cElementTree
-from email.mime.text import MIMEText
-my_env = os.environ
 
 from docserv.functions import resource_to_filename
+
+my_env = os.environ
+
 logger = logging.getLogger('docserv')
 
 class RepoLock:

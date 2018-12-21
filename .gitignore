@@ -87,6 +87,8 @@ celerybeat-schedule
 env/
 venv/
 ENV/
+.env.bak/
+.venv.bak/
 env.bak/
 venv.bak/
 
@@ -106,4 +108,7 @@ venv.bak/
 # IDE
 .vscode
 
+# Ignore other files:
+*.patch
+*.diff
 config/docserv.json

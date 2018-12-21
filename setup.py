@@ -25,7 +25,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="docserv",
-    version="0.9.19",
+    version="0.9.20",
     packages=find_packages('src'),
     package_dir={'': 'src'},
     entry_points={
@@ -38,7 +38,10 @@ setup(
     data_files=[
         ('/etc/docserv/', ['config/docserv.ini']),
         ('/etc/docserv/config.d/', ['config/config.d/sles.xml']),
-        ('/etc/docserv/templates/', ['config/templates/index.html']),
+        ('/etc/docserv/templates/', ['config/templates/template.html']),
+        ('/etc/docserv/templates/', ['config/templates/translation.xml']),
+        ('/etc/docserv/templates/res/', ['config/templates/res/jquery-3.2.1.min.js']),
+        ('/etc/docserv/templates/res/', ['config/templates/res/style.css']),
         ('/usr/share/docserv/schema/', ['share/schema/config-validation.rnc']),
         ('/usr/share/docserv/xslt/', ['share/xslt/positive-config.xsl']),
         ('/usr/lib/systemd/system/', ['systemd/docserv.service']),

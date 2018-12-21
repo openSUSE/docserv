@@ -24,64 +24,86 @@ Git repositories.
 
 import os
 import re
-import sys
-from xml.etree import cElementTree
+from xml.etree import cElementTree as etree
 
 
-def generate_config(languages, branches, contact = None):
-    root = cElementTree.Element("product", productid="FIXME", schemaversion="0.9.9")
-    cElementTree.SubElement(root, "name").text = "FIXME"
-    cElementTree.SubElement(root, "shortname").text = "FIXME"
-    maintainers = cElementTree.SubElement(root, "maintainers")
-    cElementTree.SubElement(maintainers, "contact").text = "FIXME" if not contact else contact
+def generate_config(languages, branches, version="0.9.9", contact=None):
+    """Generate the configuration file.
+
+    :param language: The allowed languages
+    :type languages: list
+
+    :param branches:
+    :type branches:
+
+    :param str schemaversion: the schema version to use
+    :param str contact: the contact email address
+    """
+    root = etree.Element("product", productid="FIXME", schemaversion=version)
+    etree.SubElement(root, "name").text = "FIXME"
+    etree.SubElement(root, "shortname").text = "FIXME"
+    maintainers = etree.SubElement(root, "maintainers")
+    etree.SubElement(maintainers, "contact").text = "FIXME" if not contact else contact
+
     for language in languages:
-        description = cElementTree.SubElement(root, "desc", default="0", lang=language)
-        cElementTree.SubElement(description, "p").text = "FIXME"
+        description = etree.SubElement(root, "desc", default="0", lang=language)
+        etree.SubElement(description, "p").text = "FIXME"
+
     for branch in branches:
         if branch.startswith("trans/"):
             continue
-        branch = str(branch)
-        docset = cElementTree.SubElement(root, "docset", setid=branch.replace("maintenance/", ""), lifecycle="FIXME")
-        cElementTree.SubElement(docset, "version").text = "FIXME"
-        builddocs = cElementTree.SubElement(docset, "builddocs")
-        git = cElementTree.SubElement(builddocs, "git")
-        cElementTree.SubElement(git, "remote").text = "FIXME"
+        docset = etree.SubElement(root, "docset", setid=branch.replace("maintenance/", ""), lifecycle="FIXME")
+        etree.SubElement(docset, "version").text = "FIXME"
+        builddocs = etree.SubElement(docset, "builddocs")
+        git = etree.SubElement(builddocs, "git")
+        etree.SubElement(git, "remote").text = "FIXME"
         for language in languages:
             if language == "en-us":
-                language = cElementTree.SubElement(builddocs, "language", default="1", lang="en-us")
-                cElementTree.SubElement(language, "branch").text = branch
+                lang = etree.SubElement(builddocs, "language", default="1", lang="en-us")
+                etree.SubElement(lang, "branch").text = branch
                 has_all_dc = "1"
                 for dc_file in branches[branch]:
                     if "-all" in dc_file:
                         has_all_dc = "0"
                 for dc_file in branches[branch]:
-                    deliverable = cElementTree.SubElement(language, "deliverable")
-                    cElementTree.SubElement(deliverable, "dc", ).text = dc_file
-                    if dc_file.endswith("-all"):
-                        format = cElementTree.SubElement(deliverable, "format", pdf="0", html="1", epub="0")
-                        format.set('single-html', '0')
-                    else:
-                        format = cElementTree.SubElement(deliverable, "format", pdf="1", html=has_all_dc, epub="1")
-                        format.set('single-html', '1')
+                    deliverable = etree.SubElement(lang, "deliverable")
+                    etree.SubElement(deliverable, "dc", ).text = dc_file
+                    dc_all_file = dc_file.endswith("-all")
+                    attrs = {'pdf': "0" if dc_all_file else "1",
+                             'epub': "0" if dc_all_file else "1",
+                             'html': "1" if dc_all_file else has_all_dc,
+                             'single-html': "0" if dc_all_file else "1",
+                             }
+                    etree.SubElement(deliverable, "format", **attrs)
             else:
-                language = cElementTree.SubElement(builddocs, "language", default="0", language=language)
+                lang = etree.SubElement(builddocs, "language", default="0", language=language)
                 if branch.startswith("maintenance/") or branch.startswith("maint/"):
                     tmp = branch.replace("maintenance/", "").replace("maint/", "")
                     if "trans/%s" % tmp in branches:
                         branch = "trans/%s" % tmp
-                cElementTree.SubElement(language, "branch").text = branch
-                cElementTree.SubElement(language, "subdir").text = "FIXME"
-                untrans = cElementTree.SubElement(language, "untranslated")
-                deliverable = cElementTree.SubElement(untrans, "deliverable")
-                cElementTree.SubElement(deliverable, "dc").text = "FIXME"
-        extralinks = cElementTree.SubElement(docset, "extralinks")
-        cElementTree.SubElement(extralinks, "link", href="FIXME").text = "SOME DESCRIPTION"
-    tree = cElementTree.ElementTree(root)
-    configfile = os.getcwd()+"/config.xml"
+                etree.SubElement(lang, "branch").text = branch
+                etree.SubElement(lang, "subdir").text = "FIXME"
+                untrans = etree.SubElement(lang, "untranslated")
+                deliverable = etree.SubElement(untrans, "deliverable")
+                etree.SubElement(deliverable, "dc").text = "FIXME"
+        extralinks = etree.SubElement(docset, "extralinks")
+        etree.SubElement(extralinks, "link", href="FIXME").text = "SOME DESCRIPTION"
+    tree = etree.ElementTree(root)
+    configfile = os.getcwd() + "/config.xml"
     tree.write(configfile)
     print("Find the config file at {!r}".format(configfile))
 
-def get_dc_files(path, branches, filter_dc):
+
+def get_dc_files(path, branches, filter_dc=None):
+    """Collect all DC files in branches.
+
+    :param str path: the path to the Git repository
+    :param dict branches: A dictionary with lists as keys like
+         {'branch1': [], 'branch2': [], ...}
+    :param filter_dc: filter 
+    :return: a dictionary with all DC files found in this branch
+    :rtype: dict
+    """
     repo = pygit2.Repository(path)
     tmp = branches
     for branch in list(branches):
@@ -91,30 +113,37 @@ def get_dc_files(path, branches, filter_dc):
         for f in os.listdir(path):
             if os.path.isfile(os.path.join(path, f)):
                 if filter_dc is not None:
-                    if str(f).startswith("DC-") and filter_dc in str(f):
+                    if f.startswith("DC-") and filter_dc in f:
                         result.append(f)
                 else:
-                    if str(f).startswith("DC-"):
+                    if f.startswith("DC-"):
                         result.append(f)
         tmp[branch] = sorted(result)
     return tmp
 
+
 def get_git_branches(path):
+    """Return all the branches of a Git repository. Replace "origin/" with ""
+
+    :param str path: the path to the Git repository
+    :return: dictionary of all branches with their DC files, for example:
+            {'develop': ['DC-foo', 'DC-foo-all'],
+             'master':  ['DC-foo', 'DC-foo-all'],
+             # ... more items pruned ...
+             }
+    :rtype: dict
+    """
     repo = pygit2.Repository(path)
     result = {}
-    for branch in sorted((list(repo.listall_branches()) + list(repo.branches.remote))):
-        if str(branch).startswith('maintenance/'):
+    for branch in sorted(repo.listall_branches(pygit2.GIT_BRANCH_ALL)):
+        branch_wo_origin = branch.replace("origin/", "")
+        if branch.startswith('maintenance/') or branch.startswith('trans/'):
             result[branch] = []
-        elif str(branch).replace("origin/", "") == "develop":
-            result[branch.replace("origin/", "")] = []
-        elif str(branch).replace("origin/", "") == "master":
-            result[branch.replace("origin/", "")] = []
-        elif str(branch).startswith('origin/trans/'):
-            result[branch.replace("origin/", "")] = []
-        elif str(branch).startswith('trans/'):
-            result[branch] = []
-        elif str(branch).startswith('origin/maintenance/'):
-            result[branch.replace("origin/", "")] = []
+        elif branch_wo_origin == "develop" \
+             or branch_wo_origin == "master" \
+             or branch.startswith('origin/trans/') \
+             or branch.startswith('origin/maintenance/'):
+            result[branch_wo_origin] = []
     return result
 
 
@@ -165,7 +194,7 @@ if __name__ == "__main__":
 
     import pygit2
     branches = get_git_branches(args.path)
-    dc_files = get_dc_files(args.path, branches, args.filter)
+    dc_files = get_dc_files(args.path, branches)
     print(dc_files)
-    generate_config(args.LANGUAGES, branches, args.contact)
+    generate_config(args.LANGUAGES, branches, contact=args.contact)
     sys.exit(0)

@@ -35,16 +35,19 @@ def resource_to_filename(url):
         url = str(url).replace(char, '_')
     return url
 
+
 def mail(text, subject, to):
     """
     Send mail via the local sendmail command.
     """
     logger.debug("Sending mail to %s", to)
-    msg = MIMEText( text )
+    msg = MIMEText(text)
     msg["To"] = to
     msg["Subject"] = subject
-    p = subprocess.Popen(["/usr/sbin/sendmail", "-t", "-oi"], stdin=subprocess.PIPE, universal_newlines=True)
+    p = subprocess.Popen(["/usr/sbin/sendmail", "-t", "-oi"],
+                         stdin=subprocess.PIPE, universal_newlines=True)
     p.communicate(msg.as_string())
+
 
 def print_help():
     print("""This is a deamon and should be invoked with the command:

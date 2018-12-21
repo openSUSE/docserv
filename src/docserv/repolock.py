@@ -26,6 +26,7 @@ my_env = os.environ
 
 logger = logging.getLogger('docserv')
 
+
 class RepoLock:
     """
     It is not safe to run multiple git commands on one repository
@@ -35,6 +36,7 @@ class RepoLock:
     we need to lock the usage of git repos down to only one thread
     at a time.
     """
+
     def __init__(self, repo_dir, thread_id, gitLocks, gitLocksLock):
         """
         repo_dir -- path to a repository

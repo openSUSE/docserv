@@ -95,26 +95,32 @@ class BuildInstructionHandler:
         sync_source_tmp = tempfile.mkdtemp(prefix="docserv_oview_")
         commands[n] = {}
         commands[n]['cmd'] = "docserv-buildoverview %s--stitched_config=\"%s\" --ui-languages=\"%s\" --default-ui-language=%s --cache-dir=%s --doc-language=%s --template_dir=%s --output_dir=%s" % (
-            "--internal-mode " if self.config['targets'][self.build_instruction['target']]['languages'] == "yes" else "",
+            "--internal-mode " if self.config['targets'][self.build_instruction['target']
+                                                         ]['languages'] == "yes" else "",
             self.stitch_tmp_file,
-            self.config['targets'][self.build_instruction['target']]['languages'],
-            self.config['targets'][self.build_instruction['target']]['default_lang'],
+            self.config['targets'][self.build_instruction['target']
+                                   ]['languages'],
+            self.config['targets'][self.build_instruction['target']
+                                   ]['default_lang'],
             self.deliverable_cache_base_dir,
             self.build_instruction['lang'],
-            self.config['targets'][self.build_instruction['target']]['template_dir'],
+            self.config['targets'][self.build_instruction['target']
+                                   ]['template_dir'],
             sync_source_tmp)
 
         # rsync build target directory to backup path
         backup_path = self.config['targets'][self.build_instruction['target']]['backup_path']
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "rsync -lr %s/ %s" % (sync_source_tmp, backup_path)
+        commands[n]['cmd'] = "rsync -lr %s/ %s" % (
+            sync_source_tmp, backup_path)
 
         # rsync built target directory with web server
         target_path = self.config['targets'][self.build_instruction['target']]['target_path']
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "rsync -lr %s/ %s" % (sync_source_tmp, target_path)
+        commands[n]['cmd'] = "rsync -lr %s/ %s" % (
+            sync_source_tmp, target_path)
 
         if hasattr(self, 'local_repo_build_dir'):
             # build target directory
@@ -124,8 +130,10 @@ class BuildInstructionHandler:
 
         for i in range(0, n + 1):
             cmd = shlex.split(commands[i]['cmd'])
-            logger.debug("Cleaning up %s, %s", self.build_instruction['id'], commands[i]['cmd'])
-            s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            logger.debug("Cleaning up %s, %s",
+                         self.build_instruction['id'], commands[i]['cmd'])
+            s = subprocess.Popen(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = s.communicate()
             if int(s.returncode) != 0:
                 logger.warning("Clean up failed! Unexpected return value %i for '%s'",
@@ -179,7 +187,7 @@ Repo/Branch: %s %s
         )
         to = ', '.join(self.maintainers)
         subject = "[docserv²] Failed build preparation"
-        mail (msg, subject, to)
+        mail(msg, subject, to)
 
     def read_conf_dir(self):
         """
@@ -191,8 +199,10 @@ Repo/Branch: %s %s
         if not self.config['targets'][target]['active'] == "yes":
             logger.debug("Target %s not active.", target)
             return False
-        self.stitch_tmp_file = os.path.join(tempfile.mkdtemp(prefix="docserv_stitch_"), 'docserv_config_full.xml')
-        logger.debug("Stitching XML config directory to %s", self.stitch_tmp_file)
+        self.stitch_tmp_file = os.path.join(tempfile.mkdtemp(
+            prefix="docserv_stitch_"), 'docserv_config_full.xml')
+        logger.debug("Stitching XML config directory to %s",
+                     self.stitch_tmp_file)
         cmd = '%s/docserv-stitch --make-positive --valid-languages="%s" %s %s' % (
             BIN_DIR,
             self.config['server']['valid_languages'],
@@ -243,7 +253,8 @@ Repo/Branch: %s %s
         except AttributeError:
             logger.warning("Failed to parse xpath: %s", xpath)
             return False
-        self.deliverable_cache_base_dir =  '%s/%s' % (CACHE_DIR, self.config['server']['name'])
+        self.deliverable_cache_base_dir = '%s/%s' % (
+            CACHE_DIR, self.config['server']['name'])
         return True
 
     def prepare_repo(self, thread_id):
@@ -275,7 +286,8 @@ Repo/Branch: %s %s
         # update locally cached repo
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "git -C %s checkout %s " % (local_repo_cache_dir, self.branch)
+        commands[n]['cmd'] = "git -C %s checkout %s " % (
+            local_repo_cache_dir, self.branch)
         commands[n]['ret_val'] = 0
         commands[n]['repo_lock'] = local_repo_cache_dir
 
@@ -292,13 +304,15 @@ Repo/Branch: %s %s
             if commands[i]['repo_lock'] is not None:
                 self.git_lock.acquire()
             logger.debug("Thread %i: %s", thread_id, commands[i]['cmd'])
-            s = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            s = subprocess.Popen(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = s.communicate()
             self.git_lock.release()
             if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
                 logger.warning("Build failed! Unexpected return value %i for '%s'",
-                    s.returncode, commands[i]['cmd'])
-                self.mail(commands[i]['cmd'], out.decode('utf-8'), err.decode('utf-8'))
+                               s.returncode, commands[i]['cmd'])
+                self.mail(commands[i]['cmd'], out.decode(
+                    'utf-8'), err.decode('utf-8'))
                 self.initialized = False
                 return False
 
@@ -312,8 +326,10 @@ Repo/Branch: %s %s
                           " log --format=\"%H\" -n 1")
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
-        self.build_instruction['commit'] = s.communicate()[0].decode('utf-8').rstrip()
-        logger.debug("Current commit hash: %s", self.build_instruction['commit'])
+        self.build_instruction['commit'] = s.communicate()[
+            0].decode('utf-8').rstrip()
+        logger.debug("Current commit hash: %s",
+                     self.build_instruction['commit'])
 
     def validate(self, build_instruction, config):
         """
@@ -362,7 +378,7 @@ Repo/Branch: %s %s
                                           xml_deliverable.find(".//dc").text,
                                           build_format,
                                           subdeliverables
-                                         )
+                                          )
                 self.deliverables[deliverable.id] = deliverable.dict()
                 self.deliverable_objects[deliverable.id] = deliverable
                 self.deliverables_open.append(deliverable.id)

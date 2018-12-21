@@ -24,6 +24,7 @@ Git repositories.
 
 import os
 import re
+import sys
 from xml.etree import cElementTree as etree
 
 
@@ -100,7 +101,7 @@ def get_dc_files(path, branches, filter_dc=None):
     :param str path: the path to the Git repository
     :param dict branches: A dictionary with lists as keys like
          {'branch1': [], 'branch2': [], ...}
-    :param filter_dc: filter 
+    :param filter_dc: filter
     :return: a dictionary with all DC files found in this branch
     :rtype: dict
     """

@@ -1,7 +1,7 @@
 import json
-from socketserver import ThreadingMixIn
-from http.server import HTTPServer, BaseHTTPRequestHandler
 import logging
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from socketserver import ThreadingMixIn
 
 logger = logging.getLogger('docserv')
 
@@ -34,9 +34,11 @@ class RESTServer(BaseHTTPRequestHandler):
                 logger.info("Not queueing %s", json.dumps(job))
         self._set_headers()
 
+
 class ThreadedRESTServer(ThreadingMixIn, HTTPServer):
     def __init__(self, server_address, RequestHandlerClass, docserv, bind_and_activate=True):
         HTTPServer.__init__(self, server_address,
                             RequestHandlerClass, bind_and_activate)
-        logger.info("Starting HTTP server on %s:%i", server_address[0], server_address[1])
+        logger.info("Starting HTTP server on %s:%i",
+                    server_address[0], server_address[1])
         self.docserv = docserv

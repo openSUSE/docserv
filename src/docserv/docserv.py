@@ -1,29 +1,29 @@
-import json
-import time
-import subprocess
-import shlex
-import datetime
-import os
-import sys
-import threading
-import queue
-import socket
 import configparser
-import logging
-import signal
-import tempfile
-import string
-import random
+import datetime
 import hashlib
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import json
+import logging
+import os
+import queue
+import random
+import shlex
+import signal
+import socket
+import string
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+from email.mime.text import MIMEText
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
 from xml.etree import ElementTree, cElementTree
-from email.mime.text import MIMEText
 
 from docserv.bih import BuildInstructionHandler
-from docserv.rest import ThreadedRESTServer, RESTServer
-from docserv.functions import print_help
 from docserv.deliverable import Deliverable
+from docserv.functions import print_help
+from docserv.rest import RESTServer, ThreadedRESTServer
 
 
 class DocservState:
@@ -122,12 +122,14 @@ class DocservState:
         build_instruction['id'] = self.generate_id(build_instruction)
         if build_instruction['id'] in self.past_builds.keys():
             with self.past_builds_lock:
-                build_instruction = self.past_builds.pop(build_instruction['id'])
+                build_instruction = self.past_builds.pop(
+                    build_instruction['id'])
         with self.bih_dict_lock:
             if build_instruction['id'] not in self.bih_dict:
                 with self.scheduled_build_instruction_lock:
                     if build_instruction['id'] not in self.scheduled_build_instruction:
-                        self.scheduled_build_instruction[build_instruction['id']] = build_instruction
+                        self.scheduled_build_instruction[build_instruction['id']
+                                                         ] = build_instruction
                         retval = True
         return retval
 
@@ -162,10 +164,12 @@ class DocservState:
         logger.info("Aborting build instruction %s", build_instruction_id)
         with self.scheduled_build_instruction_lock:
             self.updating_build_instruction.remove(build_instruction_id)
-            build_instruction = self.scheduled_build_instruction.pop(build_instruction_id, None)
+            build_instruction = self.scheduled_build_instruction.pop(
+                build_instruction_id, None)
         if build_instruction is None:
             with self.bih_dict_lock:
-                build_instruction = self.bih_dict.pop(build_instruction_id).dict()
+                build_instruction = self.bih_dict.pop(
+                    build_instruction_id).dict()
         if build_instruction is not None:
             with self.past_builds_lock:
                 self.past_builds[build_instruction_id] = build_instruction
@@ -197,7 +201,7 @@ class DocservState:
             if deliverable == 'done':
                 self.finish_build_instruction(build_instruction_id)
                 deliverable = None
-            else: # build instruction is not yet finished, put its ID back on the queue
+            else:  # build instruction is not yet finished, put its ID back on the queue
                 self.bih_queue.put(build_instruction_id)
         return deliverable
 
@@ -224,14 +228,16 @@ class DocservState:
                 if ('building' in build_instruction and len(build_instruction['building']) > 0) or ('open' in build_instruction and len(build_instruction['open']) > 0):
                     self.queue_build_instruction(build_instruction)
                 else:
-                    self.past_builds[build_instruction['id']] = build_instruction
+                    self.past_builds[build_instruction['id']
+                                     ] = build_instruction
             return True
         return False
 
     def parse_build_instruction(self, thread_id):
         build_instruction = self.get_scheduled_build_instruction()
         if build_instruction is not None:
-            myBIH = BuildInstructionHandler(build_instruction, self.config, self.gitLocks, self.gitLocksLock, thread_id)
+            myBIH = BuildInstructionHandler(
+                build_instruction, self.config, self.gitLocks, self.gitLocksLock, thread_id)
             # If the initialization failed, immediately delete the BuildInstructionHandler
             if myBIH.initialized == False:
                 self.abort_build_instruction(build_instruction['id'])
@@ -242,10 +248,12 @@ class DocservState:
                 self.bih_dict[build_instruction['id']] = myBIH
             self.bih_queue.put(build_instruction['id'])
 
+
 class DocservConfig:
     """
     Class for handling the .ini configuration file.
     """
+
     def parse_config(self, argv):
         config = configparser.ConfigParser()
         if len(argv) == 1:
@@ -257,34 +265,50 @@ class DocservConfig:
         self.config = {}
         try:
             self.config['server'] = {}
-            self.config['server']['name'] =             config_file
-            self.config['server']['loglevel'] =     int(config['server']['loglevel'])
-            self.config['server']['host'] =             config['server']['host']
-            self.config['server']['port'] =         int(config['server']['port'])
-            self.config['server']['repo_dir'] =         config['server']['repo_dir']
-            self.config['server']['temp_repo_dir'] =    config['server']['temp_repo_dir']
-            self.config['server']['valid_languages'] =  config['server']['valid_languages']
-            self.config['server']['max_threads'] =  int(config['server']['max_threads'])
+            self.config['server']['name'] = config_file
+            self.config['server']['loglevel'] = int(
+                config['server']['loglevel'])
+            self.config['server']['host'] = config['server']['host']
+            self.config['server']['port'] = int(config['server']['port'])
+            self.config['server']['repo_dir'] = config['server']['repo_dir']
+            self.config['server']['temp_repo_dir'] = config['server']['temp_repo_dir']
+            self.config['server']['valid_languages'] = config['server']['valid_languages']
+            self.config['server']['max_threads'] = int(
+                config['server']['max_threads'])
             self.config['targets'] = {}
             for section in config.sections():
                 if not str(section).startswith("target_"):
                     continue
-                self.config['targets'][config[section]['name']] =                  {}
-                self.config['targets'][config[section]['name']]['name'] =          config[section]['name']
-                self.config['targets'][config[section]['name']]['template_dir'] = config[section]['template_dir']
-                self.config['targets'][config[section]['name']]['active'] =        config[section]['active']
-                self.config['targets'][config[section]['name']]['draft'] =         config[section]['draft']
-                self.config['targets'][config[section]['name']]['remarks'] =       config[section]['remarks']
-                self.config['targets'][config[section]['name']]['meta'] =          config[section]['meta']
-                self.config['targets'][config[section]['name']]['beta_warning'] =  config[section]['beta_warning']
-                self.config['targets'][config[section]['name']]['target_path'] =   config[section]['target_path']
-                self.config['targets'][config[section]['name']]['backup_path'] =   config[section]['backup_path']
-                self.config['targets'][config[section]['name']]['config_dir'] =    config[section]['config_dir']
-                self.config['targets'][config[section]['name']]['languages'] =     config[section]['languages']
-                self.config['targets'][config[section]['name']]['default_lang'] =  config[section]['default_lang']
-                self.config['targets'][config[section]['name']]['internal'] =      config[section]['internal']
+                self.config['targets'][config[section]['name']] = {}
+                self.config['targets'][config[section]['name']
+                                       ]['name'] = config[section]['name']
+                self.config['targets'][config[section]['name']
+                                       ]['template_dir'] = config[section]['template_dir']
+                self.config['targets'][config[section]['name']
+                                       ]['active'] = config[section]['active']
+                self.config['targets'][config[section]['name']
+                                       ]['draft'] = config[section]['draft']
+                self.config['targets'][config[section]['name']
+                                       ]['remarks'] = config[section]['remarks']
+                self.config['targets'][config[section]['name']
+                                       ]['meta'] = config[section]['meta']
+                self.config['targets'][config[section]['name']
+                                       ]['beta_warning'] = config[section]['beta_warning']
+                self.config['targets'][config[section]['name']
+                                       ]['target_path'] = config[section]['target_path']
+                self.config['targets'][config[section]['name']
+                                       ]['backup_path'] = config[section]['backup_path']
+                self.config['targets'][config[section]['name']
+                                       ]['config_dir'] = config[section]['config_dir']
+                self.config['targets'][config[section]['name']
+                                       ]['languages'] = config[section]['languages']
+                self.config['targets'][config[section]['name']
+                                       ]['default_lang'] = config[section]['default_lang']
+                self.config['targets'][config[section]['name']
+                                       ]['internal'] = config[section]['internal']
         except KeyError as error:
-            logger.warning("Invalid configuration file, missing configuration key '%s'. Exiting.", error)
+            logger.warning(
+                "Invalid configuration file, missing configuration key '%s'. Exiting.", error)
             sys.exit(1)
 
 
@@ -326,7 +350,8 @@ class Docserv(DocservState, DocservConfig):
         self.save_state()
 
     def exit(self):
-        logger.warning("Received SIGINT. Telling all threads to end. Please wait.")
+        logger.warning(
+            "Received SIGINT. Telling all threads to end. Please wait.")
         self.end_all.put("now")
 
     def worker(self, thread_id):
@@ -342,7 +367,8 @@ class Docserv(DocservState, DocservConfig):
                 deliverable.run(thread_id)
 
             # 3. end thread if sigint
-            if not self.end_all.empty(): return True
+            if not self.end_all.empty():
+                return True
 
             # 4. wait for a short while, then repeat
             time.sleep(0.1)
@@ -373,6 +399,7 @@ CONF_DIR = os.getenv('DOCSERV_CONFIG_DIR', "/etc/docserv/")
 SHARE_DIR = os.getenv('DOCSERV_SHARE_DIR', "/usr/share/docserv/")
 CACHE_DIR = os.getenv('DOCSERV_CACHE_DIR', "/var/cache/docserv/")
 
+
 def main():
     if "--help" in sys.argv or "-h" in sys.argv:
         print_help()
@@ -380,5 +407,6 @@ def main():
         docserv = Docserv(sys.argv)
         docserv.start()
         sys.exit(0)
+
 
 main()

@@ -1,24 +1,25 @@
-import json
-import time
-import subprocess
-import shlex
-import datetime
-import os
-import sys
-import threading
-import queue
-import socket
 import configparser
-import logging
-import signal
-import tempfile
-import string
-import random
+import datetime
 import hashlib
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import json
+import logging
+import os
+import queue
+import random
+import shlex
+import signal
+import socket
+import string
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+from email.mime.text import MIMEText
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
 from xml.etree import ElementTree, cElementTree
-from email.mime.text import MIMEText
+
 my_env = os.environ
 
 logger = logging.getLogger('docserv')
@@ -34,16 +35,19 @@ def resource_to_filename(url):
         url = str(url).replace(char, '_')
     return url
 
+
 def mail(text, subject, to):
     """
     Send mail via the local sendmail command.
     """
     logger.debug("Sending mail to %s", to)
-    msg = MIMEText( text )
+    msg = MIMEText(text)
     msg["To"] = to
     msg["Subject"] = subject
-    p = subprocess.Popen(["/usr/sbin/sendmail", "-t", "-oi"], stdin=subprocess.PIPE, universal_newlines=True)
+    p = subprocess.Popen(["/usr/sbin/sendmail", "-t", "-oi"],
+                         stdin=subprocess.PIPE, universal_newlines=True)
     p.communicate(msg.as_string())
+
 
 def print_help():
     print("""This is a deamon and should be invoked with the command:

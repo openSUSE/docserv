@@ -23,7 +23,6 @@ Git repositories.
 """
 
 import os
-import sys
 import re
 from xml.etree import cElementTree as etree
 

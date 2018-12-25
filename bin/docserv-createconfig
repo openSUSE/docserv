@@ -77,7 +77,7 @@ def generate_config(languages, branches, version="0.9.9", contact=None):
                              }
                     etree.SubElement(deliverable, "format", **attrs)
             else:
-                lang = etree.SubElement(builddocs, "language", default="0", language=language)
+                lang = etree.SubElement(builddocs, "language", lang=language)
                 if branch.startswith("maintenance/") or branch.startswith("maint/"):
                     tmp = branch.replace("maintenance/", "").replace("maint/", "")
                     if "trans/%s" % tmp in branches:
@@ -195,7 +195,7 @@ if __name__ == "__main__":
 
     import pygit2
     branches = get_git_branches(args.path)
-    dc_files = get_dc_files(args.path, branches)
+    dc_files = get_dc_files(args.path, branches, filter_dc=args.filter)
     print(dc_files)
     generate_config(args.LANGUAGES, branches, contact=args.contact)
     sys.exit(0)

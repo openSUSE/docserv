@@ -241,18 +241,23 @@ Repo/Branch: %s %s
                 self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])
             self.branch = xml_root.find(xpath).text
 
-            xpath = ".//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/subdir" % (
-                self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])
-            self.build_source_dir = os.path.join(
-                self.local_repo_build_dir,
-                xml_root.find(xpath).text)
-
             xpath = ".//product[@productid='%s']/docset[@setid='%s']/builddocs/git/remote" % (
                 self.build_instruction['product'], self.build_instruction['docset'])
             self.remote_repo = xml_root.find(xpath).text
         except AttributeError:
             logger.warning("Failed to parse xpath: %s", xpath)
             return False
+
+        try:
+            xpath = ".//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/subdir" % (
+                self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])
+            self.build_source_dir = os.path.join(
+                self.local_repo_build_dir,
+                xml_root.find(xpath).text)
+
+        except AttributeError:
+            self.build_source_dir = self.local_repo_build_dir
+
         self.deliverable_cache_base_dir = os.path.join(
             CACHE_DIR, self.config['server']['name'])
         return True

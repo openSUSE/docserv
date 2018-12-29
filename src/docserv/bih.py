@@ -253,7 +253,7 @@ Repo/Branch: %s %s
         except AttributeError:
             logger.warning("Failed to parse xpath: %s", xpath)
             return False
-        self.deliverable_cache_base_dir = '%s/%s' % (
+        self.deliverable_cache_base_dir = os.path.join(
             CACHE_DIR, self.config['server']['name'])
         return True
 

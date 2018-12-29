@@ -168,7 +168,7 @@ class Deliverable:
         n += 1
         sync_source_tmp = tempfile.mkdtemp(prefix="docserv_sync_")
         if self.build_format == 'html' or self.build_format == 'single-html':
-            self.deliverable_relative_path = "%s/%s/%s/%s/%s/" % (
+            self.deliverable_relative_path = os.path.join(
                 self.parent.build_instruction['lang'],
                 self.parent.build_instruction['product'],
                 self.parent.build_instruction['docset'],
@@ -176,7 +176,7 @@ class Deliverable:
                 self.dc_file.replace('DC-', '')
             )
         else:
-            self.deliverable_relative_path = "%s/%s/%s/" % (
+            self.deliverable_relative_path = os.path.join(
                 self.parent.build_instruction['lang'],
                 self.parent.build_instruction['product'],
                 self.parent.build_instruction['docset'],
@@ -362,8 +362,8 @@ Language: %s
             line = line.strip()
             if '_bigfile.xml' not in line and line != "":
                 self.d2d_out_dir = line
-                self.path = ("%s/%s" % (self.deliverable_relative_path,
-                                        line.split('/')[-1])).replace('//', '/')
+                self.path = os.path.join(self.deliverable_relative_path,
+                                        line.split('/')[-1])
         logger.debug("Deliverable build results: %s", self.d2d_out_dir)
         command['cmd'] = command['cmd'].replace(
             '__FILELIST__', self.d2d_out_dir)

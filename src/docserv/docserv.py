@@ -209,7 +209,7 @@ class DocservState:
         """
         Save status to JSON file. The JSON file usually resides in /etc/docserv/[SERVER_NAME].json
         """
-        f = open("%s/%s.json" % (CONF_DIR, self.config['server']['name']), "w")
+        f = open(os.path.join(CONF_DIR, self.config['server']['name'] + '.json'), "w")
         f.write(json.dumps(self.dict()))
 
     def load_state(self):
@@ -217,7 +217,7 @@ class DocservState:
         Load status from JSON file.
         """
         logger.info("Reading previous state.")
-        filepath = "%s/%s.json" % (CONF_DIR, self.config['server']['name'])
+        filepath = os.path.join(CONF_DIR, self.config['server']['name'] + '.json')
         if os.path.isfile(filepath):
             file = open(filepath, "r")
             try:
@@ -260,8 +260,10 @@ class DocservConfig:
             config_file = "docserv"
         else:
             config_file = argv[1]
-        logger.info("Reading %s/%s.ini", CONF_DIR, config_file)
-        config.read("%s/%s.ini" % (CONF_DIR, config_file))
+        config_file="%s.ini" % config_file
+        config_path=os.path.join(CONF_DIR, config_file)
+        logger.info("Reading %s", config_path)
+        config.read(config_path)
         self.config = {}
         try:
             self.config['server'] = {}

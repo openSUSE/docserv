@@ -21,7 +21,9 @@ set up a development environment:
    3. Create a virtual environment with Python: `python3 -m venv .venv`
    4. Activate the virtual environment: `source .venv/bin/activate`
    5. Update the pip Python package manager: `pip install -U pip setuptools`
-   6. Install requirements via pip: `pip install -r requirements.txt`
+   6. The next step depends on package compatibility, and hence is distribution-dependent:
+      * *On openSUSE Leap 15.0:* Make sure the RPM package `python3-pygit2` is installed
+      * *On other distributions:* Install requirements via pip: `pip install -r requirements.txt`
    7. Install Docserv² with setuptools in develop mode: `python3 setup.py develop`
 
 # Dependencies

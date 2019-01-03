@@ -154,8 +154,7 @@ class Deliverable:
         n += 1
         tmp_build_target = tempfile.mkdtemp(prefix="docserv_out_")
         commands[n] = {}
-        commands[n]['cmd'] = "%s/d2d_runner -b=1 -v=1 -u=1 -x=%s -d=%s -o=%s -i=%s -f=%s %s" % (
-            BIN_DIR,
+        commands[n]['cmd'] = "d2d_runner -b=1 -v=1 -u=1 -x=%s -d=%s -o=%s -i=%s -f=%s %s" % (
             xslt_params_file[1],       # -x
             daps_params_file[1],       # -d
             tmp_build_target,          # -o

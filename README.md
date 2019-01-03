@@ -23,6 +23,8 @@ Docserv² depends on the following software:
   * `xmllint`, `xsltproc`
   * `xmlstarlet`
   * Jing (needs a JVM)
+  * `daps2docker` (https://github.com/openSUSE/daps2docker or available from the
+    openSUSE Build Service's `Documentation:Tools` repository)
 
 # Running Docserv² From the Git Repository
 
@@ -41,6 +43,10 @@ a development environment:
    7. Install Docserv² with setuptools in develop mode: `python3 setup.py develop`
    8. Make sure the Docker service is running: `systemctl start docker`
       (To run Docserv² as a regular user, make sure your user is part of the group `docker`.)
+   9. Make sure that the right configuration (INI) directory is chosen (defaults
+      to the configuration directory from this repository). To check, use:
+      `printenv DOCSERV_CONFIG_DIR`. To set, use
+      `export DOCSERV_CONFIG_DIR=/path/to/dir`.
 
 # Scripts That Are Part of Docserv²
 

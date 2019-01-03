@@ -94,8 +94,8 @@ class BuildInstructionHandler:
         # (re-)generate overview page
         sync_source_tmp = tempfile.mkdtemp(prefix="docserv_oview_")
         commands[n] = {}
-        commands[n]['cmd'] = "docserv-buildoverview %s--stitched_config=\"%s\" --ui-languages=\"%s\" --default-ui-language=%s --cache-dir=%s --doc-language=%s --template_dir=%s --output_dir=%s" % (
-            "--internal-mode " if self.config['targets'][self.build_instruction['target']
+        commands[n]['cmd'] = "docserv-buildoverview %s --stitched-config=\"%s\" --ui-languages=\"%s\" --default-ui-language=\"%s\" --cache-dir=\"%s\" --doc-language=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\"" % (
+            "--internal-mode" if self.config['targets'][self.build_instruction['target']
                                                          ]['languages'] == "yes" else "",
             self.stitch_tmp_file,
             self.config['targets'][self.build_instruction['target']

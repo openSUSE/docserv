@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<product productid="sles" schemaversion="0.9.9">
+<product productid="sample_product" schemaversion="0.9.9">
   <!-- ID can be used for build commands, HTML IDs, etc. -->
-  <!-- active="yes"/"no" configures whether  -->
   <!-- lifecycle="unpublished"/"beta"/"supported"/"unsupported":
     + "unpublished": Don't build, don't mention on overview page
     + "beta": Build (draft and beta warning by default), don't mention on
@@ -11,11 +10,10 @@
       please upgrade"
   -->
 
-  <name>SUSE Linux Enterprise Server</name>
-  <shortname>SLES</shortname>
+  <name>Sample Product</name>
+  <shortname>SP</shortname>
   <maintainers>
-    <contact>sknorr@suse.de</contact>
-    <contact>sseebergelverfeldt@suse.com</contact>
+    <contact>p.erson@doma.in</contact>
   </maintainers>
 
   <desc default="1" lang="en-us">
@@ -24,14 +22,14 @@
     q, cite + class/id attributes -->
     <p>
       This product will lose control of you and help you live free.
-      SLES is so glad to have you and your evil curls.
+      SP is so glad to have you and your evil curls.
     </p>
   </desc>
 
   <desc default="0" lang="fr-fr">
     <p>
       Ce produit ne peut pas obtenir la contrôle de vous, mais le vous aidez
-      a vivir libre. SLES est très heureux de vous avoir et d'avoir vos
+      a vivir libre. SP est très heureux de vous avoir et d'avoir vos
       cheveux chevalier.
     </p>
   </desc>
@@ -39,13 +37,13 @@
   <desc lang="de-de">
     <p>
       Dieses Produkt hat die Kontrolle über Sie bereits verloren und will
-      Ihnen helfen, lieber libre zu leben. SLES ist verzückt, dass Sie ihm
+      Ihnen helfen, lieber libre zu leben. SP ist verzückt, dass Sie ihm
       und seinen bösartigen Lockrufen gefolgt sind.
     </p>
   </desc>
 
-  <docset setid="15ga" lifecycle="supported">
-    <version>15</version>
+  <docset setid="1" lifecycle="supported">
+    <version>1</version>
 
     <builddocs>
 
@@ -55,7 +53,6 @@
 
       <language default="1" lang="en-us">
         <branch>develop</branch>
-        <subdir>.</subdir>
 
         <!-- MAXIMALIST (<styleroot>/<param>) COMPILATION (i.e. w/ <subdeliverables/>) DELIVERABLE EXAMPLE -->
         <deliverable remarks="0" draft="false" meta="0">
@@ -114,76 +111,10 @@
 
     <extralinks>
       <link href="https://.../...">Release Notes</link>
-      <link href="https://.../...">SUSE Best Practices</link>
-      <link href="https://.../...">SUSE Evil Curls 2018 Documentation</link>
+      <link href="https://.../...">SP Best Practices</link>
+      <link href="https://.../...">SP Evil Curls Documentation</link>
     </extralinks>
 
   </docset>
-
-  <docset setid="11sp4" lifecycle="unsupported">
-    <version>11 SP4</version>
-
-    <builddocs>
-
-
-      <git>
-        <remote>https://svn.opensuse.org/viewvc/opensuse-doc/trunk/documents/sle/</remote>
-      </git>
-
-      <language default="1" lang="en-us">
-        <branch>master</branch>
-        <subdir>en/attic</subdir>
-
-        <!-- MAXIMALIST (<styleroot>/<param>) COMPILATION (i.e. w/ <subdeliverables/>) DELIVERABLE EXAMPLE -->
-        <deliverable remarks="1" draft="0" meta="0">
-          <dc>DC-SLES-all</dc>
-          <format html="1"/>
-          <styleroot>/.../.../...</styleroot>
-          <param name="foo.bar">1</param>
-          <subdeliverable>book.admin</subdeliverable>
-          <subdeliverable>book.gnomeuser</subdeliverable>
-        </deliverable>
-
-        <!-- MINIMALIST INDIVIDUAL DELIVERABLE EXAMPLES -->
-        <deliverable>
-          <dc>DC-SLES-admin</dc>
-          <format single-html="1" pdf="1" epub="1"/>
-        </deliverable>
-        <deliverable>
-          <!-- Minimalist individual deliverable -->
-          <dc>DC-SLES-gnomeuser</dc>
-          <format single-html="1" pdf="1" epub="1"/>
-        </deliverable>
-
-      </language>
-
-      <language default="0" lang="de-de">
-        <branch>master</branch>
-        <subdir>trans/attic/sles/de</subdir>
-        <untranslated>
-          <deliverable>
-            <dc>DC-SLES-all</dc>
-            <subdeliverable>book.gnomeuser</subdeliverable>
-          </deliverable>
-          <deliverable>
-            <dc>DC-SLES-gnomeuser</dc>
-          </deliverable>
-        </untranslated>
-      </language>
-
-      <language lang="fr-fr">
-        <branch>master</branch>
-        <subdir>trans/attic/sles/de</subdir>
-      </language>
-
-    </builddocs>
-
-    <extralinks>
-      <link href="https://.../...">Release Notes</link>
-      <link href="https://.../...">SUSE Best Practices</link>
-    </extralinks>
-
-  </docset>
-
 
 </product>

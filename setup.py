@@ -44,7 +44,7 @@ setup(
         ('/etc/docserv/templates/res/', ['config/templates/res/style.css']),
         ('/usr/share/docserv/schema/', ['share/schema/config-validation.rnc']),
         ('/usr/share/docserv/xslt/', ['share/xslt/positive-config.xsl']),
-        ('/usr/lib/systemd/system/', ['systemd/docserv.service']),
+        ('/usr/lib/systemd/system/', ['systemd/docserv@.service']),
     ],
     author="SUSE Documentation Team",
     author_email="doc-team@suse.com",

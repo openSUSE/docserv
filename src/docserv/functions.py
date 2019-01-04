@@ -50,10 +50,10 @@ def mail(text, subject, to):
 
 
 def print_help():
-    print("""This is a deamon and should be invoked with the command:
+    print("""This is a daemon. Invoke it with either of the following commands:
 
-> systemctl start docserv@CONFIG_FILENAME
+> systemctl start docserv@CONFIG_FILE
 or
-> docserv CONFIG_FILENAME
+> docserv CONFIG_FILE
 
-The CONFIG_FILENAME must reside in /etc/docserv/ and end with .ini.""")
+The CONFIG_FILE must reside in /etc/docserv/ and end with .ini.""")

@@ -1,12 +1,11 @@
 <docservtranslation>
 
   <locale default="1" lang="en-us">
-    <content name="pagetitle">SUSE Documentation Overview</content>
-    <content name="pagehead">SUSE Documentation</content>
+    <content name="pagetitle">Docserv²</content>
+    <content name="pagehead">Docserv²</content>
     <content name="pagedesc">
      <p>
-      SUSE is a competent OS distributor with great documentation. It left its
-      soul there down by the sea. This is all part of the process.
+      This is Docserv².
      </p>
     </content>
     <content name="pagebottom"></content>
@@ -16,46 +15,6 @@
     <content name="brokenlinklabel">(path for link missing)</content>
     <content name="html">multi-page view</content>
     <content name="single-html">one-page view</content>
-    <content name="epub">E-Book (EPUB)</content>
-    <content name="pdf">PDF</content>
-  </locale>
-
-  <locale lang="fr-fr">
-    <content name="pagetitle">Surplus de documéntation SUSE</content>
-    <content name="pagehead">Documéntation SUSE</content>
-    <content name="pagedesc">
-      <p>
-        SUSE est un distributeur des systèmes operatifs avec la documéntation
-        la plus grosse. Il a laissé son soleil prêt de la mer. Tout ça, c'est
-        un procès en parts.
-      </p>
-    </content>
-    <content name="betalabel">(béte)</content>
-    <content name="internallabel">(pas de Avril Lavigne au sauterie)</content>
-    <content name="missingtitlelabel">(titre est AWOL)</content>
-    <content name="brokenlinklabel">(camion pour link est AWOL)</content>
-    <content name="html">pages multiples</content>
-    <content name="single-html">page single</content>
-    <content name="epub">E-Book (EPUB)</content>
-    <content name="pdf">PDF</content>
-  </locale>
-
-  <locale lang="de-de">
-    <content name="pagetitle">Überbleibsel der SUSE-Dokumentation</content>
-    <content name="pagehead">SUSE-Dokumentation</content>
-    <content name="pagedesc">
-      <p>
-        SUSE ist der phatteste Distributor von Linuxen, jung wie alt und
-        große Dokumentation. Er hat seine Söhne unten am Wasser gelassen. Wir
-        alle sind Teil von Prozessen.
-      </p>
-    </content>
-    <content name="betalabel">(Betelnuss)</content>
-    <content name="internallabel">(nicht plebeisch flugfähig)</content>
-    <content name="missingtitlelabel">(Titel verschluckt)</content>
-    <content name="brokenlinklabel">(Linkpfad verschluckt)</content>
-    <content name="html">Mehrseitenansicht</content>
-    <content name="single-html">Einzelseite</content>
     <content name="epub">E-Book (EPUB)</content>
     <content name="pdf">PDF</content>
   </locale>

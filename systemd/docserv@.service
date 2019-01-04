@@ -1,11 +1,11 @@
 [Unit]
-Description=Docserv
+Description=Docserv2 with %I.ini
 After=multi-user.target
+ConditionPathExists=/etc/docserv/%I.ini
 
 [Service]
 Type=idle
-Environment="SCRIPT_ARGS=%I"
-ExecStart=/usr/bin/docserv $SCRIPT_ARGS
+ExecStart=/usr/bin/docserv %I
 User=docserv
 
 [Install]

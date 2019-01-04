@@ -113,3 +113,6 @@ venv.bak/
 *.diff
 config/docserv.json
 server.conf
+
+# Temporary dirs caused by . dev-mode.sh usage
+cache

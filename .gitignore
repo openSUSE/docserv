@@ -112,3 +112,4 @@ venv.bak/
 *.patch
 *.diff
 config/docserv.json
+server.conf

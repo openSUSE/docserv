@@ -71,8 +71,10 @@ The Docserv² configuration consists of three parts:
 
 # Running Docserv² Itself
 
-Preparation:
+## Preparation:
 
+   0. Make sure that the server(s) you want to sync to are set up with
+      passwordless SSH access for the users `docserv` or `root` on your machine.
    1. Enable/start the Docker engine: `systemctl enable docker.service && systemctl start docker.service`
    2. Adapt the configuration in `/etc/docserv` to your needs.
    3. Choose how to run Docserv²:
@@ -82,8 +84,11 @@ Preparation:
         Docserv², use: `docserv docserv`
         The second `docserv` denotes the name of your INI file.
 
-Test your installation:
+## Test your installation:
+
 Send a build instruction, for example: `curl --header "Content-Type: application/json" --request POST --data '[{"docset": "15ga","lang": "de-de", "product": "sles", "target": "internal"}, {"docset": "15ga","lang": "en-us", "product": "sles", "target": "internal"}]' http://localhost:8080`
+To send a build instruction, you can also use `sendbuildinstruction.sh` from
+this repository. For more information, see its `--help`.
 
 
 # Using `docserv-createconfig`

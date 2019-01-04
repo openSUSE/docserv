@@ -68,6 +68,8 @@ fi
 ([[ ! "$products" ]] || [[ ! "$docsets" ]] || [[ ! "$langs" ]]) &&
   out "Missing at least one command-line parameter. See --help."
 
+targets=$(echo "$targets" | sed -r -e 's/^[^=]+=//' -e 's/,/ /g')
+
 # ---
 
 json='['

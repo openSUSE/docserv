@@ -203,8 +203,8 @@ Repo/Branch: %s %s
             prefix="docserv_stitch_"), 'docserv_config_full.xml')
         logger.debug("Stitching XML config directory to %s",
                      self.stitch_tmp_file)
-        cmd = '%s/docserv-stitch --make-positive --valid-languages="%s" %s %s' % (
-            BIN_DIR,
+        cmd = '%s --make-positive --valid-languages="%s" %s %s' % (
+            os.path.join(BIN_DIR, 'docserv-stitch'),
             self.config['server']['valid_languages'],
             self.config['targets'][target]['config_dir'],
             self.stitch_tmp_file)

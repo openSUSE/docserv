@@ -275,7 +275,7 @@ class Deliverable:
         Execute single commands and check return value.
         """
         cmd = shlex.split(command['cmd'])
-        logger.debug("Thread %i: %s" % (thread_id, cmd))
+        logger.debug("Thread %i: %s" % (thread_id, command))
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
         self.out, self.err = s.communicate()

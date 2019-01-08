@@ -260,8 +260,7 @@ class DocservConfig:
             config_file = "docserv"
         else:
             config_file = argv[1]
-        config_file="%s.ini" % config_file
-        config_path=os.path.join(CONF_DIR, config_file)
+        config_path=os.path.join(CONF_DIR, config_file + '.ini')
         logger.info("Reading %s", config_path)
         config.read(config_path)
         self.config = {}

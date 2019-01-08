@@ -1,0 +1,46 @@
+#!/bin/bash
+# Create hash sum that identifies the unique features of a DC file, simplifying
+# grouping in the overview page.
+
+# $1 - DC
+# $2 - alternate ROOTID (optional)
+
+out() {
+  >&2 echo -e "$1"
+  exit 1
+}
+
+me=$(test -L $(realpath $0) && readlink $(realpath $0) || echo $(realpath $0))
+mydir=$(dirname $me)
+
+source $mydir/docserv-dirs
+
+dcfile=$(realpath $1)
+[[ ! -f "$dcfile" ]] && out "No input DC file given."
+
+# Unfortunately, including profiling data (PROF[A-Z]+) in the
+# minimized DC files is both necessary and a source of errors. e.g.
+# DC-SLES-admin has slightly different profiling than DC-SLES-all:
+# DC-SLES-all includes a profiling attribute that is only relevant for
+# virtualization documentation which is not included in DC-SLES-admin
+# because it does not touch on virtualization.
+# However, it is necessary e.g. for SLES for SAP where the same guide is
+# shipped with either "quick start" or "full guide" profiling.
+minimaldc=$( \
+    cat "$dcfile" | \
+    sed -r \
+      -e 's/(\r+|\s+|")//g' \
+      -e "s/'//g" \
+      | \
+    sed -r -n '/^(ROOTID|MAIN|PROF[A-Z]+)=/ p' \
+  )
+
+if [[ "$2" ]]; then
+  minimaldc=$(echo -e "$minimaldc" | sed -r -n '/^ROOTID=/ !p')'\nROOTID='"$2"
+fi
+
+minimaldc=$(echo -e "$minimaldc" | sort -u)
+
+# Without the final `tr`, we would needlessly write out a \n / &#10; which
+# would end up in our cache files.
+echo -e "$minimaldc" | sha1sum | cut -f1 -d' ' | tr -d '\n'

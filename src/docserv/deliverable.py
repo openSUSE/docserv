@@ -40,6 +40,7 @@ class Deliverable:
 
     def __init__(self, parent, dc_file, build_format, subdeliverables):
         self.title = None
+        self.dc_hash = None
         self.path = None
         self.status = "building"
         self.successful_build_commit = None
@@ -387,6 +388,8 @@ Language: %s
                     break
         xmlstarlet = {}
         xmlstarlet['ret_val'] = 0
+        dchash = {}
+        dchash['ret_val'] = 0
         if self.root_id:
             bigfile = self.root_id
             logger.debug("Found ROOTID for %s: %s", self.id, self.root_id)
@@ -409,7 +412,13 @@ Language: %s
         if not result:
             return False
         self.title = self.out.decode('utf-8')
+        dchash['cmd'] = "%s %s" % (os.path.join(BIN_DIR, 'docserv-dchash'), dc_path)
+        result = self.execute(dchash, thread_id)
+        if not result:
+            return False
+        self.dc_hash = self.out.decode('utf-8')
         self.subdeliverable_titles = {}
+        self.subdeliverable_hashes = {}
         for subdeliverable in self.subdeliverables:
             xpath = "(//*[@*[local-name(.)='id']='%s']/*[contains(local-name(.),'info')]/*[local-name(.)='title']|//*[@*[local-name(.)='id']='%s']/*[local-name(.)='title'])[1]" % (
                 subdeliverable, subdeliverable)
@@ -421,6 +430,12 @@ Language: %s
                 return False
             self.subdeliverable_titles[subdeliverable] = self.out.decode(
                 'utf-8')
+            dchash['ret_val'] = 0
+            dchash['cmd'] = "%s %s %s" % (os.path.join(BIN_DIR, 'docserv-dchash'), dc_path, subdeliverable)
+            result = self.execute(dchash, thread_id)
+            if not result:
+                return False
+            self.subdeliverable_hashes[subdeliverable] = self.out.decode('utf-8')
         with self.parent.deliverables_open_lock:
             self.parent.deliverables[self.id]['title'] = self.title
             self.parent.deliverables[self.id]['path'] = self.path
@@ -447,11 +462,12 @@ Language: %s
         else:
             root_id = ""
         cElementTree.SubElement(
-            root, "title", rootid=root_id).text = self.title
+            root, "title", rootid=root_id, hash=self.dc_hash).text = self.title
 
         for subdeliverable in self.subdeliverables:
             cElementTree.SubElement(
-                root, "title", id=subdeliverable).text = self.subdeliverable_titles[subdeliverable]
+                root, "title", rootid=subdeliverable,
+                hash=self.subdeliverable_hashes[subdeliverable]).text = self.subdeliverable_titles[subdeliverable]
         tree = cElementTree.ElementTree(root)
         tree.write(os.path.join(
             self.deliverable_cache_dir, "%s.xml" % self.dc_file))

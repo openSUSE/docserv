@@ -207,17 +207,19 @@ class DocservState:
 
     def save_state(self):
         """
-        Save status to JSON file. The JSON file usually resides in /etc/docserv/[SERVER_NAME].json
+        Save status to JSON file.
+        The JSON file usually resides in /var/cache/docserv/[SERVER_NAME].json
         """
-        f = open(os.path.join(CONF_DIR, self.config['server']['name'] + '.json'), "w")
+        f = open(os.path.join(CACHE_DIR, self.config['server']['name'] + '.json'), "w")
         f.write(json.dumps(self.dict()))
 
     def load_state(self):
         """
         Load status from JSON file.
+        The JSON file usually resides in /var/cache/docserv/[SERVER_NAME].json
         """
         logger.info("Reading previous state.")
-        filepath = os.path.join(CONF_DIR, self.config['server']['name'] + '.json')
+        filepath = os.path.join(CACHE_DIR, self.config['server']['name'] + '.json')
         if os.path.isfile(filepath):
             file = open(filepath, "r")
             try:

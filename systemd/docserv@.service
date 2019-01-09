@@ -9,4 +9,4 @@ ExecStart=/usr/bin/docserv %I
 User=docserv
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=multi-user.target docker.service

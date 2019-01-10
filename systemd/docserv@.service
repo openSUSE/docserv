@@ -1,6 +1,7 @@
 [Unit]
 Description=Docserv2 with %I.ini
 After=multi-user.target
+Requires=docker.service
 ConditionPathExists=/etc/docserv/%I.ini
 
 [Service]
@@ -9,4 +10,4 @@ ExecStart=/usr/bin/docserv %I
 User=docserv
 
 [Install]
-WantedBy=multi-user.target docker.service
+WantedBy=multi-user.target

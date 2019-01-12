@@ -91,42 +91,48 @@ class BuildInstructionHandler:
 
         commands = {}
         n = 0
-        # (re-)generate overview page
-        sync_source_tmp = tempfile.mkdtemp(prefix="docserv_oview_")
-        commands[n] = {}
-        commands[n]['cmd'] = "docserv-buildoverview %s --stitched-config=\"%s\" --ui-languages=\"%s\" --default-ui-language=\"%s\" --cache-dir=\"%s\" --doc-language=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\"" % (
-            "--internal-mode" if self.config['targets'][self.build_instruction['target']
-                                                         ]['languages'] == "yes" else "",
-            self.stitch_tmp_file,
-            self.config['targets'][self.build_instruction['target']
-                                   ]['languages'],
-            self.config['targets'][self.build_instruction['target']
-                                   ]['default_lang'],
-            self.deliverable_cache_base_dir,
-            self.build_instruction['lang'],
-            self.config['targets'][self.build_instruction['target']
-                                   ]['template_dir'],
-            sync_source_tmp)
+        if hasattr(self, 'deliverable_cache_base_dir'):
+            # (re-)generate overview page
+            sync_source_tmp = tempfile.mkdtemp(prefix="docserv_oview_")
+            commands[n] = {}
+            commands[n]['cmd'] = "docserv-buildoverview %s --stitched-config=\"%s\" --ui-languages=\"%s\" --default-ui-language=\"%s\" --cache-dir=\"%s\" --doc-language=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\"" % (
+                "--internal-mode" if self.config['targets'][self.build_instruction['target']
+                                                            ]['languages'] == "yes" else "",
+                self.stitch_tmp_file,
+                self.config['targets'][self.build_instruction['target']
+                                    ]['languages'],
+                self.config['targets'][self.build_instruction['target']
+                                    ]['default_lang'],
+                self.deliverable_cache_base_dir,
+                self.build_instruction['lang'],
+                self.config['targets'][self.build_instruction['target']
+                                    ]['template_dir'],
+                sync_source_tmp)
 
-        # rsync build target directory to backup path
-        backup_path = self.config['targets'][self.build_instruction['target']]['backup_path']
-        n += 1
-        commands[n] = {}
-        commands[n]['cmd'] = "rsync -lr %s/ %s" % (
-            sync_source_tmp, backup_path)
+            # rsync build target directory to backup path
+            backup_path = self.config['targets'][self.build_instruction['target']]['backup_path']
+            n += 1
+            commands[n] = {}
+            commands[n]['cmd'] = "rsync -lr %s/ %s" % (
+                sync_source_tmp, backup_path)
 
-        # rsync built target directory with web server
-        target_path = self.config['targets'][self.build_instruction['target']]['target_path']
-        n += 1
-        commands[n] = {}
-        commands[n]['cmd'] = "rsync -lr %s/ %s" % (
-            sync_source_tmp, target_path)
+            # rsync built target directory with web server
+            target_path = self.config['targets'][self.build_instruction['target']]['target_path']
+            n += 1
+            commands[n] = {}
+            commands[n]['cmd'] = "rsync -lr %s/ %s" % (
+                sync_source_tmp, target_path)
 
         if hasattr(self, 'local_repo_build_dir'):
             # build target directory
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "rm -rf %s" % self.local_repo_build_dir
+
+        if not commands:
+            self.cleanup_done = True
+            self.cleanup_lock.release()
+            return
 
         for i in range(0, n + 1):
             cmd = shlex.split(commands[i]['cmd'])

@@ -62,19 +62,19 @@ class BuildInstructionHandler:
         self.cleanup_done = False
         self.cleanup_lock = threading.Lock()
 
-        if self.validate(build_instruction, config):
+        if self.validate(build_instruction, config, thread_id):
             self.initialized = True
             self.build_instruction = build_instruction
             if 'deliverables' in build_instruction:
                 self.deliverables = build_instruction['deliverables']
             self.config = config
-            if not self.read_conf_dir():
+            if not self.read_conf_dir(thread_id):
                 self.initialized = False
                 return
             self.git_lock = RepoLock(resource_to_filename(
                 self.remote_repo), thread_id, gitLocks, gitLocksLock)
             self.prepare_repo(thread_id)
-            self.get_commit_hash()
+            self.get_commit_hash(thread_id)
         else:
             self.initialized = False
         return
@@ -189,7 +189,7 @@ Repo/Branch: %s %s
         subject = "[docserv²] Failed build preparation"
         mail(msg, subject, to)
 
-    def read_conf_dir(self):
+    def read_conf_dir(self, thread_id):
         """
         Use the docserv-stitch command to stitch all single XML configuration
         files to a big config file. Then parse it and extract required information
@@ -197,29 +197,29 @@ Repo/Branch: %s %s
         """
         target = self.build_instruction['target']
         if not self.config['targets'][target]['active'] == "yes":
-            logger.debug("Target %s not active.", target)
+            logger.debug("Thread {}: Target {} not active.".format(thread_id, target))
             return False
         self.stitch_tmp_file = os.path.join(tempfile.mkdtemp(
             prefix="docserv_stitch_"), 'docserv_config_full.xml')
-        logger.debug("Stitching XML config directory to %s",
-                     self.stitch_tmp_file)
+        logger.debug("Thread {}: Stitching XML config directory to {}".format(
+            thread_id, self.stitch_tmp_file))
         cmd = '%s --make-positive --valid-languages="%s" %s %s' % (
             os.path.join(BIN_DIR, 'docserv-stitch'),
             self.config['server']['valid_languages'],
             self.config['targets'][target]['config_dir'],
             self.stitch_tmp_file)
-        logger.debug("Stitching command: %s", cmd)
+        logger.debug("Thread {}: Stitching command: {}".format(thread_id, cmd))
         cmd = shlex.split(cmd)
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
         s.communicate()[0]
         rc = int(s.returncode)
         if rc == 0:
-            logger.debug("Stitching of %s successful",
-                         self.config['targets'][target]['config_dir'])
+            logger.debug("Thread {}: Stitching of {} successful".format(
+                        thread_id, self.config['targets'][target]['config_dir']))
         else:
-            logger.warning("Stitching of %s failed!",
-                           self.config['targets'][target]['config_dir'])
+            logger.warning("Thread {}: Stitching of {} failed!".format(
+                        thread_id, self.config['targets'][target]['config_dir']))
             self.initialized = False
             return False
 
@@ -245,7 +245,8 @@ Repo/Branch: %s %s
                 self.build_instruction['product'], self.build_instruction['docset'])
             self.remote_repo = xml_root.find(xpath).text
         except AttributeError:
-            logger.warning("Failed to parse xpath: %s", xpath)
+            logger.warning("Thread {}: Failed to parse xpath: {}".format(
+                thread_id, xpath))
             return False
 
         try:
@@ -314,8 +315,8 @@ Repo/Branch: %s %s
             out, err = s.communicate()
             self.git_lock.release()
             if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
-                logger.warning("Build failed! Unexpected return value %i for '%s'",
-                               s.returncode, commands[i]['cmd'])
+                logger.warning("Thread {}: Build failed! Unexpected return value {} for '{}'".format(
+                               thread_id, s.returncode, commands[i]['cmd']))
                 self.mail(commands[i]['cmd'], out.decode(
                     'utf-8'), err.decode('utf-8'))
                 self.initialized = False
@@ -323,7 +324,7 @@ Repo/Branch: %s %s
 
         return True
 
-    def get_commit_hash(self):
+    def get_commit_hash(self, thread_id):
         """
         Extract HEAD commit hash from branch.
         """
@@ -333,34 +334,34 @@ Repo/Branch: %s %s
                              stderr=subprocess.PIPE)
         self.build_instruction['commit'] = s.communicate()[
             0].decode('utf-8').rstrip()
-        logger.debug("Current commit hash: %s",
-                     self.build_instruction['commit'])
+        logger.debug("Thread {}: Current commit hash: {}".format(
+                    thread_id, self.build_instruction['commit']))
 
-    def validate(self, build_instruction, config):
+    def validate(self, build_instruction, config, thread_id):
         """
         Validate completeness of build instruction. Format:
         {'docset': '15ga', 'lang': 'en', 'product': 'sles', 'target': 'external'}
         """
         #
         if not isinstance(build_instruction, dict):
-            logger.warning("Validation: Is not a dict")
+            logger.warning("Thread {}: Validation: Is not a dict".format(thread_id))
             return False
         if not isinstance(build_instruction['docset'], str):
-            logger.warning("Validation: docset is not a string")
+            logger.warning("Thread {}: Validation: docset is not a string".format(thread_id))
             return False
         if not isinstance(build_instruction['lang'], str):
-            logger.warning("Validation: lang is not a string")
+            logger.warning("Thread {}: Validation: lang is not a string".format(thread_id))
             return False
         if not isinstance(build_instruction['product'], str):
-            logger.warning("Validation: product is not a string")
+            logger.warning("Thread {}: Validation: product is not a string".format(thread_id))
             return False
         if not isinstance(build_instruction['target'], str):
-            logger.warning("Validation: target is not a string")
+            logger.warning("Thread {}: Validation: target is not a string".format(thread_id))
             return False
-        logger.debug("Valid build instruction: %s", build_instruction['id'])
+        logger.debug("Thread {}: Valid build instruction: {}".format(thread_id, build_instruction['id']))
         return True
 
-    def generate_deliverables(self):
+    def generate_deliverables(self, thread_id):
         """
         Iterate through delvierable elements in configuration and create
         instances of the Deliverable class for each.
@@ -368,7 +369,7 @@ Repo/Branch: %s %s
         if not self.initialized:
             return False
         xml_root = self.tree.getroot()
-        logger.debug("Generating deliverables.")
+        logger.debug("Thread {}: Generating deliverables.".format(thread_id))
         xpath = ".//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/deliverable" % (
             self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])
         for xml_deliverable in xml_root.findall(xpath):

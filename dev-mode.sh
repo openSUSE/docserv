@@ -8,5 +8,7 @@ export DOCSERV_BIN_DIR=$curdir/bin
 export DOCSERV_CONFIG_DIR=$curdir/config
 export DOCSERV_CACHE_DIR=$curdir/cache
 
+[[ -e $DOCSERV_CACHE_DIR ]] || mkdir -p $DOCSERV_CACHE_DIR
+
 export PATH="${DOCSERV_BIN_DIR}:"$(printenv PATH)
 export PS1="ds²-dev "$(printenv PS1)

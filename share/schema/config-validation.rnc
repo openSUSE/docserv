@@ -8,7 +8,7 @@ start = ds.product
 
 # CONSTANTS
 
-ds.schema.version = "0.9.9"
+ds.schema.version = "0.9.10"
 
 
 # TYPES
@@ -71,6 +71,8 @@ ds.type.id =
     pattern="""[\-_\.\+a-zA-Z0-9]+"""
   }
 
+ds.false.enum = "0" | "false"
+ds.true.enum = "1" | "true"
 
 # TAG/ATTRIBUTE SETS
 
@@ -84,6 +86,7 @@ ds.htmlblock =
   | ds.pre
   | ds.ul
   | ds.ol
+  | ds.dl
   | ds.h1
   | ds.h2
   | ds.h3
@@ -169,14 +172,14 @@ ds.contact =
 ds.defaultdesc =
   element desc {
     attribute lang { ds.type.lang },
-    attribute default { "1" | "true" },
+    attribute default { ds.true.enum },
     ds.htmlblock+
   }
 
 ds.otherdesc =
   element desc {
     attribute lang { ds.type.lang },
-    attribute default { "0" | "false" }?,
+    attribute default { ds.false.enum }?,
     ds.htmlblock*
   }
 
@@ -212,18 +215,14 @@ ds.builddocs =
 
 ds.git =
   element git {
-    ds.remote
-  }
-
-ds.remote =
-  element remote {
-    ds.type.gitremote
+    attribute remote { ds.type.gitremote },
+    empty
   }
 
 ds.defaultlanguage =
   element language {
     attribute lang { ds.type.lang },
-    attribute default { "1" | "true" },
+    attribute default { ds.true.enum },
     ds.branch,
     ds.subdir?,
     ds.deliverable+
@@ -231,7 +230,7 @@ ds.defaultlanguage =
 ds.otherlanguage =
   element language {
     attribute lang { ds.type.lang },
-    attribute default { "0" | "false" }?,
+    attribute default { ds.false.enum }?,
     ds.branch?,
     ds.subdir?,
     ds.untranslated?
@@ -348,6 +347,23 @@ ds.ol =
     ds.li+
   }
 
+ds.dl =
+  element dl {
+    (ds.dt, ds.dd)+
+  }
+
+ds.dt =
+  element dt {
+    ds.htmlattr,
+    ds.htmlblock*
+  }
+
+ds.dd =
+  element dd {
+    ds.htmlattr,
+    ds.htmlblock*
+  }
+
 ds.li =
   element li {
     ds.htmlattr,
@@ -420,6 +436,7 @@ ds.em =
 ds.a =
   element a {
     attribute href { xsd:anyURI },
+    attribute target { "_blank" }?,
     ds.htmlinlinecontent
   }
 

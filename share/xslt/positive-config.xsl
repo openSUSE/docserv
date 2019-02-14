@@ -51,7 +51,7 @@
 
 
   <xsl:template match="deliverable" mode="create-blacklist-param">
-    <xsl:param name="dc" select="dc"/>
+    <xsl:param name="DC" select="dc"/>
     <xsl:variable name="add-to-list">
       <xsl:choose>
         <xsl:when test="subdeliverable">
@@ -63,8 +63,8 @@
             </xsl:for-each>
           </xsl:variable>
           <xsl:variable name="original-subdeliverables">
-            <xsl:if test="ancestor::builddocs/language[@default='true' or @default='1']/deliverable[dc = $dc][subdeliverable]">
-              <xsl:for-each select="ancestor::builddocs/language[@default='true' or @default='1']/deliverable[dc = $dc][subdeliverable]/subdeliverable">
+            <xsl:if test="ancestor::builddocs/language[@default='true' or @default='1']/deliverable[dc = $DC][subdeliverable]">
+              <xsl:for-each select="ancestor::builddocs/language[@default='true' or @default='1']/deliverable[dc = $DC][subdeliverable]/subdeliverable">
                 <xsl:sort select="translate(., ' &#10;', '')" order="descending"/>
                 <xsl:value-of select="translate(., ' &#10;', '')"/>
                 <xsl:text> </xsl:text>
@@ -81,7 +81,7 @@
     </xsl:variable>
 
     <xsl:if test="$add-to-list = 1">
-      <xsl:value-of select="$dc"/>
+      <xsl:value-of select="$DC"/>
       <xsl:text> </xsl:text>
     </xsl:if>
   </xsl:template>
@@ -103,9 +103,9 @@
 
   <xsl:template match="subdeliverable" mode="positize">
     <xsl:param name="langcode" select="''"/>
-    <xsl:variable name="dc" select="preceding-sibling::dc[1]"/>
-    <xsl:variable name="subdeliverable" select="."/>
-    <xsl:if test="not(ancestor::docset/builddocs/language[@lang = $langcode]/untranslated/deliverable[dc = $dc and subdeliverable = $subdeliverable])">
+    <xsl:variable name="DC" select="preceding-sibling::dc[1]"/>
+    <xsl:variable name="SUB" select="."/>
+    <xsl:if test="not(ancestor::docset/builddocs/language[@lang = $langcode]/untranslated/deliverable[dc = $DC and subdeliverable = $SUB])">
       <xsl:apply-templates select="self::*"/>
     </xsl:if>
   </xsl:template>

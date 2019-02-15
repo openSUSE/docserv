@@ -10,8 +10,9 @@
 # INPUT_DIR                       # Directory with config files
 # OUTPUT_FILE                     # Output file name (parent directory must exist)
 #
-# XML tool deps: xmlstarlet, jing, xmllint
-
+# XML tool deps: xmlstarlet, jing, xmllint, xsltproc
+#
+# TODO: Move some checks for xmlstarlet into XSLT stylesheet
 
 out() {
   >&2 echo -e "$1"
@@ -45,9 +46,11 @@ java_flags="-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=org.apache.xer
 
 schema_file=$share_dir/schema/config-validation.rnc
 positive_xslt_file=$share_dir/xslt/positive-config.xsl
+checks_dir=$share_dir/xslt/checks
 
 [[ ! -f $schema_file ]] && out "Schema $schema_file does not exist.$(readme_message)"
 [[ ! -f $positive_xslt_file ]] && out "Schema $positive_xslt_file does not exist.$(readme_message)"
+[[ ! -e $checks_dir ]] && out "Directory $checks_dir does not exist.$(readme_message)"
 
 make_positive=0
 valid_languages=""
@@ -174,7 +177,13 @@ for file in *.xml; do
         "$input_dir/$file: Some lang attributes are not supported by your configuration INI. Check for occurrences of the following unsupported lang attribute(s):\n$unrecognized_languages"
   fi
 
-
+  # Iterate over all XSLT stylesheets (starting with "check") and
+  # apply them to the configuration XML file. Check result of xsltproc.
+  # Each XSLT stylesheet prints "0" (=success) or "10" (=failure).
+  for xslt in $checks_dir/check-*.xsl; do
+    result=$(xsltproc $xslt $file)
+    [ 0 -ne $result ] && out "Check failed for $xslt."
+  done
 done
 
 if [[ "$issuelist" ]]; then

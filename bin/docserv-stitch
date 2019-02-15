@@ -10,8 +10,7 @@
 # INPUT_DIR                       # Directory with config files
 # OUTPUT_FILE                     # Output file name (parent directory must exist)
 #
-# XML tool deps: xmlstarlet, jing, xmllint
-
+# XML tool deps: xmlstarlet, jing, xmllint, xsltproc
 
 out() {
   >&2 echo -e "$1"
@@ -44,9 +43,11 @@ stacksize=${stacksize:-"-Xss4096K"}
 java_flags="-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=org.apache.xerces.parsers.XIncludeParserConfiguration"
 
 schema_file=$share_dir/validate-product-config/product-config-schema.rnc
+checks_dir=$share_dir/validate-product-config/checks
 simplify_stylesheet=$share_dir/simplify-product-config/simplify.xsl
 
 [[ ! -f $schema_file ]] && out "Schema $schema_file does not exist.$(readme_message)"
+[[ ! -d $checks_dir ]] && out "Directory $checks_dir does not exist.$(readme_message)"
 [[ ! -f $simplify_stylesheet ]] && out "Stylesheet $simplify_stylesheet does not exist.$(readme_message)"
 
 simplify_config=0
@@ -107,6 +108,15 @@ for file in *.xml; do
   valid=$(2>&1 ADDITIONAL_FLAGS="$java_flags" ADDITIONAL_OPTIONS="$java_flags" \
     $jing -ci $schema_file $file)
   [[ $? -gt 0 ]] && add_issue "$input_dir/$file: File is not valid:\n$valid"
+
+
+  # Iterate over all XSLT stylesheets (starting with "check") and
+  # apply them to the configuration XML file. Check result of xsltproc.
+  # Each XSLT stylesheet prints "0" (=success) or "10" (=failure).
+  for xslt in $checks_dir/check-*.xsl; do
+    result=$(xsltproc $xslt $file)
+    [ 0 -ne $result ] && out "Check failed for $xslt."
+  done
 
   # all format tags need at least one format attribute set to "1" or "true"
 

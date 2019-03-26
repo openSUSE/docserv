@@ -84,6 +84,7 @@ ds.htmlblock =
   | ds.pre
   | ds.ul
   | ds.ol
+  | ds.dl
   | ds.h1
   | ds.h2
   | ds.h3
@@ -346,6 +347,21 @@ ds.ul =
 ds.ol =
   element ol {
     ds.li+
+  }
+
+ds.dl =
+  element dl {
+     (ds.dt, ds.dd)+
+  }
+
+ds.dt =
+  element dt {
+     ds.htmlinlinecontent
+  }
+
+ds.dd =
+  element dd {
+     ds.htmlinlinecontent | ds.htmlblock*
   }
 
 ds.li =

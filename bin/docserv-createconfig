@@ -159,9 +159,12 @@ def parse_cli(cliargs=None):
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("-l", "--languages",
+                        default="en-us",
                         help=("Uses one or more languages in the format "
-                              "'language_country'. "
-                              "Upper and lower case is irrelevant."
+                              "'language_country', "
+                              "separated by on or more spaces. "
+                              "Upper and lower case is irrelevant. "
+                              "Defaults to %(default)s"
                               ),
                         )
     parser.add_argument("-f", "--filter",

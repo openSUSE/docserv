@@ -25,42 +25,119 @@ Git repositories.
 import os
 import re
 import sys
+import pygit2
 from xml.etree import cElementTree as etree
 
+FIXME = "FIXME"
 
-def generate_config(languages, branches, version="0.9.9", contact=None):
+def get_origin_url(path):
+    """Return the repo origin url
+
+    :param path: The path to local repository
+    :type path: str
+
+    :return: the URL address
+    :rtype: str
+    """
+    repo = pygit2.Repository(path)
+    origin = repo.remotes["origin"]
+    url = origin.url
+    # example: ('git@')('github.com')(':')('openSUSE/docserv.git')
+    regex = r'(^[a-zA-Z]+@)([a-zA-Z.]+)([:])(.*)'
+    match = re.match(regex, url)
+    if match:
+        # substitute ':' with '/'
+        url = url.replace(match.group(3), "/")
+        # substitute 'git@' with 'https://'
+        url = url.replace(match.group(1), "https://")
+    return url
+
+def get_version(name):
+    """Returns version from product name
+    Example:
+    >>> get_version("SLE12SP4")
+    '12 SP4'
+
+    :param name: string with a product name
+    :type name: str
+
+    :return: the version of a product
+    :rtype: str
+    """
+    # example: ('SLE')('12')('SP4')
+    version_regex = r'(^[a-zA-Z_]+)([0-9.]+)?([a-zA-Z0-9.]+)?'
+    match = re.match(version_regex, name)
+    if match.group(2):
+            # substitute 'SLE' with '', removing product name
+            version = re.sub(r'(^[a-zA-Z_]+)', "", name)
+            if match.group(3):
+                # replace '12' with '12 ', adding space
+                version = version.replace(match.group(2), match.group(2) + " ")
+            # returning '12 SP4'
+            return version
+    return name
+
+
+def prettify(tree, indent="  "):
+    """Return a pretty-printed XML string for the element.
+
+    :param tree: The XML tree
+    :type tree: :class:`xml.etree.ElementTree.ElementTree`
+
+    :param indent: string used for indentation (usually spaces)
+    :type indent: str
+
+    :return: the indented string
+    :rtype: str | byte
+    """
+    from xml.dom import minidom
+    from xml.etree import ElementTree
+    rough_string = ElementTree.tostring(tree.getroot(), encoding='UTF-8')
+    reparsed = minidom.parseString(rough_string)
+    return reparsed.toprettyxml(indent=indent)
+
+
+def generate_config(languages, git_url ,branches, version="0.9.10", contact=None):
     """Generate the configuration file.
 
-    :param language: The allowed languages
+    :param languages: The allowed languages
     :type languages: list
 
-    :param branches:
-    :type branches:
+    :param branches: The branch name and DC files on it, for example:
+               {'develop': ['DC-FOO-all', 'DC-FOO-install-quick'], ... }
+    :type branches: dict
 
     :param str schemaversion: the schema version to use
     :param str contact: the contact email address
     """
-    root = etree.Element("product", productid="FIXME", schemaversion=version)
-    etree.SubElement(root, "name").text = "FIXME"
-    etree.SubElement(root, "shortname").text = "FIXME"
+
+    root = etree.Element("product", productid=FIXME, schemaversion=version)
+    etree.SubElement(root, "git", remote=git_url)
+    etree.SubElement(root, "name").text = FIXME
+    etree.SubElement(root, "shortname").text = FIXME
     maintainers = etree.SubElement(root, "maintainers")
-    etree.SubElement(maintainers, "contact").text = "FIXME" if not contact else contact
+    etree.SubElement(maintainers, "contact").text = FIXME if not contact else contact
 
     for language in languages:
         description = etree.SubElement(root, "desc", default="0", lang=language)
-        etree.SubElement(description, "p").text = "FIXME"
+        etree.SubElement(description, "p").text = FIXME
 
     for branch in branches:
         if branch.startswith("trans/"):
             continue
-        docset = etree.SubElement(root, "docset", setid=branch.replace("maintenance/", ""), lifecycle="FIXME")
-        etree.SubElement(docset, "version").text = "FIXME"
+        setid = branch.replace("maintenance/", "")
+        product_version = get_version(setid)
+        docset = etree.SubElement(root, "docset", setid=setid, lifecycle=FIXME)
+
+        etree.SubElement(docset, "version").text = product_version
         builddocs = etree.SubElement(docset, "builddocs")
-        git = etree.SubElement(builddocs, "git")
-        etree.SubElement(git, "remote").text = "FIXME"
+        # Optionally <git>, look at product/git
+        # etree.SubElement(builddocs, "git", remote=git_url)
+
         for language in languages:
             if language == "en-us":
-                lang = etree.SubElement(builddocs, "language", default="1", lang="en-us")
+                lang = etree.SubElement(builddocs, "language",
+                                        default="1", lang="en-us")
                 etree.SubElement(lang, "branch").text = branch
                 has_all_dc = "1"
                 for dc_file in branches[branch]:
@@ -83,16 +160,21 @@ def generate_config(languages, branches, version="0.9.9", contact=None):
                     if "trans/%s" % tmp in branches:
                         branch = "trans/%s" % tmp
                 etree.SubElement(lang, "branch").text = branch
-                etree.SubElement(lang, "subdir").text = "FIXME"
+                etree.SubElement(lang, "subdir").text = FIXME
                 untrans = etree.SubElement(lang, "untranslated")
                 deliverable = etree.SubElement(untrans, "deliverable")
-                etree.SubElement(deliverable, "dc").text = "FIXME"
-        extralinks = etree.SubElement(docset, "extralinks")
-        etree.SubElement(extralinks, "link", href="FIXME").text = "SOME DESCRIPTION"
+                etree.SubElement(deliverable, "dc").text = FIXME
+        # TODO: add extralinks as comments
+        # extralinks = etree.SubElement(docset, "extralinks")
+        # etree.SubElement(extralinks, "link", href=FIXME).text = "SOME DESCRIPTION"
+
     tree = etree.ElementTree(root)
     configfile = os.getcwd() + "/config.xml"
-    tree.write(configfile)
     print("Find the config file at {!r}".format(configfile))
+    # tree.write(configfile)
+    with open(configfile, 'w+t') as fh:
+        fh.write(prettify(tree))
+    print("Done.")
 
 
 def get_dc_files(path, branches, filter_dc=None):
@@ -180,22 +262,28 @@ def parse_cli(cliargs=None):
                       "ru-ru").split(" ")
 
     # do some checks:
-    args.langs = set(args.languages.replace("_", "-").lower().split(" "))
+    args.langs = set(args.languages.replace("_", "-").lower().split(","))
     if not args.langs.intersection(args.LANGUAGES):
         parser.error("Unknown language {!r} found.\n"
                      "Expected one or more of these:\n"
                      "{}".format(args.languages, ", ".join(args.LANGUAGES))
                      )
+    # Push en-us at first position:
+    if "en-us" in args.langs:
+        # changing to list, because we can't insert at a specific index in a set
+        args.langs = list(args.langs)
+        args.langs.remove('en-us')
+        args.langs.insert(0, 'en-us')
     return args
 
 
 if __name__ == "__main__":
     args = parse_cli()
-    # print(args)
+    print(args)
 
-    import pygit2
     branches = get_git_branches(args.path)
     dc_files = get_dc_files(args.path, branches, filter_dc=args.filter)
-    print(dc_files)
-    generate_config(args.LANGUAGES, branches, contact=args.contact)
+    # print(dc_files)
+    git_url = get_origin_url(args.path)
+    generate_config(args.langs, git_url ,branches, contact=args.contact)
     sys.exit(0)

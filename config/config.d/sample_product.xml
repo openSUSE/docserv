@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <product productid="sample_product" schemaversion="0.9.9">
+<?xml-model href="../../share/schema/config-validation.rnc" type="application/relax-ng-compact-syntax"?>
   <!-- ID can be used for build commands, HTML IDs, etc. -->
   <!-- lifecycle="unpublished"/"beta"/"supported"/"unsupported":
     + "unpublished": Don't build, don't mention on overview page
@@ -9,7 +10,6 @@
     + "unsupported": build, publish with note "not supported anymore,
       please upgrade"
   -->
-
   <name>Sample Product</name>
   <shortname>SP</shortname>
   <maintainers>

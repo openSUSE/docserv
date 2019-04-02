@@ -395,8 +395,9 @@ Language: %s
             logger.debug("Found ROOTID for %s: %s", self.id, self.root_id)
             bigfile_path = (os.path.join(
                 command['tmp_build_target'], '.tmp', '%s_bigfile.xml' % bigfile))
-            xpath = "(//*[@*[local-name(.)='id']='%s']/*[contains(local-name(.),'info')]/*[local-name(.)='title']|//*[@*[local-name(.)='id']='%s']/*[local-name(.)='title'])[1]" % (
-                self.root_id, self.root_id)
+            xpath = ("(//*[@*[local-name(.)='id']='{ID}']/*[contains(local-name(.),'info')]/*[local-name(.)='title']|"
+                     "//*[@*[local-name(.)='id']='{ID}']/*[local-name(.)='title'])[1]"
+                     ).format(ID=self.root_id)
             xmlstarlet['cmd'] = "xmlstarlet sel -t -v \"%s\" %s" % (
                 xpath, bigfile_path)
         else:

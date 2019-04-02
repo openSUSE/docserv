@@ -241,7 +241,7 @@ Repo/Branch: %s %s
                 self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])
             self.branch = xml_root.find(xpath).text
 
-            xpath = ".//product[@productid='%s']/docset[@setid='%s']/builddocs/git/remote" % (
+            xpath = ".//product[@productid='%s']/docset[@setid='%s']/builddocs/git/@remote" % (
                 self.build_instruction['product'], self.build_instruction['docset'])
             self.remote_repo = xml_root.find(xpath).text
         except AttributeError:

@@ -54,7 +54,7 @@ class Deliverable:
         self.subdeliverables = subdeliverables
         self.id = self.generate_id()
         self.prev_state()
-        logger.debug("Created deliverable %s (%s, %s) for BI %s",
+        logger.debug("Main thread: Created deliverable %s (%s, %s) for BI %s",
                      self.id,
                      self.dc_file,
                      self.build_format,
@@ -101,7 +101,7 @@ class Deliverable:
         Create a dict of commands that build the document.
         """
         if self.parent.build_instruction['commit'] == self.parent.deliverables[self.id]['successful_build_commit']:
-            logger.debug("Deliverable %s (%s, %s) for BI %s already up to date. Skipping daps run.",
+            logger.debug("Main thread: Deliverable %s (%s, %s) for BI %s already up to date. Skipping daps run.",
                          self.id,
                          self.dc_file,
                          self.build_format,
@@ -110,7 +110,7 @@ class Deliverable:
             return self.finish(True)
         with self.parent.deliverables_open_lock:
             self.parent.deliverables[self.id]['last_build_attempt_commit'] = self.parent.build_instruction['commit']
-        logger.info("Building deliverable %s (%s, %s) for BI %s. Commit: %s",
+        logger.info("Main thread: Building deliverable %s (%s, %s) for BI %s. Commit: %s",
                     self.id,
                     self.dc_file,
                     self.build_format,
@@ -364,7 +364,7 @@ Language: %s
                 self.d2d_out_dir = line
                 self.path = os.path.join(self.deliverable_relative_path,
                                         line.split('/')[-1])
-        logger.debug("Deliverable build results: %s", self.d2d_out_dir)
+        logger.debug("Thread {}: Deliverable build results: {}".format(thread_id, self.d2d_out_dir))
         command['cmd'] = command['cmd'].replace(
             '__FILELIST__', self.d2d_out_dir)
         return command
@@ -392,7 +392,7 @@ Language: %s
         dchash['ret_val'] = 0
         if self.root_id:
             bigfile = self.root_id
-            logger.debug("Found ROOTID for %s: %s", self.id, self.root_id)
+            logger.debug("Thread {}: Found ROOTID for {}: {}".format(thread_id, self.id, self.root_id))
             bigfile_path = (os.path.join(
                 command['tmp_build_target'], '.tmp', '%s_bigfile.xml' % bigfile))
             xpath = "(//*[@*[local-name(.)='id']='%s']/*[contains(local-name(.),'info')]/*[local-name(.)='title']|//*[@*[local-name(.)='id']='%s']/*[local-name(.)='title'])[1]" % (
@@ -402,7 +402,7 @@ Language: %s
         else:
             bigfile = self.dc_file.replace('DC-', '')
             logger.debug(
-                "No ROOTID found for %s, using DC file name: %s", self.id, self.dc_file)
+                "Thread {}: No ROOTID found for {}, using DC file name: {}".format(thread_id,  self.id, self.dc_file))
             bigfile_path = (os.path.join(
                 command['tmp_build_target'], '.tmp', '%s_bigfile.xml' % bigfile))
             xpath = "(/*/*[contains(local-name(.),'info')]/*[local-name(.)='title']|/*/*[local-name(.)='title'])[1]"

@@ -161,7 +161,7 @@ class DocservState:
         move the build instruction to the past_builds dict and remove
         it from the queued build instructions.
         """
-        logger.info("Aborting build instruction %s", build_instruction_id)
+        logger.info("Main thread: Aborting build instruction %s", build_instruction_id)
         with self.scheduled_build_instruction_lock:
             self.updating_build_instruction.remove(build_instruction_id)
             build_instruction = self.scheduled_build_instruction.pop(
@@ -179,7 +179,7 @@ class DocservState:
         After all deliverables are finished, dump a dict of the
         BuildInstructionHandler into the past_builds dict.
         """
-        logger.info("Finished build instruction %s", build_instruction_id)
+        logger.info("Main thread: Finished build instruction %s", build_instruction_id)
         self.bih_dict[build_instruction_id].cleanup()
         with self.bih_dict_lock:
             build_instruction = self.bih_dict.pop(build_instruction_id)
@@ -311,7 +311,7 @@ class DocservConfig:
                                        ]['internal'] = config[section]['internal']
         except KeyError as error:
             logger.warning(
-                "Invalid configuration file, missing configuration key '%s'. Exiting.", error)
+                "Main thread: Invalid configuration file, missing configuration key '%s'. Exiting.", error)
             sys.exit(1)
 
 

@@ -229,6 +229,13 @@ def get_git_branches(path):
             result[branch_wo_origin] = []
     return result
 
+def get_args(args):
+    if not args.languages:
+        args.languages = input("# Add languages: ")
+    if not args.filter:
+        args.filter = input("# Filter: ")
+    if not args.contact:
+        args.contact = input("# Contact: ")
 
 def parse_cli(cliargs=None):
     """Parse CLI with :class:`argparse.ArgumentParser` and return parsed result.
@@ -257,6 +264,9 @@ def parse_cli(cliargs=None):
                         help="Path to the repository",
                         )
     args = parser.parse_args(args=cliargs)
+
+    get_args(args)
+
     args.LANGUAGES = ("en-us de-de fr-fr pt-br ja-jp zh-cn es-es "
                       "it-it ko-kr hu-hu zh-tw cs-cz ar-ar pl-pl "
                       "ru-ru").split(" ")

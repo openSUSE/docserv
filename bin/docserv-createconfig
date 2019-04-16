@@ -241,6 +241,7 @@ def parse_cli(cliargs=None):
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("-l", "--languages",
+                        dest="langs",
                         help=("Uses one or more languages in the format "
                               "'language_country'. "
                               "Upper and lower case is irrelevant."
@@ -257,21 +258,22 @@ def parse_cli(cliargs=None):
                         help="Path to the repository",
                         )
     args = parser.parse_args(args=cliargs)
-    args.LANGUAGES = ("en-us de-de fr-fr pt-br ja-jp zh-cn es-es "
+    LANGUAGES = ("en-us de-de fr-fr pt-br ja-jp zh-cn es-es "
                       "it-it ko-kr hu-hu zh-tw cs-cz ar-ar pl-pl "
                       "ru-ru").split(" ")
 
     # do some checks:
-    args.langs = set(args.languages.replace("_", "-").lower().split(","))
-    if not args.langs.intersection(args.LANGUAGES):
+    args.langs = args.langs.replace("_", "-").lower().split(",")
+    # check if given list has any unknown languages
+    diff = set(args.langs).difference(LANGUAGES)
+    if diff:
         parser.error("Unknown language {!r} found.\n"
                      "Expected one or more of these:\n"
-                     "{}".format(args.languages, ", ".join(args.LANGUAGES))
+                     "{}".format(diff, ", ".join(LANGUAGES))
                      )
+    ## TODO: discuss with Stefan about this.
     # Push en-us at first position:
     if "en-us" in args.langs:
-        # changing to list, because we can't insert at a specific index in a set
-        args.langs = list(args.langs)
         args.langs.remove('en-us')
         args.langs.insert(0, 'en-us')
     return args

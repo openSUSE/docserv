@@ -230,12 +230,19 @@ def get_git_branches(path):
     return result
 
 def get_args(args):
+    """Checks if no argumets were set when running the script and asks for them.
+    If no languages were given, 'en_us' is set by default.
+
+    :param args: The namespace containing the scripts arguments
+    :type args: :class:`argparse.Namespace`
+    """
     if not args.languages:
-        args.languages = input("# Add languages: ")
+        user_input = input("# Languages (pressing return sets 'en_us'): ")
+        args.languages = user_input if user_input else "en-us"
     if not args.filter:
-        args.filter = input("# Filter: ")
+        args.filter = input("# Filter (can be left empty): ")
     if not args.contact:
-        args.contact = input("# Contact: ")
+        args.contact = input("# Contact (minimum one email): ")
 
 def parse_cli(cliargs=None):
     """Parse CLI with :class:`argparse.ArgumentParser` and return parsed result.

@@ -236,12 +236,14 @@ def get_args(args):
     :param args: The namespace containing the scripts arguments
     :type args: :class:`argparse.Namespace`
     """
+    while not args.path:
+        args.path = input("# Path to the git repository: ")
     if not args.langs:
         user_input = input("# Languages (pressing return sets 'en_us'): ")
         args.langs = user_input if user_input else "en-us"
     if not args.filter:
         args.filter = input("# Filter (can be left empty): ")
-    if not args.contact:
+    while not args.contact:
         args.contact = input("# Contact (minimum one email): ")
 
 def parse_cli(cliargs=None):
@@ -268,6 +270,7 @@ def parse_cli(cliargs=None):
                         help="The contact email address",
                         )
     parser.add_argument("path",
+                        nargs='?',
                         metavar="PATH",
                         help="Path to the repository",
                         )
@@ -281,6 +284,9 @@ def parse_cli(cliargs=None):
                       "ru-ru").split(" ")
 
     # do some checks:
+    if not os.path.exists(args.path):
+        parser.error("Path does not exist: {!r}".format(args.path))
+
     args.langs = args.langs.replace("_", "-").lower().split(",")
     # check if given list has any unknown languages
     diff = set(args.langs).difference(LANGUAGES)

@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+
+<!-- Notes on the XML model:
+  1. The RNC file provides incomplete validation only, use docserv-stitch for
+     proper validation.
+  2. In the installed package, the XML model is at a different path, this
+     only works within the docserv Git repository. -->
 <?xml-model href="../../share/schema/config-validation.rnc" type="application/relax-ng-compact-syntax"?>
+
 <product productid="sample_product" schemaversion="0.9.10">
   <!-- ID can be used for build commands, HTML IDs, etc. -->
   <!-- lifecycle="unpublished"/"beta"/"supported"/"unsupported":

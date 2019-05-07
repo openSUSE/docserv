@@ -244,7 +244,7 @@ class DocservState:
             if myBIH.initialized == False:
                 self.abort_build_instruction(build_instruction['id'])
                 return
-            myBIH.generate_deliverables()
+            myBIH.generate_deliverables(thread_id)
             self.remove_scheduled_build_instruction(build_instruction['id'])
             with self.bih_dict_lock:
                 self.bih_dict[build_instruction['id']] = myBIH

@@ -97,7 +97,7 @@ def prettify(tree, indent="  "):
     return reparsed.toprettyxml(indent=indent)
 
 
-def generate_config(languages, git_url ,branches, version="0.9.10", contact=None):
+def generate_config(languages, default_lang, git_url, branches, version="0.9.10", contact=None):
     """Generate the configuration file.
 
     :param languages: The allowed languages
@@ -112,7 +112,6 @@ def generate_config(languages, git_url ,branches, version="0.9.10", contact=None
     """
 
     root = etree.Element("product", productid=FIXME, schemaversion=version)
-    etree.SubElement(root, "git", remote=git_url)
     etree.SubElement(root, "name").text = FIXME
     etree.SubElement(root, "shortname").text = FIXME
     maintainers = etree.SubElement(root, "maintainers")
@@ -132,7 +131,7 @@ def generate_config(languages, git_url ,branches, version="0.9.10", contact=None
         etree.SubElement(docset, "version").text = product_version
         builddocs = etree.SubElement(docset, "builddocs")
         # Optionally <git>, look at product/git
-        # etree.SubElement(builddocs, "git", remote=git_url)
+        etree.SubElement(builddocs, "git", remote=git_url)
 
         for language in languages:
             if language == "en-us":
@@ -229,20 +228,62 @@ def get_git_branches(path):
             result[branch_wo_origin] = []
     return result
 
-def get_args(args):
+
+def check_langs(langs, message, attempts = 3):
+    """Checks if langs were given, gives three input attempts
+
+    :param str langs: Language(s) to check
+    :param str message: Message to print
+    :param int attempts: User attempts to type in languges that validate
+    :return: list of checked and formatted language(s)
+    :rtype: list
+    """
+    attempts = 3
+    languages = ("en-us de-de fr-fr pt-br ja-jp zh-cn es-es "
+                      "it-it ko-kr hu-hu zh-tw cs-cz ar-ar pl-pl "
+                      "ru-ru").split(" ")
+    while attempts:
+        if not langs:
+            langs = input(message)
+        # format given langs, remove white space
+        langs = langs.replace("_", "-").strip().lower().split(",")
+        langs = [lang.strip() for lang in langs if not lang == '']
+        # create a diff from our list and the languages list from above
+        diff = set(langs).difference(languages)
+        if diff or not langs:
+            attempts -= 1
+            # reset langs because they're not good
+            langs = ""
+            print("Unknown language {} found.".format(diff))
+        else:
+            return langs
+    sys.exit("Expected one or more of these:\n"
+        "{}".format(", ".join(languages)))
+
+
+def check_args(args):
     """Checks if no argumets were set when running the script and asks for them.
-    If no languages were given, 'en_us' is set by default.
 
     :param args: The namespace containing the scripts arguments
     :type args: :class:`argparse.Namespace`
     """
-    while not args.path:
+    # checking path
+    while not args.path or not os.path.exists(args.path):
         args.path = input("# Path to the git repository: ")
-    if not args.langs:
-        user_input = input("# Languages (pressing return sets 'en_us'): ")
-        args.langs = user_input if user_input else "en-us"
+    # checking languages
+    lang_message = "# Languages (separated by comma): "
+    args.langs = check_langs(args.langs, lang_message)
+    # checking default language
+    default_message = "# Default language: "
+    args.default_lang = check_langs(args.default_lang, default_message)[0]
+    # insert default_lang at first position:
+    if args.default_lang in args.langs:
+        args.langs.remove(args.default_lang)
+    args.langs.insert(0, args.default_lang)
+    # checking filter
     if not args.filter:
         args.filter = input("# Filter (can be left empty): ")
+    # checking contact
     while not args.contact:
         args.contact = input("# Contact (minimum one email): ")
 
@@ -263,6 +304,10 @@ def parse_cli(cliargs=None):
                               "Upper and lower case is irrelevant."
                               ),
                         )
+    parser.add_argument("-d", "--default",
+                        dest="default_lang",
+                        help="Default language",
+                        )
     parser.add_argument("-f", "--filter",
                         help="Expects DC files which to focus on",
                         )
@@ -277,29 +322,8 @@ def parse_cli(cliargs=None):
 
     args = parser.parse_args(args=cliargs)
 
-    get_args(args)
-
-    LANGUAGES = ("en-us de-de fr-fr pt-br ja-jp zh-cn es-es "
-                      "it-it ko-kr hu-hu zh-tw cs-cz ar-ar pl-pl "
-                      "ru-ru").split(" ")
-
     # do some checks:
-    if not os.path.exists(args.path):
-        parser.error("Path does not exist: {!r}".format(args.path))
-
-    args.langs = args.langs.replace("_", "-").lower().split(",")
-    # check if given list has any unknown languages
-    diff = set(args.langs).difference(LANGUAGES)
-    if diff:
-        parser.error("Unknown language {!r} found.\n"
-                     "Expected one or more of these:\n"
-                     "{}".format(diff, ", ".join(LANGUAGES))
-                     )
-    ## TODO: discuss with Stefan about this.
-    # Push en-us at first position:
-    if "en-us" in args.langs:
-        args.langs.remove('en-us')
-        args.langs.insert(0, 'en-us')
+    check_args(args)
     return args
 
 
@@ -311,5 +335,5 @@ if __name__ == "__main__":
     dc_files = get_dc_files(args.path, branches, filter_dc=args.filter)
     # print(dc_files)
     git_url = get_origin_url(args.path)
-    generate_config(args.langs, git_url ,branches, contact=args.contact)
+    generate_config(args.langs, args.default_lang, git_url ,branches, contact=args.contact)
     sys.exit(0)

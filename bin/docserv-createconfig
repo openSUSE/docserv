@@ -188,9 +188,14 @@ def get_dc_files(path, branches, filter_dc=None):
     """
     repo = pygit2.Repository(path)
     tmp = branches
-    for branch in list(branches):
-        foo = repo.lookup_branch(branch)
-        repo.checkout(foo)
+    # save current branch
+    curr_branch = repo.head.shorthand
+    curr_ref = repo.lookup_branch(curr_branch, pygit2.GIT_BRANCH_ALL)
+
+    for name in branches:
+        branch = repo.branches.remote["origin/" + name]
+        ref = repo.lookup_branch(branch.branch_name, pygit2.GIT_BRANCH_REMOTE)
+        repo.checkout(ref)
         result = []
         for f in os.listdir(path):
             if os.path.isfile(os.path.join(path, f)):
@@ -200,7 +205,9 @@ def get_dc_files(path, branches, filter_dc=None):
                 else:
                     if f.startswith("DC-"):
                         result.append(f)
-        tmp[branch] = sorted(result)
+        tmp[name] = sorted(result)
+    # change back to initial branch
+    repo.checkout(curr_ref)
     return tmp
 
 
@@ -217,7 +224,7 @@ def get_git_branches(path):
     """
     repo = pygit2.Repository(path)
     result = {}
-    for branch in sorted(repo.listall_branches(pygit2.GIT_BRANCH_ALL)):
+    for branch in sorted(repo.listall_branches(pygit2.GIT_BRANCH_REMOTE)):
         branch_wo_origin = branch.replace("origin/", "")
         if branch.startswith('maintenance/') or branch.startswith('trans/'):
             result[branch] = []

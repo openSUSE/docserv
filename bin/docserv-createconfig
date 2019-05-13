@@ -27,6 +27,7 @@ import re
 import sys
 import pygit2
 from xml.etree import cElementTree as etree
+from contextlib import contextmanager
 
 FIXME = "FIXME"
 
@@ -175,41 +176,71 @@ def generate_config(languages, default_lang, git_url, branches, version="0.9.10"
         fh.write(prettify(tree))
     print("Done.")
 
+@contextmanager
+def switchbranch(repo):
+    """Context manager to checkout branches
+
+    :param repo: the repo to the Git repository
+    :type repo: :class:`pygit2.Repository`
+    :return: function, see: checkout_branch
+    :rtype: function reference
+    """
+    def checkout_branch(branches):
+        """Generator to iterate over branches, which checks out the current
+            branch automatically
+
+        :param list branches: the list of branches as strings
+        :yield: current branch as string
+        """
+        for branch in branches:
+            remote_branch = repo.branches.remote["origin/" + branch]
+            ref_branch = repo.lookup_branch(remote_branch.branch_name, pygit2.GIT_BRANCH_REMOTE)
+            repo.checkout(ref_branch)
+            yield branch
+    # save initial branch
+    initial_branch = repo.head.shorthand
+    initial_ref = repo.lookup_branch(initial_branch, pygit2.GIT_BRANCH_ALL)
+    try:
+        yield checkout_branch
+    finally:
+        # change back to initial branch
+        repo.checkout(initial_ref)
 
 def get_dc_files(path, branches, filter_dc=None):
-    """Collect all DC files in branches.
+    """Collect all DC files in all branches.
 
     :param str path: the path to the Git repository
     :param dict branches: A dictionary with lists as keys like
          {'branch1': [], 'branch2': [], ...}
     :param filter_dc: filter
-    :return: a dictionary with all DC files found in this branch
+    :return: a dictionary with all DC files found in each branch
     :rtype: dict
     """
     repo = pygit2.Repository(path)
     tmp = branches
-    # save current branch
-    curr_branch = repo.head.shorthand
-    curr_ref = repo.lookup_branch(curr_branch, pygit2.GIT_BRANCH_ALL)
-
-    for name in branches:
-        branch = repo.branches.remote["origin/" + name]
-        ref = repo.lookup_branch(branch.branch_name, pygit2.GIT_BRANCH_REMOTE)
-        repo.checkout(ref)
-        result = []
-        for f in os.listdir(path):
-            if os.path.isfile(os.path.join(path, f)):
-                if filter_dc is not None:
-                    if f.startswith("DC-") and filter_dc in f:
-                        result.append(f)
-                else:
-                    if f.startswith("DC-"):
-                        result.append(f)
-        tmp[name] = sorted(result)
-    # change back to initial branch
-    repo.checkout(curr_ref)
+    with switchbranch(repo) as checkout_branch:
+        for branch in checkout_branch(branches):
+            tmp[branch] = collect_dc_files(path, filter_dc)
     return tmp
 
+def collect_dc_files(path, filter_dc):
+    """Collect all DC files in current branch
+
+    :param str path: the path to the Git repository
+    :param str filter_dc: filter
+    :return: a list with all DC files found in this branch
+    :rtype: list
+    """
+    result = []
+    for f in os.listdir(path):
+        if os.path.isfile(os.path.join(path, f)):
+            if filter_dc is not None:
+                if f.startswith("DC-") and filter_dc in f:
+                    result.append(f)
+            else:
+                if f.startswith("DC-"):
+                    result.append(f)
+    return sorted(result)
 
 def get_git_branches(path):
     """Return all the branches of a Git repository. Replace "origin/" with ""

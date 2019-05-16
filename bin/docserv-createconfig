@@ -208,43 +208,29 @@ def switchbranch(repo):
         # change back to initial branch
         repo.checkout(initial_ref)
 
-def get_dc_files(path, branches, filter_dc=None):
-    """Collect all DC files in all branches.
+def get_deliverables(path, branches, filter_dc=None):
+    """Collect all DC files and subdeliverables in all branches.
 
     :param str path: the path to the Git repository
     :param dict branches: A dictionary with lists as keys like
          {'branch1': [], 'branch2': [], ...}
     :param filter_dc: filter
-    :return: a dictionary with all DC files found in each branch
-    :rtype: dict
+    :return: a tuple with two dictionaries for each branch:
+        first dictionary contains all DC files
+        second dictionary contains all subdeliverables
+    :rtype: tuple(dict, dict)
     """
     repo = pygit2.Repository(path)
-    tmp = branches
+    dc_files = branches
+    subdeliverables = {}
     with switchbranch(repo) as checkout_branch:
         for branch in checkout_branch(branches):
             path2git = path + "/en" if "en" in os.listdir(path) else path
-            tmp[branch] = collect_dc_files(path2git, filter_dc)
-    return tmp
-
-def get_subdeliverables(path, dc_files):
-    """Collect all subdeliverables from DC-*-all files in all branches.
-
-    :param str path: the path to the Git repository
-    :param dict dc_files: A dictionary with lists as keys like
-         {'branch1': [], 'branch2': [], ...}
-    :return: a dictionary with all subdeliverables found in each branch with
-         lists as keys like {'branch1DC-file1-all': [], 'branch2DC-file2-all': [], ...}
-    :rtype: dict
-    """
-    result = {}
-    repo = pygit2.Repository(path)
-    with switchbranch(repo) as checkout_branch:
-        for branch in checkout_branch(branches):
-            path2git = path + "/en" if "en" in os.listdir(path) else path
+            dc_files[branch] = collect_dc_files(path2git, filter_dc)
             for dc_file in dc_files[branch]:
                 if dc_file.endswith("-all"):
-                    result[branch + dc_file] = collect_subdeliverables(path2git, dc_file)
-    return result
+                    subdeliverables[branch + dc_file] = collect_subdeliverables(path2git, dc_file)
+    return dc_files, subdeliverables
 
 def collect_subdeliverables(path, dc_file):
     """Collect all subdeliverables from given DC-file
@@ -292,13 +278,9 @@ def collect_dc_files(path, filter_dc):
     """
     result = []
     for f in os.listdir(path):
-        if os.path.isfile(os.path.join(path, f)):
-            if filter_dc is not None:
-                if f.startswith("DC-") and filter_dc in f:
-                    result.append(f)
-            else:
-                if f.startswith("DC-"):
-                    result.append(f)
+        if os.path.isfile(os.path.join(path, f)) and f.startswith("DC-"):
+            if filter_dc is None or filter_dc in f:
+                result.append(f)
     return sorted(result)
 
 def get_git_branches(path):
@@ -427,8 +409,7 @@ if __name__ == "__main__":
     print(args)
 
     branches = get_git_branches(args.path)
-    dc_files = get_dc_files(args.path, branches, filter_dc=args.filter)
-    subdeliverables = get_subdeliverables(args.path, dc_files)
+    dc_files, subdeliverables = get_deliverables(args.path, branches, filter_dc=args.filter)
     git_url = get_origin_url(args.path)
     generate_config(args, git_url ,branches, subdeliverables, contact=args.contact)
     sys.exit(0)

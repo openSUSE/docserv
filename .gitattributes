@@ -2,11 +2,13 @@
 /*~ export-ignore
 /.git export-ignore
 /.git/* export-ignore
-/.gitattributes export-ignore
 /.github export-ignore
-/.github/* export-ignore
-/.gitignore export-ignore
 /.venv export-ignore
+/.github/* export-ignore
+/.gitattributes export-ignore
+/.gitignore export-ignore
+/.versionrc export-ignore
 /cache export-ignore
-/sendbuildinstruction.sh
-/server.conf
+/sendbuildinstruction.sh export-ignore
+/server.conf export-ignore
+/versionbump export-ignore

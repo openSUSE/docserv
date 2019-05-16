@@ -26,7 +26,8 @@ import os
 import re
 import sys
 import pygit2
-from xml.etree import cElementTree as etree
+from lxml import etree
+from xml.dom import minidom
 from contextlib import contextmanager
 
 FIXME = "FIXME"
@@ -78,7 +79,6 @@ def get_version(name):
             return version
     return name
 
-
 def prettify(tree, indent="  "):
     """Return a pretty-printed XML string for the element.
 
@@ -91,34 +91,33 @@ def prettify(tree, indent="  "):
     :return: the indented string
     :rtype: str | byte
     """
-    from xml.dom import minidom
-    from xml.etree import ElementTree
-    rough_string = ElementTree.tostring(tree.getroot(), encoding='UTF-8')
+    rough_string = etree.tostring(tree.getroot(), encoding='UTF-8')
     reparsed = minidom.parseString(rough_string)
     return reparsed.toprettyxml(indent=indent)
 
-
-def generate_config(languages, default_lang, git_url, branches, version="0.9.10", contact=None):
+def generate_config(args, git_url, branches, subdeliverables, version="0.9.10", contact=None):
     """Generate the configuration file.
 
-    :param languages: The allowed languages
-    :type languages: list
+    :param args: The namespace containing the scripts arguments
+    :param str git_url: The repo origin url
 
     :param branches: The branch name and DC files on it, for example:
                {'develop': ['DC-FOO-all', 'DC-FOO-install-quick'], ... }
     :type branches: dict
 
-    :param str schemaversion: the schema version to use
+    :param dict subdeliverables: a dictionary with lists as keys like:
+               {'DC-file1-all': ['book.one', 'art.two'], 'DC-file2-all': [], ...}
+
+    :param str version: the schema version to use
     :param str contact: the contact email address
     """
-
     root = etree.Element("product", productid=FIXME, schemaversion=version)
     etree.SubElement(root, "name").text = FIXME
     etree.SubElement(root, "shortname").text = FIXME
     maintainers = etree.SubElement(root, "maintainers")
     etree.SubElement(maintainers, "contact").text = FIXME if not contact else contact
 
-    for language in languages:
+    for language in args.langs:
         description = etree.SubElement(root, "desc", default="0", lang=language)
         etree.SubElement(description, "p").text = FIXME
 
@@ -134,7 +133,7 @@ def generate_config(languages, default_lang, git_url, branches, version="0.9.10"
         # Optionally <git>, look at product/git
         etree.SubElement(builddocs, "git", remote=git_url)
 
-        for language in languages:
+        for language in args.langs:
             if language == "en-us":
                 lang = etree.SubElement(builddocs, "language",
                                         default="1", lang="en-us")
@@ -153,6 +152,9 @@ def generate_config(languages, default_lang, git_url, branches, version="0.9.10"
                              'single-html': "0" if dc_all_file else "1",
                              }
                     etree.SubElement(deliverable, "format", **attrs)
+                    if dc_file.endswith("-all"):
+                        for sub in subdeliverables[branch + dc_file]:
+                            etree.SubElement(deliverable, "subdeliverable", ).text = sub
             else:
                 lang = etree.SubElement(builddocs, "language", lang=language)
                 if branch.startswith("maintenance/") or branch.startswith("maint/"):
@@ -220,8 +222,65 @@ def get_dc_files(path, branches, filter_dc=None):
     tmp = branches
     with switchbranch(repo) as checkout_branch:
         for branch in checkout_branch(branches):
-            tmp[branch] = collect_dc_files(path, filter_dc)
+            path2git = path + "/en" if "en" in os.listdir(path) else path
+            tmp[branch] = collect_dc_files(path2git, filter_dc)
     return tmp
+
+def get_subdeliverables(path, dc_files):
+    """Collect all subdeliverables from DC-*-all files in all branches.
+
+    :param str path: the path to the Git repository
+    :param dict dc_files: A dictionary with lists as keys like
+         {'branch1': [], 'branch2': [], ...}
+    :return: a dictionary with all subdeliverables found in each branch with
+         lists as keys like {'branch1DC-file1-all': [], 'branch2DC-file2-all': [], ...}
+    :rtype: dict
+    """
+    result = {}
+    repo = pygit2.Repository(path)
+    with switchbranch(repo) as checkout_branch:
+        for branch in checkout_branch(branches):
+            path2git = path + "/en" if "en" in os.listdir(path) else path
+            for dc_file in dc_files[branch]:
+                if dc_file.endswith("-all"):
+                    result[branch + dc_file] = collect_subdeliverables(path2git, dc_file)
+    return result
+
+def collect_subdeliverables(path, dc_file):
+    """Collect all subdeliverables from given DC-file
+
+    :param str path: the path to the Git repository
+    :param str dc_file: the DC-file to look into
+    :return: a list with all subdeliverables found after looking in this DC-file
+    :rtype: list
+    """
+    result = []
+    main = ""
+    # example: ('MAIN', '=', '"', 'MAIN.susestorage.xml', '"')
+    #        ('ROOTID', '=', None, 'book.storage.admin', None)
+    regex = r'([A-Z]+)(=)("|\')?([\w\.\-]+)("|\')?'
+    with open(os.path.join(path, dc_file), "r") as f:
+        for line in f:
+            match = re.match(regex, line)
+            if match:
+                if match.group(1) == "MAIN":
+                    main = match.group(4)
+    if main:
+        try:
+            root = etree.parse(os.path.join(path + "/xml", main))
+            namespaces = dict(d="http://docbook.org/ns/docbook", xi="http://www.w3.org/2001/XInclude")
+            xpaths = "/set/xi:include|/set/book/xi:include|" \
+                     "/d:set/xi:include|/d:set/d:book/xi:include"
+            xi_includes = root.xpath(xpaths, namespaces=namespaces)
+            for xi in xi_includes:
+                filename = xi.attrib.get("href")
+                fileroot = etree.parse(os.path.join(path + "/xml", filename))
+                xmlid = fileroot.xpath("/d:*/@xml:id|/*/@id", namespaces=namespaces)
+                if xmlid:
+                    result.append(xmlid[0])
+        except etree.XMLSyntaxError as e:
+            print("!!! Exception:", e)
+    return result
 
 def collect_dc_files(path, filter_dc):
     """Collect all DC files in current branch
@@ -262,10 +321,10 @@ def get_git_branches(path):
         elif branch_wo_origin == "develop" \
              or branch_wo_origin == "master" \
              or branch.startswith('origin/trans/') \
+             or branch.startswith('origin/maint/') \
              or branch.startswith('origin/maintenance/'):
             result[branch_wo_origin] = []
     return result
-
 
 def check_langs(langs, message, attempts = 3):
     """Checks if langs were given, gives three input attempts
@@ -297,7 +356,6 @@ def check_langs(langs, message, attempts = 3):
             return langs
     sys.exit("Expected one or more of these:\n"
         "{}".format(", ".join(languages)))
-
 
 def check_args(args):
     """Checks if no argumets were set when running the script and asks for them.
@@ -364,14 +422,13 @@ def parse_cli(cliargs=None):
     check_args(args)
     return args
 
-
 if __name__ == "__main__":
     args = parse_cli()
     print(args)
 
     branches = get_git_branches(args.path)
     dc_files = get_dc_files(args.path, branches, filter_dc=args.filter)
-    # print(dc_files)
+    subdeliverables = get_subdeliverables(args.path, dc_files)
     git_url = get_origin_url(args.path)
-    generate_config(args.langs, args.default_lang, git_url ,branches, contact=args.contact)
+    generate_config(args, git_url ,branches, subdeliverables, contact=args.contact)
     sys.exit(0)

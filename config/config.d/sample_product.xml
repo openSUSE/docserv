@@ -91,24 +91,31 @@
 
       </language>
 
-      <!-- For translations, we assume the same deliverables as for the
-      original language, exceptions are noted within the <untranslated>
-      element. However, we probably still need to build these untranslated deliverables. -->
-      <language lang="de-de">
+      <language lang="de-de" translation-type="negative-list">
         <branch>maint/sle15</branch>
         <subdir>sles/de</subdir>
-        <untranslated>
-          <deliverable>
-            <dc>DC-SLES-all</dc>
-            <subdeliverable>book.gnomeuser</subdeliverable>
-          </deliverable>
-          <deliverable>
-            <dc>DC-SLES-gnomeuser</dc>
-          </deliverable>
-        </untranslated>
+        <deliverable>
+          <dc>DC-SLES-all</dc>
+          <subdeliverable>book.gnomeuser</subdeliverable>
+        </deliverable>
+        <deliverable>
+          <dc>DC-SLES-gnomeuser</dc>
+        </deliverable>
       </language>
 
-      <language lang="fr-fr">
+      <language lang="zh-cn" translation-type="positive-list">
+        <branch>maint/sle15</branch>
+        <subdir>sles/zh-cn</subdir>
+        <deliverable>
+          <dc>DC-SLES-all</dc>
+          <subdeliverable>book.admin</subdeliverable>
+        </deliverable>
+        <deliverable>
+          <dc>DC-SLES-admin</dc>
+        </deliverable>
+      </language>
+
+      <language lang="fr-fr" translation-type="full">
         <branch>maint/sle15</branch>
         <subdir>sles/fr</subdir>
       </language>

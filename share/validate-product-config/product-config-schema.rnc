@@ -142,8 +142,9 @@ ds.product =
     ds.name,
     ds.shortname?,
     ds.maintainers,
-    ds.defaultdesc,
-    ds.otherdesc*,
+    ds.category*,
+    ds.desc_default,
+    ds.desc_translation*,
     ds.docset+
   }
 
@@ -170,18 +171,38 @@ ds.contact =
     ds.type.email
   }
 
-ds.defaultdesc =
+ds.desc_default =
   element desc {
     attribute lang { ds.type.lang },
     attribute default { ds.true.enum },
     ds.htmlblock+
   }
 
-ds.otherdesc =
+ds.desc_translation =
   element desc {
     attribute lang { ds.type.lang },
     attribute default { ds.false.enum }?,
     ds.htmlblock*
+  }
+
+ds.category =
+  element category {
+    attribute categoryid { ds.type.id }?,
+    ds.categoryname_default,
+    ds.categoryname_translation*
+  }
+
+ds.categoryname_default =
+  element name {
+    attribute lang { ds.type.lang },
+    attribute default { ds.true.enum },
+    text
+  }
+ds.categoryname_translation =
+  element name {
+    attribute lang { ds.type.lang },
+    attribute default { ds.false.enum }?,
+    text
   }
 
 
@@ -246,7 +267,10 @@ ds.language_default =
     attribute default { ds.true.enum },
     ds.branch,
     ds.subdir?,
-    ds.deliverable+
+    (
+     ds.deliverable |
+     ds.deliverable_subdeliverable
+    )+
   }
 ds.language_translation_list =
   element language {
@@ -282,11 +306,23 @@ ds.deliverable =
     attribute remarks { xsd:boolean }?,
     attribute draft { xsd:boolean }?,
     attribute meta { xsd:boolean }?,
+    attribute category { ds.type.id }?,
+    ds.dc,
+    ds.format+,
+    ds.styleroot?,
+    ds.param*
+  }
+
+ds.deliverable_subdeliverable =
+  element deliverable {
+    attribute remarks { xsd:boolean }?,
+    attribute draft { xsd:boolean }?,
+    attribute meta { xsd:boolean }?,
     ds.dc,
     ds.format+,
     ds.styleroot?,
     ds.param*,
-    ds.subdeliverable*
+    ds.subdeliverable+
   }
 
 ds.dc =
@@ -317,6 +353,7 @@ ds.param =
 
 ds.subdeliverable =
   element subdeliverable {
+    attribute category { ds.type.id }?,
     ds.type.id
   }
 
@@ -335,6 +372,7 @@ ds.link =
   element link {
     attribute href { xsd:anyURI },
     attribute lang { ds.type.lang | "all" }?,
+    attribute category { ds.type.id }?,
     (ds.htmlinline |
     text)*
   }

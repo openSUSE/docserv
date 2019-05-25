@@ -147,7 +147,7 @@ for file in *.xml; do
 done
 
 if [[ "$issuelist" ]]; then
-  out "The following issues occured when validating:$issuelist\n"
+  out "The following issues occurred when validating:$issuelist\n"
 fi
 
 outfile='<?xml version="1.0" encoding="UTF-8"?>\n<docservconfig>\n\n'

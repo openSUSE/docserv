@@ -5,7 +5,7 @@
      proper validation.
   2. In the installed package, the XML model is at a different path, this
      only works within the docserv Git repository. -->
-<?xml-model href="../../share/schema/config-validation.rnc" type="application/relax-ng-compact-syntax"?>
+<?xml-model href="../../share/validate-product-config/product-config-schema.rnc" type="application/relax-ng-compact-syntax"?>
 
 <product productid="sample_product" schemaversion="0.9.10">
   <!-- ID can be used for build commands, HTML IDs, etc. -->

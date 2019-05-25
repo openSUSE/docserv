@@ -56,7 +56,7 @@ Parts of Docserv² that can be run individually:
      product (see below)
   * `docserv-stitch`: Validate the Docserv² XML configuration and merge it into
     a single big XML file (see `--help`).
-  * `docserv-buildoverview`: Build the overview HTML pages for Docserv²
+  * `docserv-build-navigation`: Build the navigation HTML pages for Docserv²
     (see `--help`).
 
 

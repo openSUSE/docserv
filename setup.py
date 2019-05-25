@@ -19,7 +19,7 @@
 
 
 from glob import glob
-from os.path import basename, dirname, join, splitext
+from os.path import basename, dirname, join as joinpath, splitext
 
 from setuptools import find_packages, setup
 
@@ -33,17 +33,23 @@ setup(
             'docserv = docserv.docserv:main',
         ]
     },
-    scripts=['bin/docserv-stitch', 'bin/docserv-dirs', 'bin/docserv-createconfig', 'bin/docserv-buildoverview'],
+    scripts=['bin/docserv-stitch', 'bin/docserv-dirs', 'bin/docserv-createconfig', 'bin/docserv-build-navigation', 'bin/docserv-dchash'],
     install_requires=[],
     data_files=[
-        ('/etc/docserv/', ['config/docserv.ini']),
-        ('/etc/docserv/config.d/', ['config/config.d/sample_product.xml']),
-        ('/etc/docserv/templates/', ['config/templates/template.html']),
-        ('/etc/docserv/templates/', ['config/templates/translation.xml']),
-        ('/etc/docserv/templates/res/', ['config/templates/res/style.css']),
-        ('/usr/share/docserv/schema/', ['share/schema/config-validation.rnc']),
-        ('/usr/share/docserv/xslt/', ['share/xslt/positive-config.xsl']),
-        ('/usr/share/docserv/xslt/', ['share/xslt/buildoverview.xsl']),
+        ('/usr/share/docserv/example/', ['config/docserv.ini']),
+        ('/usr/share/docserv/example/config/config.d/', glob('config/config.d/sample_product.xml')),
+        # template can be .html or .php (and potentially more in the future)
+        ('/usr/share/docserv/example/template/', glob('config/templates/template.*')),
+        ('/usr/share/docserv/example/template/', ['config/templates/translation.xml']),
+        # will likely contain .css and .js and perhaps imagery of some sort
+        ('/usr/share/docserv/example/template/res/', glob('config/templates/res/*')),
+        ('/usr/share/docserv/validate-product-config/', ['share/validate-product-config/product-config-schema.rnc']),
+        # there are bound to be more checks over time in here and they may include XSLT-based ones
+        ('/usr/share/docserv/validate-product-config/checks/', glob('share/validate-product-config/checks/check-*.sh')),
+        ('/usr/share/docserv/validate-product-config/checks/', glob('share/validate-product-config/checks/check-*.xsl')),
+        # both of these currently contain a single .xsl file but there may be more in the future
+        ('/usr/share/docserv/simplify-product-config/', glob('share/simplify-product-config/*.xsl')),
+        ('/usr/share/docserv/build-navigation/',  glob('share/build-navigation/*.xsl')),
         ('/usr/lib/systemd/system/', ['systemd/docserv@.service']),
     ],
     author="SUSE Documentation Team",

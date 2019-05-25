@@ -5,8 +5,8 @@
 # Arguments (in order of appearance):
 # --valid-languages="en-us ..."   # Space-separated list of valid language codes
 #                                 # (optional)
-# --make-positive                 # Turn translation document blacklist into
-#                                 # whitelist (optional)
+# --simplify                      # Simplify user-generated productconfig so the
+#                                 # docserv daemon can use it (optional)
 # INPUT_DIR                       # Directory with config files
 # OUTPUT_FILE                     # Output file name (parent directory must exist)
 #
@@ -43,13 +43,13 @@ starlet='xmlstarlet'
 stacksize=${stacksize:-"-Xss4096K"}
 java_flags="-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=org.apache.xerces.parsers.XIncludeParserConfiguration"
 
-schema_file=$share_dir/schema/config-validation.rnc
-positive_xslt_file=$share_dir/xslt/positive-config.xsl
+schema_file=$share_dir/validate-product-config/product-config-schema.rnc
+simplify_stylesheet=$share_dir/simplify-product-config/simplify.xsl
 
 [[ ! -f $schema_file ]] && out "Schema $schema_file does not exist.$(readme_message)"
-[[ ! -f $positive_xslt_file ]] && out "Schema $positive_xslt_file does not exist.$(readme_message)"
+[[ ! -f $simplify_stylesheet ]] && out "Stylesheet $simplify_stylesheet does not exist.$(readme_message)"
 
-make_positive=0
+simplify_config=0
 valid_languages=""
 unknown=""
 input_dir=""
@@ -61,8 +61,8 @@ for i in "$@"
       -h|--help)
         app_help
       ;;
-      --make-positive)
-        make_positive=1
+      --simplify)
+        simplify_config=1
       ;;
       --valid-languages=*)
         valid_languages=" ${i#*=}"
@@ -203,8 +203,8 @@ uniqueproductids=$(echo -e "$productids" | sort -u)
 cd - >/dev/null
 
 
-if [[ $make_positive == 1 ]]; then
-  echo -e "$outfile" | xsltproc $positive_xslt_file - > $output_file
+if [[ $simplify_config == 1 ]]; then
+  echo -e "$outfile" | xsltproc $simplify_stylesheet - > $output_file
 else
   echo -e "$outfile" > $output_file
 fi

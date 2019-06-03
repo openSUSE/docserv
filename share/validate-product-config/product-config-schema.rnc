@@ -8,7 +8,7 @@ start = ds.product
 
 # CONSTANTS
 
-ds.schema.version = "0.9.10"
+ds.schema.version = "1.1"
 
 
 # TYPES

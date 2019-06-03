@@ -40,7 +40,7 @@ xmllint='xmllint'
 jing='jing'
 starlet='xmlstarlet'
 
-stylesheet=$share_dir/xslt/buildoverview.xsl
+stylesheet=$share_dir/build-navigation/build-navigation.xsl
 [[ ! -f $stylesheet ]] && out "Stylesheet $stylesheet does not exist.$(readme_message)"
 
 magic_comment='<!--#include docserv_content-->'
@@ -127,7 +127,7 @@ if [[ ! "$ui_translation" ]]; then
   ui_translation=$default_ui_language
 fi
 
-temp_dir=$(mktemp -d /tmp/docserv-buildoverview-XXXXXXXX)
+temp_dir=$(mktemp -d /tmp/docserv-build-navigation-XXXXXXXX)
 intermediate_output=$temp_dir/page.html
 cache_file=$temp_dir/cache.xml
 

@@ -8,7 +8,7 @@
 
 
   <xsl:template match="comment()|processing-instruction()"/>
-
+  <xsl:template match="language/@translation-type"/>
 
   <xsl:template match="*" priority="-1">
     <xsl:element name="{local-name(.)}">
@@ -35,22 +35,46 @@
     </positivedocservconfig>
   </xsl:template>
 
+  <xsl:template match="language[not(@default) or @default='false' or @default='0'][@translation-type='positive-list']">
+    <language>
+      <xsl:apply-templates select="@*|*[not(self::deliverable)]"/>
+      <xsl:apply-templates select="deliverable" mode="find_extra_elements"/>
+    </language>
+  </xsl:template>
 
-  <xsl:template match="language[not(@default) or @default='false' or @default='0']">
-    <xsl:variable name="blacklist">
-      <xsl:apply-templates select="untranslated/deliverable" mode="create-blacklist-param"/>
+  <xsl:template match="deliverable" mode="find_extra_elements">
+    <xsl:variable name="current_dc" select="dc"/>
+    <deliverable>
+      <xsl:apply-templates select="@*"/>
+      <xsl:apply-templates select="dc"/>
+      <xsl:apply-templates select="parent::language/preceding-sibling::language[@default='true' or @default='1']/deliverable[dc = $current_dc]/*[not(self::dc or self::subdeliverable)]"/>
+      <xsl:apply-templates select="subdeliverable"/>
+    </deliverable>
+  </xsl:template>
+
+
+  <xsl:template match="language[not(@default) or @default='false' or @default='0'][@translation-type='full']">
+    <language>
+      <xsl:apply-templates select="@*|*"/>
+      <xsl:apply-templates select="preceding-sibling::language[@default='true' or @default='1']/deliverable"/>
+    </language>
+  </xsl:template>
+
+
+  <xsl:template match="language[not(@default) or @default='false' or @default='0'][@translation-type='negative-list']">
+    <xsl:variable name="negative_list">
+      <xsl:apply-templates select="deliverable" mode="create_negative_list"/>
     </xsl:variable>
     <language>
       <xsl:apply-templates select="@*|*[not(self::deliverable)]"/>
-      <xsl:apply-templates select="preceding-sibling::language[@default='true' or @default='1']/deliverable" mode="positize">
-        <xsl:with-param name="blacklist" select="$blacklist"/>
+      <xsl:apply-templates select="preceding-sibling::language[@default='true' or @default='1']/deliverable" mode="apply_list">
+        <xsl:with-param name="list" select="$negative_list"/>
         <xsl:with-param name="langcode" select="@lang"/>
       </xsl:apply-templates>
     </language>
   </xsl:template>
 
-
-  <xsl:template match="deliverable" mode="create-blacklist-param">
+  <xsl:template match="deliverable" mode="create_negative_list">
     <xsl:param name="current-dc" select="dc"/>
     <xsl:variable name="add-to-list">
       <xsl:choose>
@@ -87,13 +111,13 @@
   </xsl:template>
 
 
-  <xsl:template match="deliverable" mode="positize">
+  <xsl:template match="deliverable" mode="apply_list">
     <xsl:param name="blacklist" select="''"/>
     <xsl:param name="langcode" select="''"/>
     <xsl:if test="not(contains(concat(' ', $blacklist, ' '), concat(' ', dc, ' ')))">
       <deliverable>
         <xsl:apply-templates select="@*|*[not(self::subdeliverable or self::untranslated)]"/>
-        <xsl:apply-templates select="subdeliverable" mode="positize">
+        <xsl:apply-templates select="subdeliverable" mode="apply_list">
           <xsl:with-param name="langcode" select="$langcode"/>
         </xsl:apply-templates>
       </deliverable>
@@ -101,7 +125,7 @@
   </xsl:template>
 
 
-  <xsl:template match="subdeliverable" mode="positize">
+  <xsl:template match="subdeliverable" mode="apply_list">
     <xsl:param name="langcode" select="''"/>
     <xsl:variable name="current-dc" select="preceding-sibling::dc[1]"/>
     <xsl:variable name="current-subdeliverable" select="."/>

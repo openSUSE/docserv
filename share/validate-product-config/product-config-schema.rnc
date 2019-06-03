@@ -8,7 +8,7 @@ start = ds.product
 
 # CONSTANTS
 
-ds.schema.version = "0.9.10"
+ds.schema.version = "1.1"
 
 
 # TYPES
@@ -138,11 +138,13 @@ ds.product =
     # of these ID per productconfig file.
     attribute productid { ds.type.id },
     attribute schemaversion { ds.schema.version },
+    attribute navigation-visible { "visible" | "hidden" }?,
     ds.name,
     ds.shortname?,
     ds.maintainers,
-    ds.defaultdesc,
-    ds.otherdesc*,
+    ds.category*,
+    ds.desc_default,
+    ds.desc_translation*,
     ds.docset+
   }
 
@@ -169,18 +171,38 @@ ds.contact =
     ds.type.email
   }
 
-ds.defaultdesc =
+ds.desc_default =
   element desc {
     attribute lang { ds.type.lang },
     attribute default { ds.true.enum },
     ds.htmlblock+
   }
 
-ds.otherdesc =
+ds.desc_translation =
   element desc {
     attribute lang { ds.type.lang },
     attribute default { ds.false.enum }?,
     ds.htmlblock*
+  }
+
+ds.category =
+  element category {
+    attribute categoryid { ds.type.id }?,
+    ds.categoryname_default,
+    ds.categoryname_translation*
+  }
+
+ds.categoryname_default =
+  element name {
+    attribute lang { ds.type.lang },
+    attribute default { ds.true.enum },
+    text
+  }
+ds.categoryname_translation =
+  element name {
+    attribute lang { ds.type.lang },
+    attribute default { ds.false.enum }?,
+    text
   }
 
 
@@ -190,6 +212,7 @@ ds.docset =
   element docset {
     attribute setid { ds.type.id },
     attribute lifecycle { "unpublished" | "beta" | "supported" | "unsupported" },
+    attribute navigation-visible { "visible" | "hidden" }?,
     # To allow for name changes between versions, as in the example of SUSE
     # Cloud -> SUSE OpenStack Cloud: optional ds.name here
     ds.name?,
@@ -209,8 +232,11 @@ ds.version =
 ds.builddocs =
   element builddocs {
     ds.git,
-    ds.defaultlanguage,
-    ds.otherlanguage*
+    ds.language_default,
+    (
+     ds.language_translation_list |
+     ds.language_translation_full
+    )*
   }
 
 ds.git =
@@ -219,21 +245,49 @@ ds.git =
     empty
   }
 
-ds.defaultlanguage =
+# About @translation-type:
+# * "list-positive" creates a list of documents that will be built for the
+#   translation in question. This is advantageous in the common case that only
+#   a small subset of documents are translated into a particular language.
+# * "list-negative" creates a list of documents that are not built. This is
+#   advantageous if most documents for a product are translated (which does
+#   not currently appear to happen for real-life SUSE products).
+# * "full" means there is a full translation in this language for
+#   this docset
+
+# FIXME: Do we want to continue to support "negative-list"? While it is already
+#   handled and Eli has written a bunch configuration using it, the handling
+#   is more complicated than for "positive-list". It might also become
+#   confusing to see both types of translations float around.
+
+
+ds.language_default =
   element language {
     attribute lang { ds.type.lang },
     attribute default { ds.true.enum },
     ds.branch,
     ds.subdir?,
-    ds.deliverable+
+    (
+     ds.deliverable |
+     ds.deliverable_subdeliverable
+    )+
   }
-ds.otherlanguage =
+ds.language_translation_list =
   element language {
     attribute lang { ds.type.lang },
     attribute default { ds.false.enum }?,
+    attribute translation-type { "positive-list" | "negative-list" },
     ds.branch?,
     ds.subdir?,
-    ds.untranslated?
+    ds.deliverablerestricted+
+  }
+ds.language_translation_full =
+  element language {
+    attribute lang { ds.type.lang },
+    attribute default { ds.false.enum }?,
+    attribute translation-type { "full" },
+    ds.branch?,
+    ds.subdir?
   }
 
 
@@ -252,11 +306,23 @@ ds.deliverable =
     attribute remarks { xsd:boolean }?,
     attribute draft { xsd:boolean }?,
     attribute meta { xsd:boolean }?,
+    attribute category { ds.type.id }?,
+    ds.dc,
+    ds.format+,
+    ds.styleroot?,
+    ds.param*
+  }
+
+ds.deliverable_subdeliverable =
+  element deliverable {
+    attribute remarks { xsd:boolean }?,
+    attribute draft { xsd:boolean }?,
+    attribute meta { xsd:boolean }?,
     ds.dc,
     ds.format+,
     ds.styleroot?,
     ds.param*,
-    ds.subdeliverable*
+    ds.subdeliverable+
   }
 
 ds.dc =
@@ -287,12 +353,8 @@ ds.param =
 
 ds.subdeliverable =
   element subdeliverable {
+    attribute category { ds.type.id }?,
     ds.type.id
-  }
-
-ds.untranslated =
-  element untranslated {
-    ds.deliverablerestricted+
   }
 
 ds.deliverablerestricted =
@@ -310,6 +372,7 @@ ds.link =
   element link {
     attribute href { xsd:anyURI },
     attribute lang { ds.type.lang | "all" }?,
+    attribute category { ds.type.id }?,
     (ds.htmlinline |
     text)*
   }

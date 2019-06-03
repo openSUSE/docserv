@@ -94,7 +94,7 @@ class BuildInstructionHandler:
         # (re-)generate overview page
         sync_source_tmp = tempfile.mkdtemp(prefix="docserv_oview_")
         commands[n] = {}
-        commands[n]['cmd'] = "docserv-buildoverview %s --stitched-config=\"%s\" --ui-languages=\"%s\" --default-ui-language=\"%s\" --cache-dir=\"%s\" --doc-language=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\"" % (
+        commands[n]['cmd'] = "docserv-build-navigation %s --stitched-config=\"%s\" --ui-languages=\"%s\" --default-ui-language=\"%s\" --cache-dir=\"%s\" --doc-language=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\"" % (
             "--internal-mode" if self.config['targets'][self.build_instruction['target']
                                                          ]['languages'] == "yes" else "",
             self.stitch_tmp_file,
@@ -203,7 +203,7 @@ Repo/Branch: %s %s
             prefix="docserv_stitch_"), 'docserv_config_full.xml')
         logger.debug("Stitching XML config directory to %s",
                      self.stitch_tmp_file)
-        cmd = '%s --make-positive --valid-languages="%s" %s %s' % (
+        cmd = '%s --simplify --valid-languages="%s" %s %s' % (
             os.path.join(BIN_DIR, 'docserv-stitch'),
             self.config['server']['valid_languages'],
             self.config['targets'][target]['config_dir'],

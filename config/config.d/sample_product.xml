@@ -5,7 +5,7 @@
      proper validation.
   2. In the installed package, the XML model is at a different path, this
      only works within the docserv Git repository. -->
-<?xml-model href="../../share/schema/config-validation.rnc" type="application/relax-ng-compact-syntax"?>
+<?xml-model href="../../share/validate-product-config/product-config-schema.rnc" type="application/relax-ng-compact-syntax"?>
 
 <product productid="sample_product" schemaversion="0.9.10">
   <!-- ID can be used for build commands, HTML IDs, etc. -->
@@ -91,24 +91,31 @@
 
       </language>
 
-      <!-- For translations, we assume the same deliverables as for the
-      original language, exceptions are noted within the <untranslated>
-      element. However, we probably still need to build these untranslated deliverables. -->
-      <language lang="de-de">
+      <language lang="de-de" translation-type="negative-list">
         <branch>maint/sle15</branch>
         <subdir>sles/de</subdir>
-        <untranslated>
-          <deliverable>
-            <dc>DC-SLES-all</dc>
-            <subdeliverable>book.gnomeuser</subdeliverable>
-          </deliverable>
-          <deliverable>
-            <dc>DC-SLES-gnomeuser</dc>
-          </deliverable>
-        </untranslated>
+        <deliverable>
+          <dc>DC-SLES-all</dc>
+          <subdeliverable>book.gnomeuser</subdeliverable>
+        </deliverable>
+        <deliverable>
+          <dc>DC-SLES-gnomeuser</dc>
+        </deliverable>
       </language>
 
-      <language lang="fr-fr">
+      <language lang="zh-cn" translation-type="positive-list">
+        <branch>maint/sle15</branch>
+        <subdir>sles/zh-cn</subdir>
+        <deliverable>
+          <dc>DC-SLES-all</dc>
+          <subdeliverable>book.admin</subdeliverable>
+        </deliverable>
+        <deliverable>
+          <dc>DC-SLES-admin</dc>
+        </deliverable>
+      </language>
+
+      <language lang="fr-fr" translation-type="full">
         <branch>maint/sle15</branch>
         <subdir>sles/fr</subdir>
       </language>

@@ -5,13 +5,12 @@
 # Arguments (in order of appearance):
 # --valid-languages="en-us ..."   # Space-separated list of valid language codes
 #                                 # (optional)
-# --make-positive                 # Turn translation document blacklist into
-#                                 # whitelist (optional)
+# --simplify                      # Simplify user-generated productconfig so the
+#                                 # docserv daemon can use it (optional)
 # INPUT_DIR                       # Directory with config files
 # OUTPUT_FILE                     # Output file name (parent directory must exist)
 #
-# XML tool deps: xmlstarlet, jing, xmllint
-
+# XML tool deps: xmlstarlet, jing, xmllint, xsltproc
 
 out() {
   >&2 echo -e "$1"
@@ -36,6 +35,21 @@ add_issue() {
   [[ $(echo -e "$1" | wc -l) -gt 1 ]] && issuelist+='\n'$(echo -e "$1" | tail -n +2 | sed 's/^/  /')
 }
 
+add_multiple_issues() {
+  affected_file="$1"
+  issues="$2\n---"
+
+  issue=''
+  while read line; do
+    if [[ "$line" == '---' ]] && [[ "$issue" ]]; then
+      add_issue "$affected_file: $issue"
+      issue=''
+    elif [[ $(echo "$line" | sed 's/[ \t]//g') ]]; then
+      issue+="$line\n"
+    fi
+  done < <(echo -e "$issues")
+}
+
 xmllint='xmllint'
 jing='jing'
 starlet='xmlstarlet'
@@ -43,13 +57,15 @@ starlet='xmlstarlet'
 stacksize=${stacksize:-"-Xss4096K"}
 java_flags="-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=org.apache.xerces.parsers.XIncludeParserConfiguration"
 
-schema_file=$share_dir/schema/config-validation.rnc
-positive_xslt_file=$share_dir/xslt/positive-config.xsl
+schema_file=$share_dir/validate-product-config/product-config-schema.rnc
+checks_dir=$share_dir/validate-product-config/checks
+simplify_stylesheet=$share_dir/simplify-product-config/simplify.xsl
 
 [[ ! -f $schema_file ]] && out "Schema $schema_file does not exist.$(readme_message)"
-[[ ! -f $positive_xslt_file ]] && out "Schema $positive_xslt_file does not exist.$(readme_message)"
+[[ ! -d $checks_dir ]] && out "Directory $checks_dir does not exist.$(readme_message)"
+[[ ! -f $simplify_stylesheet ]] && out "Stylesheet $simplify_stylesheet does not exist.$(readme_message)"
 
-make_positive=0
+simplify_config=0
 valid_languages=""
 unknown=""
 input_dir=""
@@ -61,8 +77,8 @@ for i in "$@"
       -h|--help)
         app_help
       ;;
-      --make-positive)
-        make_positive=1
+      --simplify)
+        simplify_config=1
       ;;
       --valid-languages=*)
         valid_languages=" ${i#*=}"
@@ -92,7 +108,8 @@ cd $input_dir
 # bit dirty, because if we did not also validate with the RNG, we'd be allowing
 # invalid values for lang within builddocs elements. Though, as long as we have
 # both, there is no harm done.
-valid_languages_sorted=$(echo -e "all $valid_languages" | tr ' ' '\n' | sort -u)
+valid_languages_sorted=''
+[[ "$valid_languages" ]] && valid_languages_sorted=$(echo -e "all $valid_languages" | tr ' ' '\n' | sort -u)
 
 issuelist=''
 
@@ -108,77 +125,29 @@ for file in *.xml; do
     $jing -ci $schema_file $file)
   [[ $? -gt 0 ]] && add_issue "$input_dir/$file: File is not valid:\n$valid"
 
-  # all format tags need at least one format attribute set to "1" or "true"
 
-  format_issues=$($starlet sel -t -c "//format[not(@*='true') and not(@*='1')]" $file)
-  count_format_issues=$(echo -e "$format_issues" | sed 's/>/>\n/g' | wc -l)
-  # FIXME: welp! terribly unhelpful error message here
-  [[ "$format_issues" ]] && \
-    add_issue \
-      "$input_dir/$file: There is/are $count_format_issues format element(s) where no attribute is set to \"true\" or \"1\"."
-
-  # we want to allow IDs that start with a digit, hence we can't use RelaxNG's
-  # xsd:ID data type, but we can use xmlstarlet to check
-
-  setids=$($starlet sel -t -v "//@setid" $file | sort)
-  uniquesetids=$(echo -e "$setids" | sort -u)
-  [[ ! "$setids" == "$uniquesetids" ]] && \
-    add_issue \
-      "$input_dir/$file: Some setid values are not unique. Check for occurrences of the following duplicated setid(s): "$(comm -2 -3 <(echo -e "$setids") <(echo -e "$uniquesetids") | tr '\n' ' ')"."
-
-
-  # make sure each language code appears only once within a given set
-  for set in $(seq 1 $(echo -e "$setids" | wc -l)); do
-    langcodes=$($starlet sel -t -v "//docset["$set"]/builddocs/language/@lang" $file | sort)
-    uniquelangcodes=$(echo -e "$langcodes" | sort -u)
-    [[ ! "$langcodes" == "$uniquelangcodes" ]] && \
-    add_issue \
-      "$input_dir/$file: Some language elements within a set have non-unique lang attributes. Check for occurrences of the following duplicated lang attribute(s) in docset \""$($starlet sel -t -v "//docset["$set"]/@setid" $file)"\": "$(comm -2 -3 <(echo -e "$langcodes") <(echo -e "$uniquelangcodes") | tr '\n' ' ')"."
+  # Additional validation checks may come either as XSLTs or Bash scripts.
+  # No script output is assumed to mean there are no issues.
+  for check_file in $checks_dir/check-*.{sh,xsl}; do
+    # As long as at least one variety of check files does not exist, the glob
+    # pattern above will not resolve correctly in one case and the literal
+    # file name "check-*.xsl" (or .sh) will enter this loop. The hack below
+    # avoids that.
+    [[ $check_file =~ \*\. ]] && continue
+    command='bash'
+    [[ $check_file =~ \.xsl$ ]] && command='xsltproc'
+    result=$( \
+      xmllint="$xmllint" jing="$jing" starlet="$starlet" \
+      valid_languages="$valid_languages_sorted" \
+      $command $check_file $file)
+    [[ $? -eq 0 ]] || out "Validation check file $check_file is misbehaving."
+    [[ "$result" ]] && add_multiple_issues "$input_dir/$file" "$result"
   done
-
-
-  # make sure each dc appears only once within a language
-  languages=$($starlet sel -t -v "count(//language)" $file | sort)
-  for language in $(seq 1 "$languages"); do
-    currentlanguage=$($starlet sel -t -c "(//language)["$language"]" $file)
-    langcode=$(echo -e "$currentlanguage" | $starlet sel -t -v "(//@lang)[1]" $file)
-    setid=$($starlet sel -t -v "(//language)["$language"]/ancestor::docset/@setid" $file)
-    dcs=$(echo -e "$currentlanguage" | $starlet sel -t -v "//dc" | sort)
-    uniquedcs=$(echo -e "$dcs" | sort -u)
-    [[ ! "$dcs" == "$uniquedcs" ]] && \
-    add_issue \
-      "$input_dir/$file: Some dc elements within a language have non-unique values. Check for occurrences of the following duplicated lang attribute(s) in docset=$setid/language=$langcode: "$(comm -2 -3 <(echo -e "$dcs") <(echo -e "$uniquedcs") | tr '\n' ' ')"."
-  done
-
-  # make sure each subdeliverable appears only once within a dc
-  deliverables=$($starlet sel -t -v "count(//deliverable)" $file | sort)
-  for deliverable in $(seq 1 $deliverables); do
-    currentdeliverable=$($starlet sel -t -c "(//deliverable)["$deliverable"]" $file)
-    [[ ! $(echo -e "$currentdeliverable" | $starlet sel -t -c "(//subdeliverable)") ]] && continue
-    langcode=$($starlet sel -t -v "(//deliverable)["$deliverable"]/ancestor::language/@lang" $file)
-    setid=$($starlet sel -t -v "(//deliverable)["$deliverable"]/ancestor::docset/@setid" $file)
-    dc=$($starlet sel -t -v "(//deliverable)["$deliverable"]/dc" $file)
-    subdeliverables=$(echo -e "$currentdeliverable" | $starlet sel -t -v "//subdeliverable" | sort)
-    uniquesubdeliverables=$(echo -e "$subdeliverables" | sort -u)
-    [[ ! "$subdeliverables" == "$uniquesubdeliverables" ]] && \
-    add_issue \
-      "$input_dir/$file: Some subdeliverable elements within a deliverable have non-unique values. Check for occurrences of the following duplicated subdeliverable(s) in docset=$setid/language=$langcode/dc=$dc: "$(comm -2 -3 <(echo -e "$subdeliverables") <(echo -e "$uniquesubdeliverables") | tr '\n' ' ')"."
-  done
-
-
-  if [[ "$valid_languages" ]]; then
-    languages=$($starlet sel -t -v "//@lang" $file | sort -u)
-    unrecognized_languages=$(comm -1 -3 <(echo -e "$valid_languages_sorted") <(echo -e "$languages"))
-    [[ "$unrecognized_languages" ]] && \
-      add_issue \
-        "$input_dir/$file: Some lang attributes are not supported by your configuration INI. Check for occurrences of the following unsupported lang attribute(s):\n$unrecognized_languages"
-  fi
-
 
 done
 
 if [[ "$issuelist" ]]; then
-  out "The following issues occured when validating:$issuelist\n"
+  out "The following issues occurred when validating:$issuelist\n"
 fi
 
 outfile='<?xml version="1.0" encoding="UTF-8"?>\n<docservconfig>\n\n'
@@ -203,8 +172,8 @@ uniqueproductids=$(echo -e "$productids" | sort -u)
 cd - >/dev/null
 
 
-if [[ $make_positive == 1 ]]; then
-  echo -e "$outfile" | xsltproc $positive_xslt_file - > $output_file
+if [[ $simplify_config == 1 ]]; then
+  echo -e "$outfile" | xsltproc $simplify_stylesheet - > $output_file
 else
   echo -e "$outfile" > $output_file
 fi

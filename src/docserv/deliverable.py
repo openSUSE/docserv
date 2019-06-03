@@ -445,8 +445,8 @@ Language: %s
     def write_deliverable_cache(self, command, thread_id):
         """
         Create an XML file that contains the deliverable information
-        including path and title. This is required for the 'docserv-buildoverview'
-        command.
+        including path and title. This is required for the
+        'docserv-build-navigation' command.
         """
         root = cElementTree.Element("document",
                                     lang=self.parent.build_instruction['lang'],

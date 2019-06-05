@@ -336,7 +336,7 @@ def check_langs(langs, message, attempts = 3):
         if not langs:
             langs = input(message)
         # format given langs, remove white space
-        langs = langs.replace("_", "-").strip().lower().split(",")
+        langs = re.split(r'[, ]+', langs.replace("_", "-").strip().lower())
         langs = [lang.strip() for lang in langs if not lang == '']
         # create a diff from our list and the languages list from above
         diff = set(langs).difference(languages)

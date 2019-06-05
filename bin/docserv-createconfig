@@ -296,7 +296,7 @@ def collect_dc_files(path, filter_dc):
     return dc_files
 
 def get_git_branches(path):
-    """Return all the branches of a Git repository. Replace "origin/" with ""
+    """Return all branches of a Git repository. Replace "origin/" with ""
 
     :param str path: the path to the Git repository
     :return: dictionary of all branches for example:
@@ -351,19 +351,19 @@ def check_langs(langs, message, attempts = 3):
         "{}".format(", ".join(languages)))
 
 def check_args(args):
-    """Checks if no argumets were set when running the script and asks for them.
+    """Checks if no arguments were set when running the script and asks for them.
 
     :param args: The namespace containing the scripts arguments
     :type args: :class:`argparse.Namespace`
     """
     # checking path
     while not args.path or not os.path.exists(args.path):
-        args.path = input("# Path to the git repository: ")
+        args.path = input("- Enter the path to the git repository clone: ")
     # checking languages
-    lang_message = "# Languages (separated by comma): "
+    lang_message = "- Enter translation languages to check for (comma-separated, format: 'language-country'): "
     args.langs = check_langs(args.langs, lang_message)
     # checking default language
-    default_message = "# Default language: "
+    default_message = "- Enter the language code of the default language (format: 'language-country'): "
     args.default_lang = check_langs(args.default_lang, default_message)[0]
     # insert default_lang at first position:
     if args.default_lang in args.langs:
@@ -371,10 +371,10 @@ def check_args(args):
     args.langs.insert(0, args.default_lang)
     # checking filter
     if not args.filter:
-        args.filter = input("# Filter (can be left empty): ")
+        args.filter = input("- Enter a filter string for DC files (can be left empty): ")
     # checking contact
     while not args.contact:
-        args.contact = input("# Contact (minimum one email): ")
+        args.contact = input("- Enter the e-mail address of the primary documentation maintainer: ")
 
 def parse_cli(cliargs=None):
     """Parse CLI with :class:`argparse.ArgumentParser` and return parsed result.
@@ -388,30 +388,32 @@ def parse_cli(cliargs=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("-l", "--languages",
                         dest="langs",
-                        help=("Uses one or more languages in the format "
-                              "'language_country'. "
-                              "Upper and lower case is irrelevant."
+                        help=("One or more translation languages in the format "
+                              "'language-country'. "
+                              "Uppercase and lowercase are irrelevant."
                               ),
                         )
-    parser.add_argument("-d", "--default",
+    parser.add_argument("-d", "--default", "--default-language",
                         dest="default_lang",
-                        help="Default language",
+                        help=("Default language in the format "
+                              "'language-country'. "
+                              "Uppercase and lowercase are irrelevant."
+                             ),
                         )
     parser.add_argument("-f", "--filter",
-                        help="Expects DC files which to focus on",
+                        help="File name prefix of the DC files that you want to configure",
                         )
     parser.add_argument("-m", "--contact",
-                        help="The contact email address",
+                        help="E-mail address of the primary documentation maintainer",
                         )
     parser.add_argument("path",
                         nargs='?',
                         metavar="PATH",
-                        help="Path to the repository",
+                        help="Path to the local repository clone",
                         )
 
     args = parser.parse_args(args=cliargs)
 
-    # do some checks:
     check_args(args)
     return args
 

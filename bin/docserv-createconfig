@@ -88,26 +88,25 @@ def prettify(root):
     """
     return etree.tostring(root, pretty_print=True, encoding="unicode")
 
-def generate_config(languages, default_lang, git_url, branches, version="0.9.10", contact=None):
+def generate_config(args, git_url, branches, version="0.9.10"):
     """Generate the configuration file.
 
-    :param languages: The allowed languages
-    :type languages: list
+    :param args: The namespace containing the scripts arguments
+    :param str git_url: The repo origin url
 
     :param branches: The branch name and DC files on it, for example:
                {'develop': ['DC-FOO-all', 'DC-FOO-install-quick'], ... }
     :type branches: dict
 
-    :param str schemaversion: the schema version to use
-    :param str contact: the contact email address
+    :param str version: the schema version to use
     """
     root = etree.Element("product", productid=FIXME, schemaversion=version)
     etree.SubElement(root, "name").text = FIXME
     etree.SubElement(root, "shortname").text = FIXME
     maintainers = etree.SubElement(root, "maintainers")
-    etree.SubElement(maintainers, "contact").text = FIXME if not contact else contact
+    etree.SubElement(maintainers, "contact").text = FIXME if not args.contact else args.contact
 
-    for language in languages:
+    for language in args.langs:
         description = etree.SubElement(root, "desc", default="0", lang=language)
         etree.SubElement(description, "p").text = FIXME
 
@@ -123,7 +122,7 @@ def generate_config(languages, default_lang, git_url, branches, version="0.9.10"
         # Optionally <git>, look at product/git
         etree.SubElement(builddocs, "git", remote=git_url)
 
-        for language in languages:
+        for language in args.langs:
             if language == "en-us":
                 lang = etree.SubElement(builddocs, "language",
                                         default="1", lang="en-us")
@@ -328,5 +327,5 @@ if __name__ == "__main__":
     branches = get_git_branches(args.path)
     dc_files = get_dc_files(args.path, branches, filter_dc=args.filter)
     git_url = get_origin_url(args.path)
-    generate_config(args.langs, args.default_lang, git_url ,branches, contact=args.contact)
+    generate_config(args, git_url ,branches)
     sys.exit(0)

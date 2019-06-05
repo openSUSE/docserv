@@ -30,6 +30,7 @@ from lxml import etree
 from contextlib import contextmanager
 
 FIXME = "FIXME"
+SCHEMAVERSION = "2.0"
 
 def get_origin_url(path):
     """Return the repo origin url
@@ -89,7 +90,7 @@ def prettify(root):
     """
     return etree.tostring(root, pretty_print=True, encoding="unicode")
 
-def generate_config(args, git_url, branches, version="0.9.10"):
+def generate_config(args, git_url, branches, version=SCHEMAVERSION):
     """Generate the configuration file.
 
     :param args: The namespace containing the scripts arguments
@@ -420,5 +421,5 @@ if __name__ == "__main__":
 
     branches = get_deliverables(args.path, filter_dc=args.filter)
     git_url = get_origin_url(args.path)
-    generate_config(args, git_url ,branches)
+    generate_config(args, git_url, branches)
     sys.exit(0)

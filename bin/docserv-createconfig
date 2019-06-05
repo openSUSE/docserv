@@ -153,16 +153,14 @@ def generate_config(args, git_url, branches, version=SCHEMAVERSION):
                         for sub in sorted(branches[branch][dc_file]):
                             etree.SubElement(deliverable, "subdeliverable", ).text = sub
             else:
-                lang = etree.SubElement(builddocs, "language", lang=language)
+                lang = etree.SubElement(builddocs, "language", lang=language,
+                       attrib={'translation-type':"full"})
                 if branch.startswith("maintenance/") or branch.startswith("maint/"):
                     tmp = branch.replace("maintenance/", "").replace("maint/", "")
                     if "trans/%s" % tmp in branches:
                         branch = "trans/%s" % tmp
                 etree.SubElement(lang, "branch").text = branch
                 etree.SubElement(lang, "subdir").text = FIXME
-                untrans = etree.SubElement(lang, "untranslated")
-                deliverable = etree.SubElement(untrans, "deliverable")
-                etree.SubElement(deliverable, "dc").text = FIXME
         # TODO: add extralinks as comments
         # extralinks = etree.SubElement(docset, "extralinks")
         # etree.SubElement(extralinks, "link", href=FIXME).text = "SOME DESCRIPTION"

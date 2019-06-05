@@ -344,10 +344,13 @@ def check_langs(langs, message, attempts = 3):
             attempts -= 1
             # reset langs because they're not good
             langs = ""
-            print("Unknown language {} found.".format(diff))
+            if diff:
+                print("Unknown language {} found.".format(diff))
+            else:
+                print("No valid input language found.")
         else:
             return langs
-    sys.exit("Expected one or more of these:\n"
+    sys.exit("Expected one or more of the following languages:\n"
         "{}".format(", ".join(languages)))
 
 def check_args(args):

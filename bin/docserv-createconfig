@@ -26,7 +26,7 @@ import os
 import re
 import sys
 import pygit2
-from xml.etree import cElementTree as etree
+from lxml import etree
 
 FIXME = "FIXME"
 
@@ -77,25 +77,16 @@ def get_version(name):
             return version
     return name
 
-
-def prettify(tree, indent="  "):
+def prettify(root):
     """Return a pretty-printed XML string for the element.
 
-    :param tree: The XML tree
-    :type tree: :class:`xml.etree.ElementTree.ElementTree`
-
-    :param indent: string used for indentation (usually spaces)
-    :type indent: str
+    :param root: The XML tree
+    :type root: :class:`xml.etree._Element`
 
     :return: the indented string
-    :rtype: str | byte
+    :rtype: str
     """
-    from xml.dom import minidom
-    from xml.etree import ElementTree
-    rough_string = ElementTree.tostring(tree.getroot(), encoding='UTF-8')
-    reparsed = minidom.parseString(rough_string)
-    return reparsed.toprettyxml(indent=indent)
-
+    return etree.tostring(root, pretty_print=True, encoding="unicode")
 
 def generate_config(languages, default_lang, git_url, branches, version="0.9.10", contact=None):
     """Generate the configuration file.
@@ -110,7 +101,6 @@ def generate_config(languages, default_lang, git_url, branches, version="0.9.10"
     :param str schemaversion: the schema version to use
     :param str contact: the contact email address
     """
-
     root = etree.Element("product", productid=FIXME, schemaversion=version)
     etree.SubElement(root, "name").text = FIXME
     etree.SubElement(root, "shortname").text = FIXME
@@ -167,12 +157,11 @@ def generate_config(languages, default_lang, git_url, branches, version="0.9.10"
         # extralinks = etree.SubElement(docset, "extralinks")
         # etree.SubElement(extralinks, "link", href=FIXME).text = "SOME DESCRIPTION"
 
-    tree = etree.ElementTree(root)
     configfile = os.getcwd() + "/config.xml"
     print("Find the config file at {!r}".format(configfile))
-    # tree.write(configfile)
+
     with open(configfile, 'w+t') as fh:
-        fh.write(prettify(tree))
+        fh.write(prettify(root))
     print("Done.")
 
 
@@ -231,10 +220,10 @@ def get_git_branches(path):
         elif branch_wo_origin == "develop" \
              or branch_wo_origin == "master" \
              or branch.startswith('origin/trans/') \
+             or branch.startswith('origin/maint/') \
              or branch.startswith('origin/maintenance/'):
             result[branch_wo_origin] = []
     return result
-
 
 def check_langs(langs, message, attempts = 3):
     """Checks if langs were given, gives three input attempts
@@ -266,7 +255,6 @@ def check_langs(langs, message, attempts = 3):
             return langs
     sys.exit("Expected one or more of these:\n"
         "{}".format(", ".join(languages)))
-
 
 def check_args(args):
     """Checks if no argumets were set when running the script and asks for them.
@@ -333,14 +321,12 @@ def parse_cli(cliargs=None):
     check_args(args)
     return args
 
-
 if __name__ == "__main__":
     args = parse_cli()
     print(args)
 
     branches = get_git_branches(args.path)
     dc_files = get_dc_files(args.path, branches, filter_dc=args.filter)
-    # print(dc_files)
     git_url = get_origin_url(args.path)
     generate_config(args.langs, args.default_lang, git_url ,branches, contact=args.contact)
     sys.exit(0)

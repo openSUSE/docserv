@@ -112,7 +112,10 @@ def generate_config(args, git_url, branches, version=SCHEMAVERSION):
     etree.SubElement(maintainers, "contact").text = FIXME if not args.contact else args.contact
 
     for language in args.langs:
-        description = etree.SubElement(root, "desc", default="0", lang=language)
+        is_default_lang = 0
+        if language == args.default_lang:
+            is_default_lang = 1
+        description = etree.SubElement(root, "desc", default=str(is_default_lang), lang=language)
         etree.SubElement(description, "p").text = FIXME
 
     for branch in branches:
@@ -128,9 +131,9 @@ def generate_config(args, git_url, branches, version=SCHEMAVERSION):
         etree.SubElement(builddocs, "git", remote=git_url)
 
         for language in args.langs:
-            if language == "en-us":
+            if language == args.default_lang:
                 lang = etree.SubElement(builddocs, "language",
-                                        default="1", lang="en-us")
+                                        default="1", lang=language)
                 etree.SubElement(lang, "branch").text = branch
                 has_all_dc = "1"
                 for dc_file in branches[branch]:

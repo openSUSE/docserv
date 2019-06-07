@@ -26,6 +26,7 @@ import os
 import re
 import sys
 import pygit2
+import argparse
 from lxml import etree
 from contextlib import contextmanager
 
@@ -105,7 +106,7 @@ def generate_config(args, git_url, branches, version=SCHEMAVERSION):
 
     :param str version: the schema version to use
     """
-    root = etree.Element("product", productid=FIXME, schemaversion=version)
+    root = etree.Element("product", productid=args.productid, schemaversion=version)
     etree.SubElement(root, "name").text = FIXME
     etree.SubElement(root, "shortname").text = FIXME
     maintainers = etree.SubElement(root, "maintainers")
@@ -165,7 +166,8 @@ def generate_config(args, git_url, branches, version=SCHEMAVERSION):
         # extralinks = etree.SubElement(docset, "extralinks")
         # etree.SubElement(extralinks, "link", href=FIXME).text = "SOME DESCRIPTION"
 
-    configfile = os.getcwd() + "/config.xml"
+    tree = etree.ElementTree(root)
+    configfile = os.path.join(os.getcwd(), "{}.xml".format(args.productid))
     print("Find the config file at {!r}".format(configfile))
 
     with open(configfile, 'w+t') as fh:
@@ -329,7 +331,6 @@ def check_langs(langs, message, attempts = 3):
     :return: list of checked and formatted language(s)
     :rtype: list
     """
-    attempts = 3
     languages = ("en-us de-de fr-fr pt-br ja-jp zh-cn es-es "
                       "it-it ko-kr hu-hu zh-tw cs-cz ar-ar pl-pl "
                       "ru-ru").split(" ")
@@ -353,6 +354,21 @@ def check_langs(langs, message, attempts = 3):
             return langs
     sys.exit("Expected one or more of the following languages:\n"
         "{}".format(", ".join(languages)))
+
+def check_productid(productid, message, attempts = 3):
+    productid_regex = r'(?P<productid>[-_.+a-zA-Z0-9]+)'
+    message_expected = ("Following chars accepted: -_.+a-zA-Z0-9")
+    while attempts:
+        if not productid:
+            productid = input(message)
+        match = re.match(productid_regex, productid)
+        if match and match.group('productid') == productid:
+            return productid
+        attempts -= 1
+        print("Invalid Product ID '{}' given".format(productid))
+        print(message_expected)
+        productid = ""
+    sys.exit(1)
 
 def check_args(args):
     """Checks if no arguments were set when running the script and asks for them.
@@ -379,6 +395,8 @@ def check_args(args):
     # checking contact
     while not args.contact:
         args.contact = input("- Enter the e-mail address of the primary documentation maintainer: ")
+    # checking productid
+    args.productid = check_productid(args.productid, "- Enter a Product ID (also serves as the output file name): ")
 
 def parse_cli(cliargs=None):
     """Parse CLI with :class:`argparse.ArgumentParser` and return parsed result.
@@ -387,8 +405,6 @@ def parse_cli(cliargs=None):
     :return: parsed CLI result
     :rtype: :class:`argparse.Namespace`
     """
-    import argparse
-
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("-l", "--languages",
                         dest="langs",
@@ -410,12 +426,16 @@ def parse_cli(cliargs=None):
     parser.add_argument("-m", "--contact",
                         help="E-mail address of the primary documentation maintainer",
                         )
+    parser.add_argument("-p", "--product-id",
+                        dest="productid",
+                        help=("Product ID that will also be used as name for "
+                              "this configuration file (Example: 'sles')"),
+                        )
     parser.add_argument("path",
                         nargs='?',
                         metavar="PATH",
                         help="Path to the local repository clone",
                         )
-
     args = parser.parse_args(args=cliargs)
 
     check_args(args)

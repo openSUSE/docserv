@@ -1,24 +1,13 @@
-import configparser
-import datetime
-import hashlib
 import json
 import logging
 import os
-import queue
 import random
 import shlex
-import signal
-import socket
 import string
 import subprocess
-import sys
 import tempfile
 import threading
-import time
-from email.mime.text import MIMEText
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from socketserver import ThreadingMixIn
-from xml.etree import ElementTree, cElementTree
+from lxml import etree
 
 from docserv.deliverable import Deliverable
 from docserv.functions import mail, resource_to_filename
@@ -227,33 +216,32 @@ Repo/Branch: %s %s
             random.choices(string.ascii_uppercase + string.digits, k=12)))
 
         # then read all files into an xml tree
-        self.tree = ElementTree.parse(self.stitch_tmp_file)
-        xml_root = self.tree.getroot()
+        self.tree = etree.parse(self.stitch_tmp_file)
         try:
-            xpath = ".//product[@productid='%s']/maintainers/contact" % (
+            xpath = "//product[@productid='%s']/maintainers/contact" % (
                 self.build_instruction['product'])
             self.maintainers = []
-            stuff = xml_root.findall(xpath)
+            stuff = self.tree.findall(xpath)
             for contact in stuff:
                 self.maintainers.append(contact.text)
 
-            xpath = ".//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/branch" % (
+            xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/branch" % (
                 self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])
-            self.branch = xml_root.find(xpath).text
+            self.branch = self.tree.find(xpath).text
 
-            xpath = ".//product[@productid='%s']/docset[@setid='%s']/builddocs/git/@remote" % (
+            xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/git/@remote" % (
                 self.build_instruction['product'], self.build_instruction['docset'])
-            self.remote_repo = xml_root.find(xpath).text
+            self.remote_repo = str(self.tree.xpath(xpath)[0])
         except AttributeError:
             logger.warning("Failed to parse xpath: %s", xpath)
             return False
 
         try:
-            xpath = ".//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/subdir" % (
+            xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/subdir" % (
                 self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])
             self.build_source_dir = os.path.join(
                 self.local_repo_build_dir,
-                xml_root.find(xpath).text)
+                self.tree.find(xpath).text)
 
         except AttributeError:
             self.build_source_dir = self.local_repo_build_dir
@@ -367,11 +355,10 @@ Repo/Branch: %s %s
         """
         if not self.initialized:
             return False
-        xml_root = self.tree.getroot()
         logger.debug("Generating deliverables.")
-        xpath = ".//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/deliverable" % (
+        xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/deliverable" % (
             self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])
-        for xml_deliverable in xml_root.findall(xpath):
+        for xml_deliverable in self.tree.findall(xpath):
             build_formats = xml_deliverable.find(".//format").attrib
             for build_format in build_formats:
                 if build_formats[build_format] == "no" or build_formats[build_format] == "0" or build_formats[build_format] == "false":

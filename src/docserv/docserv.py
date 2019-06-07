@@ -1,24 +1,12 @@
-import configparser
-import datetime
 import hashlib
 import json
 import logging
 import os
 import queue
-import random
-import shlex
-import signal
-import socket
-import string
-import subprocess
 import sys
-import tempfile
 import threading
 import time
-from email.mime.text import MIMEText
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from socketserver import ThreadingMixIn
-from xml.etree import ElementTree, cElementTree
+from configparser import ConfigParser as configparser
 
 from docserv.bih import BuildInstructionHandler
 from docserv.deliverable import Deliverable
@@ -257,7 +245,7 @@ class DocservConfig:
     """
 
     def parse_config(self, argv):
-        config = configparser.ConfigParser()
+        config = configparser()
         if len(argv) == 1:
             config_file = "docserv"
         else:

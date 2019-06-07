@@ -1,23 +1,11 @@
-import configparser
-import datetime
 import hashlib
-import json
 import logging
 import os
-import queue
-import random
 import shlex
-import signal
-import socket
-import string
 import subprocess
-import sys
 import tempfile
-import threading
 import time
-from email.mime.text import MIMEText
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from socketserver import ThreadingMixIn
+# FIXME: switch to LXML
 from xml.etree import ElementTree, cElementTree
 
 from docserv.functions import mail, resource_to_filename

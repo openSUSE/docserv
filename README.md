@@ -32,21 +32,21 @@ Docserv² does not run straight out of the Git repository. To use it, first
 make sure that the dependencies listed above are installed and then set up
 a development environment:
 
-   1. `cd` to the local repository checkout
-   2. Source the dev-mode.sh script: `. dev-mode.sh`
-   3. Create a virtual environment with Python: `python3 -m venv .venv`
-   4. Activate the virtual environment: `source .venv/bin/activate`
-   5. Update the pip Python package manager: `pip install -U pip setuptools`
-   6. The next step depends on package compatibility, and hence is distribution-dependent:
+
+   1. Make sure the Docker service is running: `systemctl start docker`
+      (To run Docserv² as a regular user, make sure your user is part of the group `docker`.)
+   2. `cd` to the local repository checkout
+   3. Source the dev-mode.sh script: `source dev-mode.sh`
+   4. Make sure that the right configuration (INI) directory is chosen (defaults
+      to the configuration directory from this repository). To set a different one, use
+      `export DOCSERV_CONFIG_DIR=/path/to/dir`.
+   5. Create a virtual environment with Python: `python3 -m venv .venv`
+   6. Activate the virtual environment: `source .venv/bin/activate`
+   7. Update the pip Python package manager: `pip install -U pip setuptools`
+   8. The next step depends on package compatibility, and hence is distribution-dependent:
       * *On openSUSE Leap 15.0:* Make sure the RPM package `python3-pygit2` is installed
       * *On other distributions:* Install requirements via pip: `pip install -r requirements.txt`
-   7. Install Docserv² with setuptools in develop mode: `python3 setup.py develop`
-   8. Make sure the Docker service is running: `systemctl start docker`
-      (To run Docserv² as a regular user, make sure your user is part of the group `docker`.)
-   9. Make sure that the right configuration (INI) directory is chosen (defaults
-      to the configuration directory from this repository). To check, use:
-      `printenv DOCSERV_CONFIG_DIR`. To set, use
-      `export DOCSERV_CONFIG_DIR=/path/to/dir`.
+   9. Install Docserv² with setuptools in develop mode: `python3 setup.py develop`
 
 # Scripts That Are Part of Docserv²
 

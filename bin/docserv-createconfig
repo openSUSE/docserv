@@ -350,10 +350,12 @@ def check_langs(langs, message, attempts = 3):
                 print("Unknown language {} found.".format(diff))
             else:
                 print("No valid input language found.")
+            print("Expected one or more of the following languages:\n"
+                "{}".format(", ".join(languages)))
         else:
             return langs
-    sys.exit("Expected one or more of the following languages:\n"
-        "{}".format(", ".join(languages)))
+    print("Exiting. You entered invalid input too often.")
+    sys.exit(1)
 
 def check_productid(productid, message, attempts = 3):
     """Check that productid matches the ID-type regex from the config schema.
@@ -377,6 +379,7 @@ def check_productid(productid, message, attempts = 3):
         print("Invalid Product ID '{}' given".format(productid))
         print(message_expected)
         productid = ""
+    print("Exiting. You entered invalid input too often.")
     sys.exit(1)
 
 def check_args(args):

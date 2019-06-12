@@ -17,7 +17,7 @@ Docserv² depends on the following software:
 
   * Linux with systemd
   * Python 3.4, 3.5, or 3.6
-  * `pygit2`
+  * `pygit2`, `lxml`
   * Docker Engine
   * Bash
   * `xmllint`, `xsltproc`

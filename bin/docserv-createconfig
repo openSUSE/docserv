@@ -365,7 +365,8 @@ def check_productid(productid, message, attempts = 3):
     :rtype: string
     """
     productid_regex = r'(?P<productid>[-_.+a-zA-Z0-9]+)'
-    message_expected = ("Following chars accepted: -_.+a-zA-Z0-9")
+    message_expected = ("Only alphanumeric characters and the special "
+                        "characters -_.+ are allowed.")
     while attempts:
         if not productid:
             productid = input(message)

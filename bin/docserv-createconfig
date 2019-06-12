@@ -26,7 +26,8 @@ import os
 import re
 import sys
 import pygit2
-from xml.etree import cElementTree as etree
+from lxml import etree
+from contextlib import contextmanager
 
 FIXME = "FIXME"
 
@@ -77,47 +78,39 @@ def get_version(name):
             return version
     return name
 
-
-def prettify(tree, indent="  "):
+def prettify(root):
     """Return a pretty-printed XML string for the element.
 
-    :param tree: The XML tree
-    :type tree: :class:`xml.etree.ElementTree.ElementTree`
-
-    :param indent: string used for indentation (usually spaces)
-    :type indent: str
+    :param root: The XML tree
+    :type root: :class:`xml.etree._Element`
 
     :return: the indented string
-    :rtype: str | byte
+    :rtype: str
     """
-    from xml.dom import minidom
-    from xml.etree import ElementTree
-    rough_string = ElementTree.tostring(tree.getroot(), encoding='UTF-8')
-    reparsed = minidom.parseString(rough_string)
-    return reparsed.toprettyxml(indent=indent)
+    return etree.tostring(root, pretty_print=True, encoding="unicode")
 
-
-def generate_config(languages, default_lang, git_url, branches, version="0.9.10", contact=None):
+def generate_config(args, git_url, branches, version="0.9.10"):
     """Generate the configuration file.
 
-    :param languages: The allowed languages
-    :type languages: list
+    :param args: The namespace containing the scripts arguments
+    :param str git_url: The repo origin url
 
     :param branches: The branch name and DC files on it, for example:
                {'develop': ['DC-FOO-all', 'DC-FOO-install-quick'], ... }
     :type branches: dict
 
-    :param str schemaversion: the schema version to use
-    :param str contact: the contact email address
-    """
+    :param dict subdeliverables: a dictionary with lists as keys like:
+               {'DC-file1-all': ['book.one', 'art.two'], 'DC-file2-all': [], ...}
 
+    :param str version: the schema version to use
+    """
     root = etree.Element("product", productid=FIXME, schemaversion=version)
     etree.SubElement(root, "name").text = FIXME
     etree.SubElement(root, "shortname").text = FIXME
     maintainers = etree.SubElement(root, "maintainers")
-    etree.SubElement(maintainers, "contact").text = FIXME if not contact else contact
+    etree.SubElement(maintainers, "contact").text = FIXME if not args.contact else args.contact
 
-    for language in languages:
+    for language in args.langs:
         description = etree.SubElement(root, "desc", default="0", lang=language)
         etree.SubElement(description, "p").text = FIXME
 
@@ -133,7 +126,7 @@ def generate_config(languages, default_lang, git_url, branches, version="0.9.10"
         # Optionally <git>, look at product/git
         etree.SubElement(builddocs, "git", remote=git_url)
 
-        for language in languages:
+        for language in args.langs:
             if language == "en-us":
                 lang = etree.SubElement(builddocs, "language",
                                         default="1", lang="en-us")
@@ -142,7 +135,7 @@ def generate_config(languages, default_lang, git_url, branches, version="0.9.10"
                 for dc_file in branches[branch]:
                     if "-all" in dc_file:
                         has_all_dc = "0"
-                for dc_file in branches[branch]:
+                for dc_file in sorted(branches[branch]):
                     deliverable = etree.SubElement(lang, "deliverable")
                     etree.SubElement(deliverable, "dc", ).text = dc_file
                     dc_all_file = dc_file.endswith("-all")
@@ -152,6 +145,9 @@ def generate_config(languages, default_lang, git_url, branches, version="0.9.10"
                              'single-html': "0" if dc_all_file else "1",
                              }
                     etree.SubElement(deliverable, "format", **attrs)
+                    if dc_file.endswith("-all"):
+                        for sub in sorted(branches[branch][dc_file]):
+                            etree.SubElement(deliverable, "subdeliverable", ).text = sub
             else:
                 lang = etree.SubElement(builddocs, "language", lang=language)
                 if branch.startswith("maintenance/") or branch.startswith("maint/"):
@@ -167,74 +163,160 @@ def generate_config(languages, default_lang, git_url, branches, version="0.9.10"
         # extralinks = etree.SubElement(docset, "extralinks")
         # etree.SubElement(extralinks, "link", href=FIXME).text = "SOME DESCRIPTION"
 
-    tree = etree.ElementTree(root)
     configfile = os.getcwd() + "/config.xml"
     print("Find the config file at {!r}".format(configfile))
-    # tree.write(configfile)
+
     with open(configfile, 'w+t') as fh:
-        fh.write(prettify(tree))
+        fh.write(prettify(root))
     print("Done.")
 
+@contextmanager
+def switchbranch(repo):
+    """Context manager to checkout branches
 
-def get_dc_files(path, branches, filter_dc=None):
-    """Collect all DC files in branches.
+    :param repo: the repo to the Git repository
+    :type repo: :class:`pygit2.Repository`
+    :return: function, see: checkout_branch
+    :rtype: function reference
+    """
+    def checkout_branch(branches):
+        """Generator to iterate over branches, which checks out the current
+            branch automatically
+
+        :param list branches: the list of branches as strings
+        :yield: current branch as string
+        """
+        for branch in branches:
+            remote_branch = repo.branches.remote["origin/" + branch]
+            ref_branch = repo.lookup_branch(remote_branch.branch_name, pygit2.GIT_BRANCH_REMOTE)
+            repo.checkout(ref_branch)
+            yield branch
+    # save initial branch
+    initial_branch = repo.head.shorthand
+    initial_ref = repo.lookup_branch(initial_branch, pygit2.GIT_BRANCH_ALL)
+    try:
+        yield checkout_branch
+    finally:
+        # change back to initial branch
+        repo.checkout(initial_ref)
+
+def get_deliverables(path, filter_dc=None):
+    """Collect all DC files and subdeliverables in all branches.
 
     :param str path: the path to the Git repository
-    :param dict branches: A dictionary with lists as keys like
-         {'branch1': [], 'branch2': [], ...}
+    :param dict branches: A dictionary with branch names
+        {
+            'branch1': {},
+            'branch2': {}
+        }
     :param filter_dc: filter
-    :return: a dictionary with all DC files found in this branch
+    :return: A dictionary with all branches, DC-files and subdeliverables
+        { 'branch1': {
+            'DC-blub-all' : ['book.bla', 'book.blu'],
+            'DC-blub-bla' : [],
+            'DC-blub-blu' : [], ... },
+          'branch2': {
+            'DC-blubs-all' : ['book.ble', 'book.bli'],
+            'DC-blubs-ble' : [],
+            'DC-blubs-bli' : [], ... }
+        }
     :rtype: dict
     """
     repo = pygit2.Repository(path)
-    tmp = branches
-    # save current branch
-    curr_branch = repo.head.shorthand
-    curr_ref = repo.lookup_branch(curr_branch, pygit2.GIT_BRANCH_ALL)
+    branches = get_git_branches(path)
+    with switchbranch(repo) as checkout_branch:
+        for branch in checkout_branch(branches):
+            # some branches have their dc-files in a 'en' folder
+            path2git = path + "/en" if "en" in os.listdir(path) else path
+            # collecting dc-files in this branch
+            branches[branch] = collect_dc_files(path2git, filter_dc)
+            # collecting subdeliverables
+            for dc_file in branches[branch]:
+                # remove/change this 'if' to go through other DC-files as well
+                if dc_file.endswith("-all"):
+                    main_all = get_main_rootid(path2git, dc_file)[0]
+                    branches[branch][dc_file] = collect_subdeliverables(path2git, branches[branch], main_all)
+    return branches
 
-    for name in branches:
-        branch = repo.branches.remote["origin/" + name]
-        ref = repo.lookup_branch(branch.branch_name, pygit2.GIT_BRANCH_REMOTE)
-        repo.checkout(ref)
-        result = []
-        for f in os.listdir(path):
-            if os.path.isfile(os.path.join(path, f)):
-                if filter_dc is not None:
-                    if f.startswith("DC-") and filter_dc in f:
-                        result.append(f)
-                else:
-                    if f.startswith("DC-"):
-                        result.append(f)
-        tmp[name] = sorted(result)
-    # change back to initial branch
-    repo.checkout(curr_ref)
-    return tmp
+def get_main_rootid(path, dc_file):
+    """Get the MAIN and ROOTID values from a DC-file
 
+    :param str path: the path to the Git repository
+    :param str dc_file: the DC-file to look in
+    :return: a tuple with two strings: MAIN and ROOTID vaules
+    :rtype: tuple(str, str)
+    """
+    main = rootid = ""
+    regex = r'(?P<name>[A-Z]+)[ \t]*=[ \t]*(?:"|\')?(?P<value>[\w\.\-]+)(?:"|\')?'
+    with open(os.path.join(path, dc_file), "r") as f:
+        for line in f:
+            match = re.match(regex, line)
+            if match and match.group('name') == "MAIN":
+                 main = match.group('value')
+            if match and match.group('name') == "ROOTID":
+                 rootid = match.group('value')
+    return main, rootid
+
+def collect_subdeliverables(path, dc_files, main_all):
+    """Collect all subdeliverables for given MAIN-file
+
+    :param str path: the path to the Git repository
+    :param list dc_files: the list with DC-files from current branch
+    :param str main_all: MAIN value of current DC-all-file
+    :return: a list with all subdeliverables found after looking in all DC-files
+    :rtype: list
+    """
+    subdeliverables = []
+    for dc_file in dc_files:
+        if dc_file.endswith("-all"):
+            continue
+        main, rootid = get_main_rootid(path, dc_file)
+        if main == main_all and rootid and rootid not in subdeliverables:
+            subdeliverables.append(rootid)
+    return subdeliverables
+
+def collect_dc_files(path, filter_dc):
+    """Collect all DC files in current branch
+
+    :param str path: the path to the Git repository
+    :param str filter_dc: filter
+    :return: a dictionary with all DC files found in this branch:
+        {
+            'DC-blub-all' : [],
+            'DC-blub-bla' : [],
+            'DC-blub-blu' : [], ... }
+    :rtype: dict
+    """
+    dc_files = {}
+    for file in os.listdir(path):
+        if os.path.isfile(os.path.join(path, file)) and file.startswith("DC-"):
+            if filter_dc is None or filter_dc in file:
+                dc_files[file] = []
+    return dc_files
 
 def get_git_branches(path):
     """Return all the branches of a Git repository. Replace "origin/" with ""
 
     :param str path: the path to the Git repository
-    :return: dictionary of all branches with their DC files, for example:
-            {'develop': ['DC-foo', 'DC-foo-all'],
-             'master':  ['DC-foo', 'DC-foo-all'],
-             # ... more items pruned ...
-             }
+    :return: dictionary of all branches for example:
+            {
+                'develop': {},
+                'master':  {}, ... }
     :rtype: dict
     """
     repo = pygit2.Repository(path)
-    result = {}
+    branches = {}
     for branch in sorted(repo.listall_branches(pygit2.GIT_BRANCH_REMOTE)):
         branch_wo_origin = branch.replace("origin/", "")
         if branch.startswith('maintenance/') or branch.startswith('trans/'):
-            result[branch] = []
+            branches[branch] = {}
         elif branch_wo_origin == "develop" \
              or branch_wo_origin == "master" \
              or branch.startswith('origin/trans/') \
+             or branch.startswith('origin/maint/') \
              or branch.startswith('origin/maintenance/'):
-            result[branch_wo_origin] = []
-    return result
-
+            branches[branch_wo_origin] = {}
+    return branches
 
 def check_langs(langs, message, attempts = 3):
     """Checks if langs were given, gives three input attempts
@@ -266,7 +348,6 @@ def check_langs(langs, message, attempts = 3):
             return langs
     sys.exit("Expected one or more of these:\n"
         "{}".format(", ".join(languages)))
-
 
 def check_args(args):
     """Checks if no argumets were set when running the script and asks for them.
@@ -333,14 +414,11 @@ def parse_cli(cliargs=None):
     check_args(args)
     return args
 
-
 if __name__ == "__main__":
     args = parse_cli()
     print(args)
 
-    branches = get_git_branches(args.path)
-    dc_files = get_dc_files(args.path, branches, filter_dc=args.filter)
-    # print(dc_files)
+    branches = get_deliverables(args.path, filter_dc=args.filter)
     git_url = get_origin_url(args.path)
-    generate_config(args.langs, args.default_lang, git_url ,branches, contact=args.contact)
+    generate_config(args, git_url ,branches)
     sys.exit(0)

@@ -327,8 +327,8 @@ def check_langs(langs, message, attempts = 3):
 
     :param str langs: Language(s) to check
     :param str message: Message to print
-    :param int attempts: User attempts to type in languges that validate
-    :return: list of checked and formatted language(s)
+    :param int attempts: Allowed number of attempts to specify valid languages
+    :return: List of checked and formatted language(s)
     :rtype: list
     """
     languages = ("en-us de-de fr-fr pt-br ja-jp zh-cn es-es "
@@ -356,6 +356,14 @@ def check_langs(langs, message, attempts = 3):
         "{}".format(", ".join(languages)))
 
 def check_productid(productid, message, attempts = 3):
+    """Check that productid matches the ID-type regex from the config schema.
+
+    :param productid: The product ID supplied from the command line
+    :param message: Message to print
+    :attempts: Allowed number of attempts to specify a valid product ID
+    :return: Validated product ID
+    :rtype: string
+    """
     productid_regex = r'(?P<productid>[-_.+a-zA-Z0-9]+)'
     message_expected = ("Following chars accepted: -_.+a-zA-Z0-9")
     while attempts:

@@ -14,7 +14,7 @@ for deliverable in $(seq 1 "$deliverables"); do
     setid=$($starlet sel -t -v "($deliverable_xpath)[$deliverable]/ancestor::docset/@setid" $file)
     language=$($starlet sel -t -v "($deliverable_xpath)[$deliverable]/ancestor::language/@lang" $file)
     echo -e \
-      "The DC file $currentdc is configured for docset=$setid/language=$language but not for the default language of docset=$setid. Documents configured for translation languages must be subset of the documents configured for the default language.\n---"
+      "The DC file $currentdc is configured for docset=$setid/language=$language but not for the default language of docset=$setid. Documents configured for translation languages must be a subset of the documents configured for the default language.\n---"
     continue
   }
 
@@ -29,7 +29,7 @@ for deliverable in $(seq 1 "$deliverables"); do
       language=$($starlet sel -t -v "(//deliverable[ancestor::language[not(@default or @default='true' or @default='1')]])[$deliverable]/ancestor::language/@lang" $file)
       dc=$($starlet sel -t -v "(//deliverable[ancestor::language[not(@default or @default='true' or @default='1')]])[$deliverable]/dc" $file)
       echo -e \
-        "The subdeliverable $current_subdeliverable is configured for docset=$setid/language=$language/deliverable=$dc but not for the same deliverable of the default language of docset=$setid. Documents configured for translation languages must be subset of the documents configured for the default language.\n---"
+        "The subdeliverable $current_subdeliverable is configured for docset=$setid/language=$language/deliverable=$dc but not for the same deliverable of the default language of docset=$setid. Documents configured for translation languages must be a subset of the documents configured for the default language.\n---"
     }
   done
 done

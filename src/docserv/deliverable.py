@@ -178,7 +178,7 @@ class Deliverable:
         # Copy wanted files to sync source
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "rsync -r __FILELIST__  %s" % (sync_source_dir)
+        commands[n]['cmd'] = "rsync -lr __FILELIST__  %s" % (sync_source_dir)
         commands[n]['pre_cmd_hook'] = 'parse_d2d_filelist'
         commands[n]['tmp_build_target'] = tmp_build_target
 

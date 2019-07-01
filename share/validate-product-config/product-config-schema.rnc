@@ -69,10 +69,17 @@ ds.type.xsltparam =
   }
 
 ds.type.id =
-  # An ID (however, we do not check for uniqueness here -- we do that in
+  # An ID (however, we do not check for uniqueness via RNC -- we check in
   # docserv-stitch)
   xsd:token {
     pattern="""[\-_\.\+a-zA-Z0-9]+"""
+  }
+
+ds.type.idmulti =
+  # A space-separated list of IDs (we do not check via RNC -- we check in
+  # docserv-stitch)
+  xsd:token {
+    pattern="""([\-_\.\+a-zA-Z0-9]+ )*[\-_\.\+a-zA-Z0-9]+"""
   }
 
 ds.false.enum = "0" | "false"
@@ -310,7 +317,7 @@ ds.deliverable =
     attribute remarks { xsd:boolean }?,
     attribute draft { xsd:boolean }?,
     attribute meta { xsd:boolean }?,
-    attribute category { ds.type.id }?,
+    attribute category { ds.type.idmulti }?,
     ds.dc,
     ds.format+,
     ds.styleroot?,
@@ -357,7 +364,7 @@ ds.param =
 
 ds.subdeliverable =
   element subdeliverable {
-    attribute category { ds.type.id }?,
+    attribute category { ds.type.idmulti }?,
     ds.type.id
   }
 
@@ -376,7 +383,7 @@ ds.link =
   element link {
     attribute href { xsd:anyURI },
     attribute lang { ds.type.lang | "all" }?,
-    attribute category { ds.type.id }?,
+    attribute category { ds.type.idmulti }?,
     (ds.htmlinline |
     text)*
   }

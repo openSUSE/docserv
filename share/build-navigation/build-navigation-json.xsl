@@ -93,8 +93,8 @@
         "name": "<xsl:value-of select="$name"/>",
         "shortname": "<xsl:value-of select="ancestor::product/shortname"/>",
         "version": "<xsl:value-of select="version"/>",
-        "defaultlanguage": "<xsl:value-of select="builddocs/language[@default='1' or @default='true']/@lang"/>",
-        "languages": [<xsl:apply-templates select="builddocs/language[not(@default='1' or @default='true')]" mode="generate-product-list"/>
+        "defaultlanguage": "<xsl:value-of select="builddocs/language[@default='true']/@lang"/>",
+        "languages": [<xsl:apply-templates select="builddocs/language[not(@default='true')]" mode="generate-product-list"/>
           ]
       },
   </xsl:template>
@@ -150,7 +150,7 @@
   <xsl:template match="desc" mode="generate-docset-json">
     <xsl:variable name="default">
       <xsl:choose>
-        <xsl:when test="@default = 1 or @default = 'true'">
+        <xsl:when test="@default = 'true'">
           <xsl:text>true</xsl:text>
         </xsl:when>
         <xsl:otherwise>
@@ -175,7 +175,7 @@
         "document": [
           <!-- FIXME sort all this stuff alphabetically -->
           <!-- FIXME take into account languages -->
-          <xsl:apply-templates select="builddocs[@default = 'true' or @default = 1]/deliverable[not(@category)]"/>
+          <xsl:apply-templates select="builddocs[@default = 'true']/deliverable[not(@category)]"/>
           <!-- FIXME handle subdelivs -->
           <!-- FIXME handle links -->
         ]
@@ -213,7 +213,7 @@
   <xsl:template match="category/name" mode="generate-docset-json">
     <xsl:variable name="default">
       <xsl:choose>
-        <xsl:when test="@default = 1 or @default = 'true'">
+        <xsl:when test="@default = 'true'">
           <xsl:text>true</xsl:text>
         </xsl:when>
         <xsl:otherwise>

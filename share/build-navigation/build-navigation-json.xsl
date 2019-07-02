@@ -3,12 +3,12 @@
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   xmlns:exsl="http://exslt.org/common"
+  xmlns:dscr="https://github.com/openSUSE/docserv/docserv2_cache_result"
   extension-element-prefixes="exsl"
-  exclude-result-prefixes="exsl">
+  exclude-result-prefixes="exsl dscr">
 
   <xsl:include href="string-replace.xsl"/>
-
-  <xsl:variable name="cache_content" select="document($cache_file)/docservcache"/>
+  <xsl:include href="cache-request.xsl"/>
 
   <xsl:param name="pathprefix" select="''"/>
 
@@ -55,6 +55,7 @@
 
   <xsl:template match="product" mode="generate-product-list">
     "<xsl:value-of select="@productid"/>": {<xsl:apply-templates select="docset" mode="generate-product-list">
+      <!-- sort translate() lists need to be expanded for other langs. -->
       <xsl:sort
         lang="en"
         select="normalize-space(translate(version,
@@ -102,7 +103,7 @@
   <xsl:template match="language" mode="generate-product-list">
            "<xsl:value-of select="@lang"/>",</xsl:template>
 
-  <xsl:template match="//docset" mode="generate-docset-json">
+  <xsl:template match="docset" mode="generate-docset-json">
     <xsl:variable name="name">
       <xsl:choose>
         <xsl:when test="name">
@@ -130,18 +131,16 @@
   "description": [
     <xsl:apply-templates select="ancestor::product/desc" mode="generate-docset-json"/>
   ],
-  "document": [
+  "category": [
     <!-- FIXME: should uncategorized items be listed first or last? -->
-    <xsl:call-template select="." mode="generate-docset-json-no-cat"/>
-    <xsl:apply-templates select="ancestor::product/category" mode="generate-docset-json"/>
+    <xsl:call-template select="." name="generate-docset-json-no-cat"/>
+    <xsl:apply-templates select="ancestor::product/category" mode="generate-docset-json">
+      <xsl:with-param name="node" select="."/>
+    </xsl:apply-templates>
   ]
 }
       <!--
       zip: docset.zip
-      doc-by-cat
-        categoryid-a *** add category sorting key to RNC?
-          doc1 [en-us: {html: index.html, single-html: index1.html, epub: file.epub, pdf: file.pdf},
-                de-de: {...} ]
      } -->
     </exsl:document>
 
@@ -165,7 +164,7 @@
     },
   </xsl:template>
 
-  <xsl:template mode="generate-docset-json-no-cat">
+  <xsl:template name="generate-docset-json-no-cat">
     <xsl:if test="descendant::deliverable[not(subdeliverable)][not(@category)] or
                   descendant::subdeliverable[not(@category)] or
                   link[not(@category)]">
@@ -175,21 +174,27 @@
         "document": [
           <!-- FIXME sort all this stuff alphabetically -->
           <!-- FIXME take into account languages -->
-          <xsl:apply-templates select="builddocs[@default = 'true']/deliverable[not(@category)]"/>
-          <!-- FIXME handle subdelivs -->
-          <!-- FIXME handle links -->
+          <xsl:apply-templates
+            select="( builddocs/language[@default = 'true']/deliverable[not(subdeliverable)][not(@category)] |
+                      builddocs/language[@default = 'true']/deliverable/subdeliverable[not(@category)] )"
+            mode="generate-docset-json"/>
+          <!-- FIXME handle extralinks -->
         ]
       },
     </xsl:if>
   </xsl:template>
 
   <xsl:template match="category" mode="generate-docset-json">
-    <!-- FIXME: categories are not sorted in any way. -->
+    <xsl:param name="node" select="."/>
+    <xsl:variable name="categoryid" select="concat(' ', @categoryid, ' ')"/>
+    <!-- FIXME: categories are not yet sorted in any way. wondering whether
+    to sort alphabetically, implicitly by order in the config document or
+    explicitly with rank attribute. -->
     <xsl:variable name="used-categories">
       <xsl:text> </xsl:text>
       <xsl:apply-templates select="parent::product/descendant::*[@category]/@category" mode="category-name-list"/>
     </xsl:variable>
-    <xsl:if test="contains($used-categories, @categoryid)">
+    <xsl:if test="contains($used-categories, $categoryid)">
       {
         "category": "<xsl:value-of select="@categoryid"/>",
         "name": [
@@ -197,9 +202,11 @@
         ],
         "document": [
           <!-- FIXME sort all this stuff alphabetically -->
-          <!-- FIXME handle simple delivs -->
-          <!-- FIXME handle subdelivs -->
-          <!-- FIXME handle links -->
+          <xsl:apply-templates
+            select="( $node/builddocs/language[@default = 'true']/deliverable[not(subdeliverable)][contains(concat(' ', @category,' '), $categoryid)] |
+                      $node/builddocs/language[@default = 'true']/deliverable/subdeliverable[contains(concat(' ',@category,' '), $categoryid)] )"
+            mode="generate-docset-json"/>
+          <!-- FIXME handle extralinks -->
         ]
       },
     </xsl:if>
@@ -226,6 +233,78 @@
           "default": <xsl:value-of select="$default"/>,
           "localname": "<xsl:value-of select="."/>"
         },
+  </xsl:template>
+
+  <xsl:template match="deliverable[not(subdeliverable)]|subdeliverable" mode="generate-docset-json">
+    <xsl:variable name="node" select="."/>
+    <xsl:variable name="default">
+      <xsl:choose>
+        <xsl:when test="ancestor::language/@default = 'true'">
+          <xsl:text>true</xsl:text>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:text>false</xsl:text>
+        </xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
+
+    <xsl:variable name="title">
+      <xsl:call-template name="cache-request">
+        <xsl:with-param name="information" select="'title'"/>
+      </xsl:call-template>
+    </xsl:variable>
+    <xsl:variable name="title-escaped">
+      <xsl:apply-templates select="exsl:node-set($title)" mode="escape-html"/>
+    </xsl:variable>
+    <xsl:variable name="hash">
+      <xsl:call-template name="cache-request">
+        <xsl:with-param name="information" select="'hash'"/>
+      </xsl:call-template>
+    </xsl:variable>
+    <xsl:variable name="hash-match">
+      <xsl:choose>
+        <xsl:when test="$hash != ''">
+          <xsl:call-template name="cache-hash-match">
+            <xsl:with-param name="hash" select="$hash"/>
+          </xsl:call-template>
+        </xsl:when>
+      </xsl:choose>
+    </xsl:variable>
+
+    <!-- If the document has no cache value, it can't have been built yet, don't
+    reference it here. -->
+    <!-- FIXME Think about whether internal-mode should affect this 'if'. -->
+    <xsl:if test="$hash != ''">
+            [
+              {
+                "lang": "<xsl:value-of select="ancestor::language/@lang"/>",
+                "default": <xsl:value-of select="$default"/>,
+                "title": "<xsl:value-of select="$title-escaped"/>",
+                "format": {
+                <xsl:for-each select="exsl:node-set($hash-match)/dscr:cacheresult/dscr:result">
+                  <!-- NB: We intentionally accept _any_ DC file with the
+                  right @format from the same product below. This allows us
+                  to group builds of sets (HTML) together with builds of
+                  individual books (Single-HTML, PDF, EPUB).-->
+                  <xsl:variable name="format" select="@format"/>
+                  <xsl:if
+                    test="
+                      $node/ancestor::product/@productid = @productid and
+                      $node/ancestor::docset/@setid = @setid and
+                      $node/ancestor::language/@lang = @lang and
+                      $node/ancestor::language/deliverable[format/@*[local-name($format)] = 'true']/dc = @dc
+                    ">
+                  "<xsl:value-of select="@format"/>": "<xsl:value-of select="@path"/>",
+                  </xsl:if>
+                </xsl:for-each>
+               }
+              },
+              <!-- FIXME Make this work for more than one lang. -->
+              <!-- FIXME: Dedupe DCs that have already been handled.
+              Unfortunately, deduping and sorting in the same step are
+              somewhat exclusionary. -->
+            ],
+    </xsl:if>
   </xsl:template>
 
 

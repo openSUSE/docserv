@@ -414,7 +414,7 @@ Repo/Branch: %s %s
         for xml_deliverable in self.tree.findall(xpath):
             build_formats = xml_deliverable.find(".//format").attrib
             for build_format in build_formats:
-                if build_formats[build_format] == "no" or build_formats[build_format] == "0" or build_formats[build_format] == "false":
+                if build_formats[build_format] == "false":
                     continue
                 subdeliverables = []
                 for subdeliverable in xml_deliverable.findall("subdeliverable"):

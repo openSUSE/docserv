@@ -29,6 +29,16 @@
   </xsl:template>
 
 
+  <xsl:template match="format/@*|@default">
+    <xsl:attribute name="{local-name(.)}">
+      <xsl:choose>
+        <xsl:when test=". = 1 or . = 'true'">true</xsl:when>
+        <xsl:when test=". = 0 or . = 'false'">false</xsl:when>
+      </xsl:choose>
+    </xsl:attribute>
+  </xsl:template>
+
+
   <xsl:template match="/docservconfig">
     <positivedocservconfig>
       <xsl:apply-templates select="@*|*"/>

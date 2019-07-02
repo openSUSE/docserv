@@ -8,6 +8,8 @@
 
   <xsl:include href="string-replace.xsl"/>
 
+  <xsl:variable name="cache_content" select="document($cache_file)/docservcache"/>
+
   <xsl:param name="pathprefix" select="''"/>
 
   <xsl:template match="node()|@*"/>
@@ -129,17 +131,15 @@
     <xsl:apply-templates select="ancestor::product/desc" mode="generate-docset-json"/>
   ],
   "document": [
+    <!-- FIXME: should uncategorized items be listed first or last? -->
+    <xsl:call-template select="." mode="generate-docset-json-no-cat"/>
     <xsl:apply-templates select="ancestor::product/category" mode="generate-docset-json"/>
-    <!-- FIXME: do something about documents that have no category (i.e. all of them). -->
   ]
 }
       <!--
-      categories
-        _none as special value, make sure can't be used via rnc?
-        id, [lang: [name, default]], ...
       zip: docset.zip
       doc-by-cat
-        categoryid-a *** add category sorting key to RNC? ** allow multi-cat in rnc
+        categoryid-a *** add category sorting key to RNC?
           doc1 [en-us: {html: index.html, single-html: index1.html, epub: file.epub, pdf: file.pdf},
                 de-de: {...} ]
      } -->
@@ -150,7 +150,7 @@
   <xsl:template match="desc" mode="generate-docset-json">
     <xsl:variable name="default">
       <xsl:choose>
-        <xsl:when test="@default = 1 or @default = true">
+        <xsl:when test="@default = 1 or @default = 'true'">
           <xsl:text>true</xsl:text>
         </xsl:when>
         <xsl:otherwise>
@@ -165,10 +165,55 @@
     },
   </xsl:template>
 
+  <xsl:template mode="generate-docset-json-no-cat">
+    <xsl:if test="descendant::deliverable[not(subdeliverable)][not(@category)] or
+                  descendant::subdeliverable[not(@category)] or
+                  link[not(@category)]">
+      {
+        "category": false,
+        "name": false,
+        "document": [
+          <!-- FIXME sort all this stuff alphabetically -->
+          <!-- FIXME take into account languages -->
+          <xsl:apply-templates select="builddocs[@default = 'true' or @default = 1]/deliverable[not(@category)]"/>
+          <!-- FIXME handle subdelivs -->
+          <!-- FIXME handle links -->
+        ]
+      },
+    </xsl:if>
+  </xsl:template>
+
   <xsl:template match="category" mode="generate-docset-json">
+    <!-- FIXME: categories are not sorted in any way. -->
+    <xsl:variable name="used-categories">
+      <xsl:text> </xsl:text>
+      <xsl:apply-templates select="parent::product/descendant::*[@category]/@category" mode="category-name-list"/>
+    </xsl:variable>
+    <xsl:if test="contains($used-categories, @categoryid)">
+      {
+        "category": "<xsl:value-of select="@categoryid"/>",
+        "name": [
+          <xsl:apply-templates select="name" mode="generate-docset-json"/>
+        ],
+        "document": [
+          <!-- FIXME sort all this stuff alphabetically -->
+          <!-- FIXME handle simple delivs -->
+          <!-- FIXME handle subdelivs -->
+          <!-- FIXME handle links -->
+        ]
+      },
+    </xsl:if>
+  </xsl:template>
+
+  <xsl:template match="@category" mode="category-name-list">
+    <xsl:value-of select="."/>
+    <xsl:text> </xsl:text>
+  </xsl:template>
+
+  <xsl:template match="category/name" mode="generate-docset-json">
     <xsl:variable name="default">
       <xsl:choose>
-        <xsl:when test="@default = 1 or @default = true">
+        <xsl:when test="@default = 1 or @default = 'true'">
           <xsl:text>true</xsl:text>
         </xsl:when>
         <xsl:otherwise>
@@ -176,14 +221,12 @@
         </xsl:otherwise>
       </xsl:choose>
     </xsl:variable>
-    {
-      "lang": "<xsl:value-of select="@lang"/>",
-      "default": <xsl:value-of select="$default"/>,
-      "description": "<xsl:apply-templates select="text()|*" mode="escape-html"/>",
-      "document": "<xsl:apply-templates select="text()|*" mode="escape-html"/>"
-    },
+        {
+          "lang": "<xsl:value-of select="@lang"/>",
+          "default": <xsl:value-of select="$default"/>,
+          "localname": "<xsl:value-of select="."/>"
+        },
   </xsl:template>
-
 
 
   <!-- HTML-in-JSON escaping -->

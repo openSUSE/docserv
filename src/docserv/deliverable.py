@@ -422,12 +422,16 @@ Language: %s
             root, "commit").text = self.parent.deliverables[self.id]['last_build_attempt_commit']
         cElementTree.SubElement(
             root, "path", format=self.build_format).text = self.path
-        if self.root_id is not None:
-            root_id = self.root_id
-        else:
-            root_id = ""
-        cElementTree.SubElement(
-            root, "title", rootid=root_id, hash=self.dc_hash).text = self.title
+
+        # If there are subdeliverables, we are probably in a set and we don't
+        # really need to bother linking to the set page.
+        if not self.subdeliverables:
+            if self.root_id is not None:
+                root_id = self.root_id
+            else:
+                root_id = ""
+            cElementTree.SubElement(
+                root, "title", rootid=root_id, hash=self.dc_hash).text = self.title
 
         for subdeliverable in self.subdeliverables:
             cElementTree.SubElement(

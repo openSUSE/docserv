@@ -104,12 +104,8 @@ done
 
 cd $input_dir
 
-# "all" is actually only recognized for the extralinks tags. Adding it here is
-# bit dirty, because if we did not also validate with the RNG, we'd be allowing
-# invalid values for lang within builddocs elements. Though, as long as we have
-# both, there is no harm done.
 valid_languages_sorted=''
-[[ "$valid_languages" ]] && valid_languages_sorted=$(echo -e "all $valid_languages" | tr ' ' '\n' | sort -u)
+[[ "$valid_languages" ]] && valid_languages_sorted=$(echo -e "$valid_languages" | tr ' ' '\n' | sort -u)
 
 issuelist=''
 

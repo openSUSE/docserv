@@ -2,6 +2,10 @@
 
 # make sure that deliverables that contain subdeliverables only enable html
 # or single-html as format
+# it would actually be possible to catch this issue via the RNC -- just either
+# disable the @pdf and @epub attributes; the only issue is that the error
+# messages would be much harder to understand. so let's keep this check for
+# the moment.
 
 file=$1
 

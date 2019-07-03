@@ -7,8 +7,8 @@ file=$1
 
 categories=$($starlet sel -t -v "count(//category)" $file)
 for category in $(seq 1 "$categories"); do
-  current_id=$($starlet sel -t -v "//category["$category"]/@categoryid" $file | sort)
-  langcodes=$($starlet sel -t -v "//category["$category"]/name/@lang" $file | sort)
+  current_id=$($starlet sel -t -v '//category['"$category"']/@categoryid' $file | sort)
+  langcodes=$($starlet sel -t -v '//category['"$category"']/name/@lang' $file | sort)
   uniquelangcodes=$(echo -e "$langcodes" | sort -u)
   [[ ! "$langcodes" == "$uniquelangcodes" ]] && \
   echo -e \

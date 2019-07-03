@@ -135,9 +135,21 @@
     </builddocs>
 
     <extralinks>
-      <link href="https://.../...">Release Notes</link>
-      <link href="https://.../...">SP Best Practices</link>
-      <link href="https://.../...">SP Evil Curls Documentation</link>
+      <link>
+        <language lang="en-us" default="1" title="Release Notes">
+          <url format="html" href="https://..."/>
+        </language>
+      </link>
+      <link>
+        <language lang="en-us" default="1" title="Example Product Best Practices">
+          <url format="pdf" href="https://..."/>
+        </language>
+      </link>
+      <link>
+        <language lang="en-us" default="1" title="Example Product Evil Curls Documentation">
+          <url format="html" href="https://..."/>
+        </language>
+      </link>
     </extralinks>
 
   </docset>

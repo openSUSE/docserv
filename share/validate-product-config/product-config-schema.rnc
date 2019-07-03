@@ -381,11 +381,32 @@ ds.extralinks =
 
 ds.link =
   element link {
-    attribute href { xsd:anyURI },
-    attribute lang { ds.type.lang | "all" }?,
     attribute category { ds.type.idmulti }?,
-    (ds.htmlinline |
-    text)*
+    ds.linklanguage_default,
+    ds.linklanguage_translation*
+  }
+
+ds.linklanguage_default =
+  element language {
+    attribute lang { ds.type.lang }?,
+    attribute default { ds.true.enum },
+    attribute title { text },
+    ds.url+
+  }
+
+ds.linklanguage_translation =
+  element language {
+    attribute lang { ds.type.lang }?,
+    attribute default { ds.false.enum }?,
+    attribute title { text },
+    ds.url+
+  }
+
+ds.url =
+  element url {
+    attribute href { xsd:anyURI },
+    attribute format { "html" | "single-html" | "pdf" | "epub" | "other" },
+    empty
   }
 
 

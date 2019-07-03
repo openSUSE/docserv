@@ -9,6 +9,8 @@
 #                                 # docserv daemon can use it (optional)
 # INPUT_DIR                       # Directory with config files
 # OUTPUT_FILE                     # Output file name (parent directory must exist)
+#                                 # (optional; if not specified, this will only
+#                                 # validate the configuration)
 #
 # XML tool deps: xmlstarlet, jing, xmllint, xsltproc
 
@@ -101,6 +103,8 @@ done
 [[ $(echo "$valid_languages" | sed -r 's/( +[a-z]{2}(-[a-z]{2,8})?)*//') ]] && \
   out "Language codes parameter string does not conform to scheme (must be la-ng scheme, with entries space-separated)."
 
+([[ "$simplify_config" -eq 1 ]] && [[ -z "$output_file" ]]) && \
+  out "--simplify can only be used together with an OUTPUT_FILE parameter."
 
 cd $input_dir
 
@@ -170,6 +174,6 @@ cd - >/dev/null
 
 if [[ $simplify_config == 1 ]]; then
   echo -e "$outfile" | xsltproc $simplify_stylesheet - > $output_file
-else
+elif [[ "$output_file" ]]; then
   echo -e "$outfile" > $output_file
 fi

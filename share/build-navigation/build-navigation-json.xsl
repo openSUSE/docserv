@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE xsl:stylesheet>
+<!DOCTYPE xsl:stylesheet
+[
+  <!ENTITY sortlower "abcdefghijklmnopqrstuvwxyz">
+  <!ENTITY sortupper "ABCDEFGHIJKLMNOPQRSTUVWXYZ">
+]>
+
 <xsl:stylesheet version="1.0"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   xmlns:exsl="http://exslt.org/common"
@@ -9,6 +14,7 @@
 
   <xsl:include href="string-replace.xsl"/>
   <xsl:include href="cache-request.xsl"/>
+  <xsl:include href="escape-html.xsl"/>
 
   <xsl:param name="pathprefix" select="''"/>
 
@@ -28,16 +34,14 @@
      <xsl:apply-templates select="//product" mode="generate-productline-list">
        <xsl:sort
          lang="en"
-         select="normalize-space(translate(name,
-           'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'))"/>
+         select="normalize-space(translate(name, '&sortlower;', '&sortupper;'))"/>
      </xsl:apply-templates>
   },
   "product": {
      <xsl:apply-templates select="//product" mode="generate-product-list">
        <xsl:sort
          lang="en"
-         select="normalize-space(translate(name,
-           'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'))"/>
+         select="normalize-space(translate(name,'&sortlower;', '&sortupper;'))"/>
      </xsl:apply-templates>
   }
 }
@@ -59,7 +63,7 @@
       <xsl:sort
         lang="en"
         select="normalize-space(translate(version,
-          'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'))"/>
+          '&sortlower;', '&sortupper;'))"/>
     </xsl:apply-templates>
     },</xsl:template>
 
@@ -165,22 +169,22 @@
   </xsl:template>
 
   <xsl:template name="generate-docset-json-no-cat">
+
     <xsl:if test="descendant::deliverable[not(subdeliverable)][not(@category)] or
                   descendant::subdeliverable[not(@category)] or
                   link[not(@category)]">
-      {
-        "category": false,
-        "name": false,
-        "document": [
-          <!-- FIXME sort all this stuff alphabetically -->
-          <!-- FIXME take into account languages -->
-          <xsl:apply-templates
-            select="( builddocs/language[@default = 'true']/deliverable[not(subdeliverable)][not(@category)] |
-                      builddocs/language[@default = 'true']/deliverable/subdeliverable[not(@category)] )"
-            mode="generate-docset-json"/>
-          <!-- FIXME handle extralinks -->
-        ]
-      },
+      <xsl:variable name="documents">
+        <xsl:apply-templates
+          select="( builddocs/language[@default = 'true']/deliverable[not(subdeliverable)][not(@category)] |
+                    builddocs/language[@default = 'true']/deliverable/subdeliverable[not(@category)] )"
+          mode="generate-docset-json"/>
+        <xsl:apply-templates select="extralinks/link[not(@category)]" mode="generate-docset-json"/>
+      </xsl:variable>
+
+      <xsl:call-template name="json-category-definition" mode="generate-docset-json">
+        <xsl:with-param name="is-actual-category" select="'false'"/>
+        <xsl:with-param name="documents" select="$documents"/>
+      </xsl:call-template>
     </xsl:if>
   </xsl:template>
 
@@ -195,18 +199,48 @@
       <xsl:apply-templates select="parent::product/descendant::*[@category]/@category" mode="category-name-list"/>
     </xsl:variable>
     <xsl:if test="contains($used-categories, $categoryid)">
+      <xsl:variable name="documents">
+        <xsl:apply-templates
+          select="( $node/builddocs/language[@default = 'true']/deliverable[not(subdeliverable)][contains(concat(' ', @category,' '), $categoryid)] |
+                    $node/builddocs/language[@default = 'true']/deliverable/subdeliverable[contains(concat(' ',@category,' '), $categoryid)] )"
+          mode="generate-docset-json"/>
+        <xsl:apply-templates select="$node/extralinks/link[contains(concat(' ',@category,' '), $categoryid)]" mode="generate-docset-json"/>
+      </xsl:variable>
+
+      <xsl:call-template name="json-category-definition" mode="generate-docset-json">
+        <xsl:with-param name="is-actual-category" select="'true'"/>
+        <xsl:with-param name="categoryid" select="@categoryid"/>
+        <xsl:with-param name="documents" select="$documents"/>
+      </xsl:call-template>
+    </xsl:if>
+  </xsl:template>
+
+  <xsl:template name="json-category-definition" mode="generate-docset-json">
+    <xsl:param name="is-actual-category" select="'true'"/>
+    <xsl:param name="categoryid" select="@categoryid"/>
+    <xsl:param name="documents" select="$documents"/>
+
+    <xsl:if test="$documents != ''">
       {
-        "category": "<xsl:value-of select="@categoryid"/>",
-        "name": [
+        <xsl:choose>
+          <xsl:when test="$is-actual-category != 'false'">
+        "category": "<xsl:value-of select="$categoryid"/>",
+        "title": [
           <xsl:apply-templates select="name" mode="generate-docset-json"/>
         ],
+          </xsl:when>
+          <xsl:otherwise>
+        "category": false,
+        "title": false,
+          </xsl:otherwise>
+        </xsl:choose>
         "document": [
-          <!-- FIXME sort all this stuff alphabetically -->
-          <xsl:apply-templates
-            select="( $node/builddocs/language[@default = 'true']/deliverable[not(subdeliverable)][contains(concat(' ', @category,' '), $categoryid)] |
-                      $node/builddocs/language[@default = 'true']/deliverable/subdeliverable[contains(concat(' ',@category,' '), $categoryid)] )"
-            mode="generate-docset-json"/>
-          <!-- FIXME handle extralinks -->
+        <xsl:for-each select="exsl:node-set($documents)/dscr:jsondocument">
+          <xsl:sort
+            lang="en"
+            select="normalize-space(translate(@title,'&sortlower;', '&sortupper;'))"/>
+          <xsl:value-of select="."/>
+        </xsl:for-each>
         ]
       },
     </xsl:if>
@@ -275,6 +309,7 @@
     reference it here. -->
     <!-- FIXME Think about whether internal-mode should affect this 'if'. -->
     <xsl:if test="$hash != ''">
+      <dscr:jsondocument title="{$title-escaped}">
             [
               {
                 "lang": "<xsl:value-of select="ancestor::language/@lang"/>",
@@ -304,86 +339,12 @@
               Unfortunately, deduping and sorting in the same step are
               somewhat exclusionary. -->
             ],
+      </dscr:jsondocument>
     </xsl:if>
   </xsl:template>
 
-
-  <!-- HTML-in-JSON escaping -->
-
-  <xsl:template match="*" mode="escape-html">
-    <xsl:text>&lt;</xsl:text><xsl:value-of select="local-name(.)"/>
-    <xsl:apply-templates select="@*" mode="escape-html"/>
-    <xsl:text>&gt;</xsl:text>
-    <xsl:apply-templates select="text()|*" mode="escape-html"/>
-    <xsl:text>&lt;/</xsl:text><xsl:value-of select="local-name(.)"/><xsl:text>&gt;</xsl:text>
-  </xsl:template>
-
-  <xsl:template match="@*" mode="escape-html">
-    <xsl:text> </xsl:text><xsl:value-of select="local-name(.)"/><xsl:text>=\&quot;</xsl:text>
-    <xsl:call-template name="escape-text">
-      <xsl:with-param name="use-single-quote-only" select="true"/>
-    </xsl:call-template>
-    <xsl:text>\&quot;</xsl:text>
-  </xsl:template>
-
-  <xsl:template match="text()" mode="escape-html">
-    <xsl:call-template name="escape-text"/>
-  </xsl:template>
-
-  <xsl:template name="escape-text" mode="escape-html">
-    <xsl:param name="input" select="."/>
-    <xsl:param name="use-single-quote-only" select="false"/>
-
-    <!-- Remove deadweight strings that consist of only spaces and newlines -->
-    <xsl:variable name="text-remove-empty">
-      <xsl:choose>
-        <xsl:when test="not(translate($input,' &#10;',''))">
-          <xsl:text/>
-        </xsl:when>
-        <xsl:otherwise>
-          <xsl:value-of select="$input"/>
-        </xsl:otherwise>
-      </xsl:choose>
-    </xsl:variable>
-
-    <!-- Newlines need to be escaped as \\n for JSON. -->
-    <xsl:variable name="text-fix-newline">
-      <xsl:call-template name="string-replace">
-        <xsl:with-param name="input" select="$text-remove-empty"/>
-        <xsl:with-param name="search-string" select="'&#10;'"/>
-        <xsl:with-param name="replace-string" select="'\\n'"/>
-      </xsl:call-template>
-    </xsl:variable>
-
-    <!-- Replace literal backslashes -->
-    <xsl:variable name="text-fix-backslash">
-      <xsl:call-template name="string-replace">
-        <xsl:with-param name="input" select="$text-fix-newline"/>
-        <xsl:with-param name="search-string" select="'\'"/>
-        <xsl:with-param name="replace-string" select="'\\'"/>
-      </xsl:call-template>
-    </xsl:variable>
-
-    <!-- Quotes are used to delimit strings in JSON. -->
-    <xsl:variable name="text-fix-quote">
-      <xsl:choose>
-        <xsl:when test="$use-single-quote-only = true">
-          <xsl:call-template name="string-replace">
-            <xsl:with-param name="input" select="$text-fix-newline"/>
-            <xsl:with-param name="search-string" select="'&quot;'"/>
-            <xsl:with-param name="replace-string" select='"&apos;"'/>
-          </xsl:call-template>
-        </xsl:when>
-        <xsl:otherwise>
-          <xsl:call-template name="string-replace">
-            <xsl:with-param name="input" select="$text-fix-newline"/>
-            <xsl:with-param name="search-string" select="'&quot;'"/>
-            <xsl:with-param name="replace-string" select="'\&quot;'"/>
-          </xsl:call-template>
-        </xsl:otherwise>
-      </xsl:choose>
-    </xsl:variable>
-    <xsl:value-of select="$text-fix-quote"/>
+  <xsl:template match="extralinks/link" mode="generate-docset-json">
+    <xsl:message>Implementation missing.</xsl:message>
   </xsl:template>
 
 </xsl:stylesheet>

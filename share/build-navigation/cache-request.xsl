@@ -129,37 +129,35 @@
   <xsl:template name="cache-hash-match">
     <xsl:param name="hash" select="''"/>
 
-    <dscr:cacheresult>
-     <xsl:for-each select="$cache_content/descendant::title[@hash = $hash]">
-       <xsl:variable name="format" select="ancestor::document/path/@format"/>
-       <xsl:variable name="rootdoc">
-         <xsl:choose>
-           <xsl:when test="@rootid and @rootid != ''"><xsl:value-of select="@rootid"/></xsl:when>
-           <xsl:otherwise>index</xsl:otherwise>
-         </xsl:choose>
-       </xsl:variable>
-       <xsl:variable name="path">
-         <xsl:choose>
-           <xsl:when test="$format = 'html' or $format = 'single-html'">
-             <xsl:value-of select="concat(ancestor::document/path,$rootdoc,'.html')"/>
-           </xsl:when>
-           <xsl:otherwise>
-             <xsl:value-of select="ancestor::document/path"/>
-           </xsl:otherwise>
-         </xsl:choose>
-       </xsl:variable>
+    <xsl:for-each select="$cache_content/descendant::title[@hash = $hash]">
+      <xsl:variable name="format" select="ancestor::document/path/@format"/>
+      <xsl:variable name="rootdoc">
+        <xsl:choose>
+          <xsl:when test="@rootid and @rootid != ''"><xsl:value-of select="@rootid"/></xsl:when>
+          <xsl:otherwise>index</xsl:otherwise>
+        </xsl:choose>
+      </xsl:variable>
+      <xsl:variable name="path">
+        <xsl:choose>
+          <xsl:when test="$format = 'html' or $format = 'single-html'">
+            <xsl:value-of select="concat(ancestor::document/path,$rootdoc,'.html')"/>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:value-of select="ancestor::document/path"/>
+          </xsl:otherwise>
+        </xsl:choose>
+      </xsl:variable>
 
-       <dscr:result
-         dc="{ancestor::document/@dc}"
-         rootid="{@rootid}"
-         format="{ancestor::document/path/@format}"
-         path="{$path}"
-         lang="{ancestor::document/@lang}"
-         productid="{ancestor::document/@productid}"
-         setid="{ancestor::document/@setid}"
-         title="{.}"/>
-     </xsl:for-each>
-    </dscr:cacheresult>
+      <dscr:result
+        dc="{ancestor::document/@dc}"
+        rootid="{@rootid}"
+        format="{ancestor::document/path/@format}"
+        path="{$path}"
+        lang="{ancestor::document/@lang}"
+        productid="{ancestor::document/@productid}"
+        setid="{ancestor::document/@setid}"
+        title="{.}"/>
+    </xsl:for-each>
   </xsl:template>
 
 

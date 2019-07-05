@@ -51,15 +51,15 @@
     <xsl:apply-templates select="//docset" mode="generate-docset-json"/>
   </xsl:template>
 
-  <!-- Make sure to exclude products based on lifecycle. -->
-  <!-- Make sure to handle SBP differently. -->
+  <!-- FIXME: Make sure to exclude products based on lifecycle. -->
+  <!-- FIXME: Make sure to handle SBP differently. -->
   <xsl:template match="product" mode="generate-productline-list">
     "<xsl:value-of select="@productid"/>": "<xsl:value-of select="name"/>",</xsl:template>
 
 
   <xsl:template match="product" mode="generate-product-list">
     "<xsl:value-of select="@productid"/>": {<xsl:apply-templates select="docset" mode="generate-product-list">
-      <!-- sort translate() lists need to be expanded for other langs. -->
+      <!-- FIXME: sort translate() lists need to be expanded for other langs. -->
       <xsl:sort
         lang="en"
         select="normalize-space(translate(version,
@@ -67,8 +67,8 @@
     </xsl:apply-templates>
     },</xsl:template>
 
-  <!-- Make sure to exclude products based on lifecycle. -->
-  <!-- Make sure to handle SBP differently. -->
+  <!-- FIXME: Make sure to exclude products based on lifecycle. -->
+  <!-- FIXME: Make sure to handle SBP differently. -->
   <xsl:template match="docset" mode="generate-product-list">
     <xsl:variable name="visible">
       <xsl:choose>
@@ -144,7 +144,7 @@
   ]
 }
       <!--
-      zip: docset.zip
+      zip: docset-en-us.zip, docset-de-de.zip
      } -->
     </exsl:document>
 
@@ -173,12 +173,17 @@
     <xsl:if test="descendant::deliverable[not(subdeliverable)][not(@category)] or
                   descendant::subdeliverable[not(@category)] or
                   link[not(@category)]">
-      <xsl:variable name="documents">
+      <xsl:variable name="documents-candidate">
         <xsl:apply-templates
           select="( builddocs/language[@default = 'true']/deliverable[not(subdeliverable)][not(@category)] |
                     builddocs/language[@default = 'true']/deliverable/subdeliverable[not(@category)] )"
           mode="generate-docset-json"/>
         <xsl:apply-templates select="extralinks/link[not(@category)]" mode="generate-docset-json"/>
+      </xsl:variable>
+      <xsl:variable name="documents">
+        <xsl:call-template name="dedupe-documents">
+          <xsl:with-param name="documents-in" select="exsl:node-set($documents-candidate)"/>
+        </xsl:call-template>
       </xsl:variable>
 
       <xsl:call-template name="json-category-definition" mode="generate-docset-json">
@@ -199,18 +204,41 @@
       <xsl:apply-templates select="parent::product/descendant::*[@category]/@category" mode="category-name-list"/>
     </xsl:variable>
     <xsl:if test="contains($used-categories, $categoryid)">
-      <xsl:variable name="documents">
+      <xsl:variable name="documents-candidate">
         <xsl:apply-templates
           select="( $node/builddocs/language[@default = 'true']/deliverable[not(subdeliverable)][contains(concat(' ', @category,' '), $categoryid)] |
                     $node/builddocs/language[@default = 'true']/deliverable/subdeliverable[contains(concat(' ',@category,' '), $categoryid)] )"
           mode="generate-docset-json"/>
         <xsl:apply-templates select="$node/extralinks/link[contains(concat(' ',@category,' '), $categoryid)]" mode="generate-docset-json"/>
       </xsl:variable>
+      <xsl:variable name="documents">
+        <xsl:call-template name="dedupe-documents">
+          <xsl:with-param name="documents-in" select="exsl:node-set($documents-candidate)"/>
+        </xsl:call-template>
+      </xsl:variable>
 
       <xsl:call-template name="json-category-definition" mode="generate-docset-json">
         <xsl:with-param name="is-actual-category" select="'true'"/>
         <xsl:with-param name="categoryid" select="@categoryid"/>
         <xsl:with-param name="documents" select="$documents"/>
+      </xsl:call-template>
+    </xsl:if>
+  </xsl:template>
+
+  <xsl:template name="dedupe-documents">
+    <xsl:param name="documents-in" select="''"/>
+    <xsl:param name="count" select="1"/>
+    <xsl:param name="known-hashes" select="' '"/>
+    <xsl:if test="not(contains($known-hashes, concat(' ', $documents-in/dscr:jsondocument[$count]/@hash, ' ')))">
+      <dscr:jsondocument title="{$documents-in/dscr:jsondocument[$count]/@title}" hash="{$documents-in/dscr:jsondocument[$count]/@hash}">
+        <xsl:value-of select="$documents-in/dscr:jsondocument[$count]"/>
+      </dscr:jsondocument>
+    </xsl:if>
+    <xsl:if test="$documents-in/dscr:jsondocument[$count + 1]">
+      <xsl:call-template name="dedupe-documents">
+        <xsl:with-param name="documents-in" select="$documents-in"/>
+        <xsl:with-param name="count" select="$count + 1"/>
+        <xsl:with-param name="known-hashes" select="concat($known-hashes, ' ', $documents-in/dscr:jsondocument[$count]/@hash, ' ')"/>
       </xsl:call-template>
     </xsl:if>
   </xsl:template>
@@ -309,14 +337,14 @@
     reference it here. -->
     <!-- FIXME Think about whether internal-mode should affect this 'if'. -->
     <xsl:if test="$hash != ''">
-      <dscr:jsondocument title="{$title-escaped}">
+      <dscr:jsondocument title="{$title-escaped}" hash="{$hash}">
             [
               {
                 "lang": "<xsl:value-of select="ancestor::language/@lang"/>",
                 "default": <xsl:value-of select="$default"/>,
                 "title": "<xsl:value-of select="$title-escaped"/>",
                 "format": {
-                <xsl:for-each select="exsl:node-set($hash-match)/dscr:cacheresult/dscr:result">
+                <xsl:for-each select="exsl:node-set($hash-match)/dscr:result">
                   <!-- NB: We intentionally accept _any_ DC file with the
                   right @format from the same product below. This allows us
                   to group builds of sets (HTML) together with builds of
@@ -332,7 +360,7 @@
                   "<xsl:value-of select="@format"/>": "<xsl:value-of select="@path"/>",
                   </xsl:if>
                 </xsl:for-each>
-               }
+                }
               },
               <!-- FIXME Make this work for more than one lang. -->
               <!-- FIXME: Dedupe DCs that have already been handled.

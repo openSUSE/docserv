@@ -70,15 +70,17 @@ def get_version(name):
     # example: ('SLE')('12')('SP4')
     version_regex = r'(^[a-zA-Z_]+)([0-9.]+)?([a-zA-Z0-9.]+)?'
     match = re.match(version_regex, name)
-    if match.group(2):
-            # substitute 'SLE' with '', removing product name
-            version = re.sub(r'(^[a-zA-Z_]+)', "", name)
-            if match.group(3):
-                # replace '12' with '12 ', adding space
-                version = version.replace(match.group(2), match.group(2) + " ")
-            # returning '12 SP4'
-            return version
-    return name
+    try:
+        if match.group(2):
+              # substitute 'SLE' with '', removing product name
+              version = re.sub(r'(^[a-zA-Z_]+)', "", name)
+              if match.group(3):
+                  # replace '12' with '12 ', adding space
+                  version = version.replace(match.group(2), match.group(2) + " ")
+              # returning '12 SP4'
+              return version
+    except AttributeError:
+        return name
 
 def prettify(root):
     """Return a pretty-printed XML string for the element.
@@ -455,7 +457,6 @@ def parse_cli(cliargs=None):
 
 if __name__ == "__main__":
     args = parse_cli()
-    print(args)
 
     branches = get_deliverables(args.path, filter_dc=args.filter)
     git_url = get_origin_url(args.path)

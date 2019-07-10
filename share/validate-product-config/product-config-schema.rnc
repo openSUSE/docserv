@@ -371,7 +371,12 @@ ds.subdeliverable =
 ds.deliverablerestricted =
   element deliverable {
     ds.dc,
-    ds.subdeliverable*
+    ds.subdeliverablerestricted*
+  }
+
+ds.subdeliverablerestricted =
+  element subdeliverable {
+    ds.type.id
   }
 
 ds.extralinks =

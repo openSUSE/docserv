@@ -1,7 +1,22 @@
 # What is this?
-Docserv² is a set of scripts and configuration files to automatically build
-DocBook XML documentation in several languages and publish the result as
-static web content.
+Docserv² is a daemon to semi-automatically build
+DAPS-compatible DocBook XML and AsciiDoc documentation sources and generate
+accompanying Web pages for navigating the result.
+
+High notes:
+
+* Supports HTML, PDF, Single-HTML, and EPUB output formats
+* Support for localized documentation
+* Documents created outside of Docserv² can be linked to from the navigational
+  pages
+* Output directory tree is all-static Web content
+* Separation of build server and publishing server(s)
+* Documentation sources are automatically synchronized from a remote Git
+  repository
+* Output documents can be rebuilt and synchronized to publishing servers using
+  a simple API call
+* Rigorous configuration format that (hopefully) prevents errors etc.
+
 
 # Installing Docserv²
 RPM builds are available in the openSUSE Build Service in the

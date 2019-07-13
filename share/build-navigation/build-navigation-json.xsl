@@ -276,12 +276,13 @@
   </xsl:template>
 
   <xsl:template match="deliverable[not(subdeliverable)]|subdeliverable" mode="generate-docset-json">
-    <xsl:variable name="node" select="."/>
-    <xsl:variable name="default">
+    <xsl:param name="node" select="."/>
+    <xsl:param name="lang" select="ancestor::language/@lang"/>
+    <xsl:param name="default">
       <xsl:call-template name="determine-default">
         <xsl:with-param name="node" select="ancestor::language"/>
       </xsl:call-template>
-    </xsl:variable>
+    </xsl:param>
 
     <xsl:variable name="title">
       <xsl:call-template name="cache-request">
@@ -306,14 +307,10 @@
       </xsl:choose>
     </xsl:variable>
 
-    <!-- If the document has no cache value, it can't have been built yet, don't
-    reference it here. -->
-    <!-- FIXME Think about whether internal-mode should affect this 'if'. -->
-    <xsl:if test="$hash != ''">
-      <dscr:jsondocument title="{$title-escaped}" hash="{$hash}">
-            [
+    <xsl:variable name="content">
+      <xsl:if test="$hash != ''">
               {
-                "lang": "<xsl:value-of select="ancestor::language/@lang"/>",
+                "lang": "<xsl:value-of select="$lang"/>",
                 "default": <xsl:value-of select="$default"/>,
                 "title": "<xsl:value-of select="$title-escaped"/>",
                 "format": {
@@ -335,11 +332,75 @@
                 </xsl:for-each>
                 }
               },
-              <!-- FIXME Make this work for more than one lang. -->
+      </xsl:if>
+    </xsl:variable>
+
+    <!-- If the document has no cache value, it can't have been built yet, don't
+    reference it here. -->
+    <!-- FIXME Think about whether internal-mode should affect this 'choose'. -->
+    <xsl:choose>
+      <xsl:when test="$content != '' and $default = 'true'">
+        <xsl:variable name="equivalent-dcs">
+          <xsl:text> </xsl:text>
+          <xsl:for-each select="exsl:node-set($hash-match)/dscr:result">
+            <xsl:value-of select="concat(@dc,'/',@rootid)"/><xsl:text> </xsl:text>
+          </xsl:for-each>
+        </xsl:variable>
+        <dscr:jsondocument title="{$title-escaped}" hash="{$hash}">
+            [
+              <xsl:value-of select="$content"/>
+              <!-- for each non-default lang call this template but with a
+              parameter that prevents dscr + outer json thing -->
+              <xsl:apply-templates select="ancestor::builddocs/language[not(@default = 'true')]" mode="fatedtopretend">
+                <xsl:sort lang="en" select="normalize-space(translate(@lang, '&sortlower;', '&sortupper;'))"/>
+                <xsl:with-param name="node" select="$node"/>
+                <xsl:with-param name="equivalent-dcs" select="$equivalent-dcs"/>
+              </xsl:apply-templates>
             ],
-      </dscr:jsondocument>
-    </xsl:if>
+        </dscr:jsondocument>
+      </xsl:when>
+      <xsl:when test="$content != ''">
+        <xsl:value-of select="$content"/>
+      </xsl:when>
+    </xsl:choose>
   </xsl:template>
+
+  <xsl:template match="language[not(@default = 'true')]" mode="fatedtopretend">
+    <xsl:param name="node" select="."/>
+    <xsl:param name="equivalent-dcs" select="$equivalent-dcs"/>
+
+    <!-- From the default-language version, we know already which documents are
+    equivalent to which others. Now, it can happen that some specific document
+    builds in the default language but not in a translation. But an equivalent
+    document providing a different set of formats may have built.
+    If we're catching the document that does not build only here, we're a bit
+    screwed. So let's make sure to try all the documents we know to be
+    equivalent! -->
+    <!-- First try to see if there are equivalent subdeliverables -->
+    <xsl:variable name="try-subdeliverables">
+      <xsl:if test="deliverable/subdeliverable[contains($equivalent-dcs, concat(' ', parent::deliverable/dc,'/',., ' '))]">
+        <xsl:apply-templates
+          select="deliverable/subdeliverable[contains($equivalent-dcs, concat(' ', parent::deliverable/dc,'/',., ' '))]"
+          mode="generate-docset-json"/>
+      </xsl:if>
+    </xsl:variable>
+
+    <!-- If we don't have a result on the subdeliverables, try regular
+    deliverables. If we don't have anything there, there either is no
+    translation for this document in that language or it has not been built
+    yet. -->
+    <xsl:choose>
+      <xsl:when test="$try-subdeliverables != ''">
+        <xsl:value-of select="$try-subdeliverables"/>
+      </xsl:when>
+      <xsl:when test="deliverable[not(subdeliverable)][contains($equivalent-dcs, concat(' ', dc,'/'))]">
+        <xsl:apply-templates
+          select="deliverable[not(subdeliverable)][contains($equivalent-dcs, concat(' ', dc,'/'))]"
+          mode="generate-docset-json"/>
+      </xsl:when>
+    </xsl:choose>
+  </xsl:template>
+
 
   <xsl:template match="extralinks/link" mode="generate-docset-json">
     <xsl:variable name="title-escaped-default">

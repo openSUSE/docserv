@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+"""
+Create a zip archive with all files in specified formats from given directory.
+"""
+import os
+import sys
+import argparse
+from zipfile import ZipFile, ZIP_DEFLATED
+
+def file_paths(input_path, zip_formats):
+    """Collect all files with paths in specified formats from given directory.
+
+    :param str input_path: path to directory from which files are to be collected
+    :param list zip_formats: a list containing accepted documentation formats
+        example: ["pdf", "epub", "single-html"]
+    :return: a generator of matching file paths
+    """
+    for rootdir, subdirs, files in os.walk(input_path):
+        for filename in files:
+            filepath = os.path.join(rootdir, filename)
+            for format in zip_formats:
+                format_relative_path = os.path.join(input_path, format)
+                if rootdir.startswith(format_relative_path):
+                    yield filepath
+                    break
+
+def create_zip_archive(input_path, output_path, zip_formats):
+    """Create zip archive with all files in specified formats from given directory.
+
+    :param str input_path: path to directory from which files are to be archived
+    :param str zip_formats: a string containing accepted documentation formats,
+        which are also the names of directories to be archived
+        example: "pdf,epub,single-html"
+    :param str output_path:  archive name including path where to be saved
+    """
+    zip_formats = zip_formats.split(",")
+    # writing files to a zipfile
+    with ZipFile(output_path, 'w', ZIP_DEFLATED) as zip:
+        # writing each file one by one
+        for filepath in file_paths(input_path, zip_formats):
+            filename = filepath.replace(input_path, "")
+            zip.write(filepath, filename)
+
+def parse_cli(cliargs=None):
+    """Parse CLI with :class:`argparse.ArgumentParser` and return parsed result.
+
+    :param list cliargs: Arguments to parse or None (=use sys.argv)
+    :return: parsed CLI result
+    :rtype: :class:`argparse.Namespace`
+    """
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("-i", "--input-path",
+                        dest="input_path",
+                        help="Path to directory from which files are to be archived.",
+                        )
+    parser.add_argument("-o", "--output-path",
+                        dest="output_path",
+                        help="Path to directory where the archive is to be saved.",
+                        )
+    parser.add_argument("-f", "--zip-formats",
+                        dest="zip_formats",
+                        help="Documentation formats to save in the archive.",
+                        )
+    args = parser.parse_args(args=cliargs)
+
+    return args
+
+if __name__ == "__main__":
+    args = parse_cli()
+    create_zip_archive(args.input_path, args.output_path, args.zip_formats)
+    sys.exit(0)

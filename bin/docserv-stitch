@@ -7,6 +7,8 @@
 #                                 # (optional)
 # --simplify                      # Simplify user-generated productconfig so the
 #                                 # docserv daemon can use it (optional)
+# --spinner                       # Show a spinner while working, if you or your
+#                                 # CI are impatient and eager to kill processes
 # INPUT_DIR                       # Directory with config files
 # OUTPUT_FILE                     # Output file name (parent directory must exist)
 #                                 # (optional; if not specified, this will only
@@ -52,6 +54,20 @@ add_multiple_issues() {
   done < <(echo -e "$issues")
 }
 
+# Mostly because we need to put something random on screen when running within
+# CI, so we don't get killed for inactivity
+spin() {
+  [[ "$enable_spinner" -eq 0 ]] && return
+
+  if [[ "$spinstate" == '/' ]]; then spinstate='-'
+  elif [[ "$spinstate" == '-' ]]; then spinstate='\'
+  elif [[ "$spinstate" == '\' ]]; then spinstate='|'
+  else spinstate='/'
+  fi
+
+  echo -ne "\b$spinstate"
+}
+
 xmllint='xmllint'
 jing='jing'
 starlet='xmlstarlet'
@@ -68,6 +84,7 @@ simplify_stylesheet=$share_dir/simplify-product-config/simplify.xsl
 [[ ! -f $simplify_stylesheet ]] && out "Stylesheet $simplify_stylesheet does not exist.$(readme_message)"
 
 simplify_config=0
+enable_spinner=0
 valid_languages=""
 unknown=""
 input_dir=""
@@ -81,6 +98,9 @@ for i in "$@"
       ;;
       --simplify)
         simplify_config=1
+      ;;
+      --spinner)
+        enable_spinner=1
       ;;
       --valid-languages=*)
         valid_languages=" ${i#*=}"
@@ -120,11 +140,12 @@ for file in *.xml; do
 
   wellformed=$(2>&1 xmllint --noout --noent $file)
   [[ $? -gt 0 ]] && add_issue "$input_dir/$file: File is not well-formed:\n$wellformed" && continue
+  spin
 
   valid=$(2>&1 ADDITIONAL_FLAGS="$java_flags" ADDITIONAL_OPTIONS="$java_flags" \
     $jing -ci $schema_file $file)
   [[ $? -gt 0 ]] && add_issue "$input_dir/$file: File is not valid:\n$valid"
-
+  spin
 
   # Additional validation checks may come either as XSLTs or Bash scripts.
   # No script output is assumed to mean there are no issues.
@@ -142,6 +163,7 @@ for file in *.xml; do
       $command $check_file $file)
     [[ $? -eq 0 ]] || out "Validation check file $check_file is misbehaving."
     [[ "$result" ]] && add_multiple_issues "$input_dir/$file" "$result"
+    spin
   done
 
 done

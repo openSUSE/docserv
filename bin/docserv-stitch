@@ -59,6 +59,11 @@ add_multiple_issues() {
 spin() {
   [[ "$enable_spinner" -eq 0 ]] && return
 
+  if [[ "$1" == 'clear' ]]; then
+    echo -e '\b '
+    return
+  fi
+
   if [[ "$spinstate" == '/' ]]; then spinstate='-'
   elif [[ "$spinstate" == '-' ]]; then spinstate='\'
   elif [[ "$spinstate" == '\' ]]; then spinstate='|'
@@ -167,6 +172,8 @@ for file in *.xml; do
   done
 
 done
+
+spin 'clear'
 
 if [[ "$issuelist" ]]; then
   out "The following issues occurred when validating:$issuelist\n"

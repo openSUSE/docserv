@@ -26,7 +26,7 @@ class Deliverable:
     one of these objects.
     """
 
-    def __init__(self, parent, dc_file, build_format, subdeliverables):
+    def __init__(self, parent, dc_file, dir_struct_paths, build_format, subdeliverables):
         self.title = None
         self.dc_hash = None
         self.path = None
@@ -36,6 +36,7 @@ class Deliverable:
         self.root_id = None  # False if no root id exists
         self.cleanup_done = False
 
+        self.tmp_dir_bi, self.docset_relative_path = dir_struct_paths
         self.parent = parent  # Reference to the parent BuildInstructionHandler
         self.dc_file = dc_file
         self.build_format = build_format
@@ -141,77 +142,56 @@ class Deliverable:
         # Run daps in the docker container, copy results to a
         # build target directory
         n += 1
-        tmp_build_target = tempfile.mkdtemp(prefix="docserv_out_")
+        tmp_dir_docker = tempfile.mkdtemp(prefix="docserv_out_")
         commands[n] = {}
         commands[n]['cmd'] = "d2d_runner -b=1 -v=1 -u=1 -x=%s -d=%s -o=%s -i=%s -f=%s %s" % (
             xslt_params_file[1],       # -x
             daps_params_file[1],       # -d
-            tmp_build_target,          # -o
+            tmp_dir_docker,          # -o
             self.parent.build_source_dir,  # -i
             self.build_format,         # -f
             self.dc_file               # last param
         )
 
         # Create correct directory structure
-        n += 1
-        sync_source_tmp = tempfile.mkdtemp(prefix="docserv_sync_")
-        if self.build_format == 'html' or self.build_format == 'single-html':
+        self.deliverable_relative_path = os.path.join(
+            self.docset_relative_path,
+            self.build_format
+        )
+        if self.build_format in ['html', 'single-html']:
             self.deliverable_relative_path = os.path.join(
-                self.parent.build_instruction['lang'],
-                self.parent.build_instruction['product'],
-                self.parent.build_instruction['docset'],
-                self.build_format,
+                self.deliverable_relative_path,
                 self.dc_file.replace('DC-', '')
             )
-        else:
-            self.deliverable_relative_path = os.path.join(
-                self.parent.build_instruction['lang'],
-                self.parent.build_instruction['product'],
-                self.parent.build_instruction['docset'],
-            )
-        sync_source_dir = os.path.join(
-            sync_source_tmp,
-            self.deliverable_relative_path)
-        commands[n] = {}
-        commands[n]['cmd'] = "/usr/bin/mkdir -p %s" % (sync_source_dir)
-
-        # Copy wanted files to sync source
+        tmp_build_full_path = os.path.join(
+            self.tmp_dir_bi,
+            self.deliverable_relative_path
+        )
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "rsync -lr __FILELIST__  %s" % (sync_source_dir)
+        commands[n]['cmd'] = "/usr/bin/mkdir -p %s" % (tmp_build_full_path)
+
+        # Copy wanted files to temp build instruction directory
+        n += 1
+        commands[n] = {}
+        commands[n]['cmd'] = "rsync -lr __FILELIST__  %s" % (tmp_build_full_path)
         commands[n]['pre_cmd_hook'] = 'parse_d2d_filelist'
-        commands[n]['tmp_build_target'] = tmp_build_target
+        commands[n]['tmp_dir_docker'] = tmp_dir_docker
 
         # create directory for Deliverable cache file
         self.deliverable_cache_dir = os.path.join(
             self.parent.deliverable_cache_base_dir,
-            self.parent.build_instruction['lang'],
-            self.parent.build_instruction['product'],
-            self.parent.build_instruction['docset'],
+            self.docset_relative_path,
             self.build_format,
         )
         n += 1
         commands[n] = {}
         commands[n]['cmd'] = "mkdir -p %s" % self.deliverable_cache_dir
-        commands[n]['tmp_build_target'] = tmp_build_target
+        commands[n]['tmp_dir_docker'] = tmp_dir_docker
         # get root id from bigfile
         commands[n]['pre_cmd_hook'] = 'extract_root_id'
         # write configuration for overview page
         commands[n]['post_cmd_hook'] = 'write_deliverable_cache'
-
-        # rsync build target directory to backup path
-        backup_path = self.parent.config['targets'][self.parent.build_instruction['target']]['backup_path']
-        n += 1
-        commands[n] = {}
-        commands[n]['cmd'] = "rsync -lr %s/ %s" % (
-            sync_source_tmp, backup_path)
-
-        # rsync built target directory with web server
-        target_path = self.parent.config['targets'][self.parent.build_instruction['target']]['target_path']
-        n += 1
-        commands[n] = {}
-        commands[n]['cmd'] = "rsync -lr %s/ %s" % (
-            sync_source_tmp, target_path)
 
         # remove daps parameter file
         n += 1
@@ -223,14 +203,10 @@ class Deliverable:
         commands[n] = {}
         commands[n]['cmd'] = "rm %s" % (xslt_params_file[1])
 
-        # sync source directory
-        commands[n] = {}
-        commands[n]['cmd'] = "rm -rf %s" % (sync_source_tmp)
-
-        # build target directory
+        # remove docker output directory
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "rm -rf %s" % (tmp_build_target)
+        commands[n]['cmd'] = "rm -rf %s" % (tmp_dir_docker)
 
         #
         # Now iterate through all commands and execute them
@@ -345,7 +321,7 @@ Language: %s
         a list of built documents.
         """
         # currently only read from file logic
-        f = open(os.path.join(command['tmp_build_target'], 'filelist'), 'r')
+        f = open(os.path.join(command['tmp_dir_docker'], 'filelist'), 'r')
         for line in f:
             line = line.strip()
             if '_bigfile.xml' not in line and line != "":
@@ -382,7 +358,7 @@ Language: %s
             bigfile = self.root_id
             logger.debug("Found ROOTID for %s: %s", self.id, self.root_id)
             bigfile_path = (os.path.join(
-                command['tmp_build_target'], '.tmp', '%s_bigfile.xml' % bigfile))
+                command['tmp_dir_docker'], '.tmp', '%s_bigfile.xml' % bigfile))
             xpath = ("(//*[@*[local-name(.)='id']='{ID}']/*[contains(local-name(.),'info')]/*[local-name(.)='title']|"
                      "//*[@*[local-name(.)='id']='{ID}']/*[local-name(.)='title'])[1]"
                      ).format(ID=self.root_id)
@@ -393,7 +369,7 @@ Language: %s
             logger.debug(
                 "No ROOTID found for %s, using DC file name: %s", self.id, self.dc_file)
             bigfile_path = (os.path.join(
-                command['tmp_build_target'], '.tmp', '%s_bigfile.xml' % bigfile))
+                command['tmp_dir_docker'], '.tmp', '%s_bigfile.xml' % bigfile))
             xpath = "(/*/*[contains(local-name(.),'info')]/*[local-name(.)='title']|/*/*[local-name(.)='title'])[1]"
             xmlstarlet['cmd'] = "xmlstarlet sel -t -v \"%s\" %s" % (
                 xpath, bigfile_path)

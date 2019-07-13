@@ -297,6 +297,8 @@ class DocservConfig:
                                        ]['default_lang'] = config[section]['default_lang']
                 self.config['targets'][config[section]['name']
                                        ]['internal'] = config[section]['internal']
+                self.config['targets'][config[section]['name']
+                                       ]['zip_formats'] = config[section]['zip_formats']
         except KeyError as error:
             logger.warning(
                 "Invalid configuration file, missing configuration key '%s'. Exiting.", error)

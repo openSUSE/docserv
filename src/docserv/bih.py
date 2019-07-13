@@ -54,6 +54,9 @@ class BuildInstructionHandler:
         if self.validate(build_instruction, config):
             self.initialized = True
             self.build_instruction = build_instruction
+            self.product = build_instruction['product']
+            self.docset = build_instruction['docset']
+            self.lang = build_instruction['lang']
             if 'deliverables' in build_instruction:
                 self.deliverables = build_instruction['deliverables']
             self.config = config
@@ -64,9 +67,23 @@ class BuildInstructionHandler:
                 self.remote_repo), thread_id, gitLocks, gitLocksLock)
             self.prepare_repo(thread_id)
             self.get_commit_hash()
+            self.create_dir_structure()
         else:
             self.initialized = False
         return
+
+    def create_dir_structure(self):
+        """Create directory structure command.
+        This directory is used within a build instruction.
+        Example: /tmp/ds_caasp_2_en-us_12e312d3/en-us/caasp/2
+        """
+        prefix = "ds_{}_{}_{}_".format(self.product, self.docset, self.lang)
+        self.tmp_dir_bi = tempfile.mkdtemp(prefix=prefix)
+
+        self.docset_relative_path = os.path.join(self.lang, self.product, self.docset)
+        self.tmp_bi_path = os.path.join(self.tmp_dir_bi, self.docset_relative_path)
+
+        os.makedirs(self.tmp_bi_path, exist_ok=True)
 
     def cleanup(self):
         """
@@ -81,7 +98,7 @@ class BuildInstructionHandler:
         commands = {}
         n = 0
         # (re-)generate overview page
-        sync_source_tmp = tempfile.mkdtemp(prefix="docserv_oview_")
+        tmp_dir_oview = tempfile.mkdtemp(prefix="docserv_oview_")
         commands[n] = {}
         commands[n]['cmd'] = "docserv-build-navigation %s --stitched-config=\"%s\" --ui-languages=\"%s\" --default-ui-language=\"%s\" --cache-dir=\"%s\" --doc-language=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\"" % (
             "--internal-mode" if self.config['targets'][self.build_instruction['target']
@@ -92,30 +109,58 @@ class BuildInstructionHandler:
             self.config['targets'][self.build_instruction['target']
                                    ]['default_lang'],
             self.deliverable_cache_base_dir,
-            self.build_instruction['lang'],
+            self.lang,
             self.config['targets'][self.build_instruction['target']
                                    ]['template_dir'],
-            sync_source_tmp)
+            tmp_dir_oview)
 
         # rsync build target directory to backup path
         backup_path = self.config['targets'][self.build_instruction['target']]['backup_path']
         n += 1
         commands[n] = {}
         commands[n]['cmd'] = "rsync -lr %s/ %s" % (
-            sync_source_tmp, backup_path)
+            tmp_dir_oview, backup_path)
 
-        # rsync built target directory with web server
-        target_path = self.config['targets'][self.build_instruction['target']]['target_path']
-        n += 1
-        commands[n] = {}
-        commands[n]['cmd'] = "rsync -lr %s/ %s" % (
-            sync_source_tmp, target_path)
+        if os.listdir(self.tmp_bi_path):
+            # remove contents of backup path for current build instruction
+            backup_docset_relative_path = os.path.join(backup_path, self.docset_relative_path)
+            n += 1
+            commands[n] = {}
+            commands[n]['cmd'] = "rm -rf %s" % (backup_docset_relative_path)
+
+            # copy temp build instruction directory to  backup path
+            n += 1
+            commands[n] = {}
+            commands[n]['cmd'] = "cp -r %s/. %s" % (self.tmp_dir_bi, backup_path)
+
+            # create zip archive
+            n += 1
+            commands[n] = {}
+            zip_name = "{}-{}.zip".format(self.product, self.docset)
+            zip_formats = self.config['targets'][self.build_instruction['target']]['zip_formats'].replace(" ",",")
+            create_archive_cmd = '%s --input-path %s --output-path %s --zip-formats %s' % (
+                os.path.join(BIN_DIR, 'docserv-create-archive'),
+                self.tmp_bi_path,
+                os.path.join(backup_docset_relative_path, zip_name),
+                zip_formats)
+            commands[n]['cmd'] = create_archive_cmd
+
+            # rsync local backup path with web server target path
+            target_path = self.config['targets'][self.build_instruction['target']]['target_path']
+            n += 1
+            commands[n] = {}
+            commands[n]['cmd'] = "rsync -lr %s/ %s" % (backup_path, target_path)
 
         if hasattr(self, 'local_repo_build_dir'):
             # build target directory
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "rm -rf %s" % self.local_repo_build_dir
+
+        # remove temp build instruction directory
+        n += 1
+        commands[n] = {}
+        commands[n]['cmd'] = "rm -rf %s" % self.tmp_dir_bi
 
         for i in range(0, n + 1):
             cmd = shlex.split(commands[i]['cmd'])
@@ -219,18 +264,18 @@ Repo/Branch: %s %s
         self.tree = etree.parse(self.stitch_tmp_file)
         try:
             xpath = "//product[@productid='%s']/maintainers/contact" % (
-                self.build_instruction['product'])
+                self.product)
             self.maintainers = []
             stuff = self.tree.findall(xpath)
             for contact in stuff:
                 self.maintainers.append(contact.text)
 
             xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/branch" % (
-                self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])
+                self.product, self.docset, self.lang)
             self.branch = self.tree.find(xpath).text
 
             xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/git/@remote" % (
-                self.build_instruction['product'], self.build_instruction['docset'])
+                self.product, self.docset)
             self.remote_repo = str(self.tree.xpath(xpath)[0])
         except AttributeError:
             logger.warning("Failed to parse xpath: %s", xpath)
@@ -238,7 +283,7 @@ Repo/Branch: %s %s
 
         try:
             xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/subdir" % (
-                self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])
+                self.product, self.docset, self.lang)
             self.build_source_dir = os.path.join(
                 self.local_repo_build_dir,
                 self.tree.find(xpath).text)
@@ -357,7 +402,7 @@ Repo/Branch: %s %s
             return False
         logger.debug("Generating deliverables.")
         xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/deliverable" % (
-            self.build_instruction['product'], self.build_instruction['docset'], self.build_instruction['lang'])
+            self.product, self.docset, self.lang)
         for xml_deliverable in self.tree.findall(xpath):
             build_formats = xml_deliverable.find(".//format").attrib
             for build_format in build_formats:
@@ -368,6 +413,8 @@ Repo/Branch: %s %s
                     subdeliverables.append(subdeliverable.text)
                 deliverable = Deliverable(self,
                                           xml_deliverable.find(".//dc").text,
+                                          (self.tmp_dir_bi,
+                                          self.docset_relative_path),
                                           build_format,
                                           subdeliverables
                                           )

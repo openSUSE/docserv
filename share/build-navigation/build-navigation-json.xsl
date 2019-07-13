@@ -136,11 +136,10 @@
     <xsl:apply-templates select="ancestor::product/desc" mode="generate-docset-json"/>
   ],
   "category": [
-    <!-- FIXME: should uncategorized items be listed first or last? -->
-    <xsl:call-template select="." name="generate-docset-json-no-cat"/>
     <xsl:apply-templates select="ancestor::product/category" mode="generate-docset-json">
       <xsl:with-param name="node" select="."/>
     </xsl:apply-templates>
+    <xsl:call-template select="." name="generate-docset-json-no-cat"/>
   ]
 }
       <!--
@@ -151,28 +150,17 @@
   </xsl:template>
 
   <xsl:template match="desc" mode="generate-docset-json">
-    <xsl:variable name="default">
-      <xsl:choose>
-        <xsl:when test="@default = 'true'">
-          <xsl:text>true</xsl:text>
-        </xsl:when>
-        <xsl:otherwise>
-          <xsl:text>false</xsl:text>
-        </xsl:otherwise>
-      </xsl:choose>
-    </xsl:variable>
     {
       "lang": "<xsl:value-of select="@lang"/>",
-      "default": <xsl:value-of select="$default"/>,
+      "default":  <xsl:call-template name="determine-default"/>,
       "description": "<xsl:apply-templates select="text()|*" mode="escape-html"/>"
     },
   </xsl:template>
 
   <xsl:template name="generate-docset-json-no-cat">
-
     <xsl:if test="descendant::deliverable[not(subdeliverable)][not(@category)] or
                   descendant::subdeliverable[not(@category)] or
-                  link[not(@category)]">
+                  descendant::link[not(@category)]">
       <xsl:variable name="documents-candidate">
         <xsl:apply-templates
           select="( builddocs/language[@default = 'true']/deliverable[not(subdeliverable)][not(@category)] |
@@ -280,19 +268,9 @@
   </xsl:template>
 
   <xsl:template match="category/name" mode="generate-docset-json">
-    <xsl:variable name="default">
-      <xsl:choose>
-        <xsl:when test="@default = 'true'">
-          <xsl:text>true</xsl:text>
-        </xsl:when>
-        <xsl:otherwise>
-          <xsl:text>false</xsl:text>
-        </xsl:otherwise>
-      </xsl:choose>
-    </xsl:variable>
         {
           "lang": "<xsl:value-of select="@lang"/>",
-          "default": <xsl:value-of select="$default"/>,
+          "default":  <xsl:call-template name="determine-default"/>,
           "localname": "<xsl:value-of select="."/>"
         },
   </xsl:template>
@@ -300,14 +278,9 @@
   <xsl:template match="deliverable[not(subdeliverable)]|subdeliverable" mode="generate-docset-json">
     <xsl:variable name="node" select="."/>
     <xsl:variable name="default">
-      <xsl:choose>
-        <xsl:when test="ancestor::language/@default = 'true'">
-          <xsl:text>true</xsl:text>
-        </xsl:when>
-        <xsl:otherwise>
-          <xsl:text>false</xsl:text>
-        </xsl:otherwise>
-      </xsl:choose>
+      <xsl:call-template name="determine-default">
+        <xsl:with-param name="node" select="ancestor::language"/>
+      </xsl:call-template>
     </xsl:variable>
 
     <xsl:variable name="title">
@@ -363,16 +336,50 @@
                 }
               },
               <!-- FIXME Make this work for more than one lang. -->
-              <!-- FIXME: Dedupe DCs that have already been handled.
-              Unfortunately, deduping and sorting in the same step are
-              somewhat exclusionary. -->
             ],
       </dscr:jsondocument>
     </xsl:if>
   </xsl:template>
 
   <xsl:template match="extralinks/link" mode="generate-docset-json">
-    <xsl:message>Implementation missing.</xsl:message>
+    <xsl:variable name="title-escaped-default">
+      <xsl:call-template name="escape-text" mode="escape-html">
+        <xsl:with-param name="input" select="language[default='true']/@title"/>
+      </xsl:call-template>
+    </xsl:variable>
+          <dscr:jsondocument title="{$title-escaped-default}" hash="link-{generate-id(.)}">
+            [
+            <xsl:for-each select="language">
+              <xsl:variable name="title-escaped">
+                <xsl:call-template name="escape-text" mode="escape-html">
+                  <xsl:with-param name="input" select="@title"/>
+                </xsl:call-template>
+              </xsl:variable>
+              {
+                "lang": "<xsl:value-of select="@lang"/>",
+                "default": <xsl:call-template name="determine-default"/>,
+                "title": "<xsl:value-of select="$title-escaped"/>",
+                "format": {
+                <xsl:for-each select="url">
+                  "<xsl:value-of select="@format"/>": "<xsl:value-of select="@href"/>",
+                </xsl:for-each>
+                }
+              },
+            </xsl:for-each>
+            ],
+          </dscr:jsondocument>
+  </xsl:template>
+
+  <xsl:template name="determine-default">
+    <xsl:param name="node" select="."/>
+    <xsl:choose>
+      <xsl:when test="$node/@default = 'true'">
+        <xsl:text>true</xsl:text>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:text>false</xsl:text>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
 </xsl:stylesheet>

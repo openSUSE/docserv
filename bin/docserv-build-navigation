@@ -47,7 +47,6 @@ magic_comment='<!--#include docserv_content-->'
 
 stitched_config=
 
-doc_language=
 ui_languages=
 default_ui_language=
 
@@ -67,9 +66,6 @@ for i in "$@"
       ;;
       --stitched-config=*)
         stitched_config="${i#*=}"
-      ;;
-      --doc-language=*)
-        doc_language="${i#*=}"
       ;;
       --ui-languages=*)
         ui_languages="${i#*=}"
@@ -95,7 +91,7 @@ done
 [[ "$unknown" ]] && \
   out "There are unknown parameters:\n$unknown"
 
-for lang in "$doc_language" "$ui_languages" "$default_ui_language"; do
+for lang in "$ui_languages" "$default_ui_language"; do
   [[ $(echo -e " $lang" | sed -r 's/( [a-z]{2}(-[a-z]{2,5})?)+//') ]] && out "Language parameter ($lang) is not in the right format."
 done
 
@@ -103,7 +99,7 @@ for file in "$stitched_config"; do
   [[ ! -f "$file" ]] && out "File $file does not exist."
 done
 
-for dir in "$cache_dir/$doc_language" "$template_dir" "$output_dir"; do
+for dir in "$cache_dir" "$template_dir" "$output_dir"; do
   [[ ! -d "$dir" ]] && out "Directory $dir does not exist."
 done
 
@@ -122,19 +118,11 @@ done
 [[ ! $(grep -P '^'"$magic_comment"'$' $template_html) ]] && \
   out "Template $template_html does not include magic comment: $magic_comment"
 
-ui_translation=$(comm -1 -2 <(echo "$doc_language" | tr ' ' '\n' | sort -u | head -1) <(echo -e "$ui_languages" | tr ' ' '\n' | sort -u))
-if [[ ! "$ui_translation" ]]; then
-  ui_translation=$default_ui_language
-fi
-
 temp_dir=$(mktemp -d /tmp/docserv-build-navigation-XXXXXXXX)
 intermediate_output=$temp_dir/page.html
 cache_file=$temp_dir/cache.xml
 
-output=$output_dir/index.${doc_language}.html
-[[ "$doc_language" == "$default_ui_language" ]] && output=$output_dir/index.html
-
-cache_files=$(find "$cache_dir/$doc_language" -name '*.xml')
+cache_files=$(find "$cache_dir" -name '*.xml')
 
 stitched_cache='<?xml version="1.0" encoding="UTF-8"?>\n<docservcache>\n\n'
 for file in $cache_files; do
@@ -148,8 +136,6 @@ echo -e "$stitched_cache" > $cache_file
 xsltproc \
   --stringparam "template_translation" "$template_translation" \
   --stringparam "cache_file" "$cache_file" \
-  --stringparam "doc_language" "$doc_language" \
-  --stringparam "ui_translation" "$ui_translation" \
   --stringparam "internal_mode" "$internal_mode" \
   "$stylesheet" \
   "$stitched_config" \

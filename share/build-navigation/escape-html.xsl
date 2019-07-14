@@ -46,7 +46,7 @@
       <xsl:call-template name="string-replace">
         <xsl:with-param name="input" select="$text-remove-empty"/>
         <xsl:with-param name="search-string" select="'&#10;'"/>
-        <xsl:with-param name="replace-string" select="'\\n'"/>
+        <xsl:with-param name="replace-string" select="'\n'"/>
       </xsl:call-template>
     </xsl:variable>
 

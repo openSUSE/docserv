@@ -328,6 +328,11 @@
                 "title": "<xsl:value-of select="$title-escaped"/>",
                 "format": {
                 <xsl:for-each select="exsl:node-set($hash-match)/dscr:result">
+                  <!-- Let's sort formats by their (likely) importance:
+                  HTML, Single-HTML, PDF, EPUB with this one werid trick!
+                  Luckily, they all start with a different letter, otherwise
+                  this might have become icky. -->
+                  <xsl:sort lang="en" select="normalize-space(translate(@format, 'hHsSpPeEoO', '1122334455'))"/>
                   <!-- NB: We intentionally accept _any_ DC file with the
                   right @format from the same product below. This allows us
                   to group builds of sets (HTML) together with builds of

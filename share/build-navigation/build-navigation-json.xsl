@@ -16,7 +16,23 @@
   <xsl:include href="cache-request.xsl"/>
   <xsl:include href="escape-html.xsl"/>
 
-  <xsl:param name="pathprefix" select="''"/>
+  <xsl:param name="output_root">
+    <xsl:message terminate="yes">Root directory for output is missing.</xsl:message>
+  </xsl:param>
+  <xsl:param name="cache_file">
+    <xsl:message terminate="yes">Stitched document cache file XSLT parameter missing.</xsl:message>
+  </xsl:param>
+  <xsl:param name="ui_languages">
+    <xsl:message terminate="yes">UI languages XSLT parameter missing.</xsl:message>
+  </xsl:param>
+
+  <xsl:param name="product">
+    <xsl:message terminate="yes">Product parameter missing.</xsl:message>
+  </xsl:param>
+  <xsl:param name="docset">
+    <xsl:message terminate="yes">Docset parameter missing.</xsl:message>
+  </xsl:param>
+  <xsl:param name="internal_mode" select="'false'"/>
 
   <xsl:template match="node()|@*"/>
 
@@ -24,11 +40,11 @@
     <!-- Create a list of available products. -->
     <!-- FIXME: We need to cross-check this list against what is available in the cache to avoid showing products that aren't built yet (at least in the public version.) -->
     <exsl:document
-     href="{$pathprefix}product.json"
-     method="text"
-     encoding="UTF-8"
-     indent="no"
-     media-type="application/x-json">
+      href="{$output_root}product.json"
+      method="text"
+      encoding="UTF-8"
+      indent="no"
+      media-type="application/x-json">
 {
   "productline": {
      <xsl:apply-templates select="//product" mode="generate-productline-list">
@@ -119,11 +135,8 @@
       </xsl:choose>
     </xsl:variable>
 
-    <!-- FIXME: This file naming is not deterministic enough, e.g.
-    productid=blub-12/setid=sp2 would get the same JSON file name as
-    productid=blub/setid=12-sp2 == product-blub-12-sp2.json -->
     <exsl:document
-     href="{$pathprefix}product-{parent::product/@productid}-{@setid}.json"
+     href="{$output_root}{parent::product/@productid}/{@setid}/setdata.json"
      method="text"
      encoding="UTF-8"
      indent="no"
@@ -144,7 +157,7 @@
 }
       <!--
       zip: docset-en-us.zip, docset-de-de.zip
-     } -->
+      -->
     </exsl:document>
 
   </xsl:template>

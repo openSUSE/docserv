@@ -100,22 +100,19 @@ class BuildInstructionHandler:
         n = 0
         if hasattr(self, 'tmp_bi_path') and os.listdir(self.tmp_bi_path):
             # (re-)generate overview page
-            tmp_dir_oview = tempfile.mkdtemp(prefix="docserv_oview_")
+            tmp_dir_oview = tempfile.mkdtemp(prefix="docserv_navigation_")
             n += 1
             commands[n] = {}
-            commands[n]['cmd'] = "docserv-build-navigation %s --stitched-config=\"%s\" --ui-languages=\"%s\" --default-ui-language=\"%s\" --cache-dir=\"%s\" --doc-language=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\"" % (
+            commands[n]['cmd'] = "docserv-build-navigation %s --product=\"%s\" --docset=\"%s\" --stitched-config=\"%s\" --ui-languages=\"%s\" --cache-dir=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\"" % (
                 "--internal-mode" if self.config['targets'][self.build_instruction['target']
                                                              ]['languages'] == "yes" else "",
+                self.build_instruction['product'],
+                self.build_instruction['docset'],
                 self.stitch_tmp_file,
-                self.config['targets'][self.build_instruction['target']
-                                       ]['languages'],
-                self.config['targets'][self.build_instruction['target']
-                                       ]['default_lang'],
+                self.config['targets'][self.build_instruction['target']]['languages'],
                 self.deliverable_cache_base_dir,
-                self.lang,
-                self.config['targets'][self.build_instruction['target']
-                                       ]['template_dir'],
-                tmp_dir_oview)
+                self.config['targets'][self.build_instruction['target']]['template_dir'],
+                sync_source_tmp)
 
             # rsync build target directory to backup path
             backup_path = self.config['targets'][self.build_instruction['target']]['backup_path']

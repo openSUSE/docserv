@@ -176,3 +176,5 @@ done
 
 #cp -r $template_resources $output_dir
 echo "-> $output_dir"
+
+rm -rf $temp_dir

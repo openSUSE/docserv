@@ -87,6 +87,7 @@ class BuildInstructionHandler:
 
     def cleanup(self):
         """
+        Copy built documentation to the right places.
         Remove temporary files when build fails or all deliverables
         are finished.
         """
@@ -97,31 +98,32 @@ class BuildInstructionHandler:
 
         commands = {}
         n = 0
-        # (re-)generate overview page
-        tmp_dir_oview = tempfile.mkdtemp(prefix="docserv_oview_")
-        commands[n] = {}
-        commands[n]['cmd'] = "docserv-build-navigation %s --stitched-config=\"%s\" --ui-languages=\"%s\" --default-ui-language=\"%s\" --cache-dir=\"%s\" --doc-language=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\"" % (
-            "--internal-mode" if self.config['targets'][self.build_instruction['target']
-                                                         ]['languages'] == "yes" else "",
-            self.stitch_tmp_file,
-            self.config['targets'][self.build_instruction['target']
-                                   ]['languages'],
-            self.config['targets'][self.build_instruction['target']
-                                   ]['default_lang'],
-            self.deliverable_cache_base_dir,
-            self.lang,
-            self.config['targets'][self.build_instruction['target']
-                                   ]['template_dir'],
-            tmp_dir_oview)
+        if hasattr(self, 'tmp_bi_path') and os.listdir(self.tmp_bi_path):
+            # (re-)generate overview page
+            tmp_dir_oview = tempfile.mkdtemp(prefix="docserv_oview_")
+            n += 1
+            commands[n] = {}
+            commands[n]['cmd'] = "docserv-build-navigation %s --stitched-config=\"%s\" --ui-languages=\"%s\" --default-ui-language=\"%s\" --cache-dir=\"%s\" --doc-language=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\"" % (
+                "--internal-mode" if self.config['targets'][self.build_instruction['target']
+                                                             ]['languages'] == "yes" else "",
+                self.stitch_tmp_file,
+                self.config['targets'][self.build_instruction['target']
+                                       ]['languages'],
+                self.config['targets'][self.build_instruction['target']
+                                       ]['default_lang'],
+                self.deliverable_cache_base_dir,
+                self.lang,
+                self.config['targets'][self.build_instruction['target']
+                                       ]['template_dir'],
+                tmp_dir_oview)
 
-        # rsync build target directory to backup path
-        backup_path = self.config['targets'][self.build_instruction['target']]['backup_path']
-        n += 1
-        commands[n] = {}
-        commands[n]['cmd'] = "rsync -lr %s/ %s" % (
-            tmp_dir_oview, backup_path)
+            # rsync build target directory to backup path
+            backup_path = self.config['targets'][self.build_instruction['target']]['backup_path']
+            n += 1
+            commands[n] = {}
+            commands[n]['cmd'] = "rsync -lr %s/ %s" % (
+                tmp_dir_oview, backup_path)
 
-        if os.listdir(self.tmp_bi_path):
             # remove contents of backup path for current build instruction
             backup_docset_relative_path = os.path.join(backup_path, self.docset_relative_path)
             n += 1
@@ -151,27 +153,33 @@ class BuildInstructionHandler:
             commands[n] = {}
             commands[n]['cmd'] = "rsync -lr %s/ %s" % (backup_path, target_path)
 
+            # remove temp build instruction directory
+            n += 1
+            commands[n] = {}
+            commands[n]['cmd'] = "rm -rf %s" % self.tmp_dir_bi
+
         if hasattr(self, 'local_repo_build_dir'):
             # build target directory
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "rm -rf %s" % self.local_repo_build_dir
 
-        # remove temp build instruction directory
-        n += 1
-        commands[n] = {}
-        commands[n]['cmd'] = "rm -rf %s" % self.tmp_dir_bi
 
-        for i in range(0, n + 1):
+        if not commands:
+            self.cleanup_done = True
+            self.cleanup_lock.release()
+            return
+
+        for i in range(1, n + 1):
             cmd = shlex.split(commands[i]['cmd'])
             logger.debug("Cleaning up %s, %s",
-                         self.build_instruction['id'], commands[i]['cmd'])
+                self.build_instruction['id'], commands[i]['cmd'])
             s = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = s.communicate()
             if int(s.returncode) != 0:
                 logger.warning("Clean up failed! Unexpected return value %i for '%s'",
-                               s.returncode, commands[i]['cmd'])
+                    s.returncode, commands[i]['cmd'])
                 self.mail(out, err, commands[i]['cmd'])
         self.cleanup_done = True
         self.cleanup_lock.release()

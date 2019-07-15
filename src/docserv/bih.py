@@ -100,7 +100,7 @@ class BuildInstructionHandler:
         n = 0
         if hasattr(self, 'tmp_bi_path') and os.listdir(self.tmp_bi_path):
             # (re-)generate navigation page
-            tmp_dir_oview = tempfile.mkdtemp(prefix="docserv_navigation_")
+            tmp_dir_nav = tempfile.mkdtemp(prefix="docserv_navigation_")
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "docserv-build-navigation %s --product=\"%s\" --docset=\"%s\" --stitched-config=\"%s\" --ui-languages=\"%s\" --cache-dir=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\"" % (
@@ -112,14 +112,14 @@ class BuildInstructionHandler:
                 self.config['targets'][self.build_instruction['target']]['languages'],
                 self.deliverable_cache_base_dir,
                 self.config['targets'][self.build_instruction['target']]['template_dir'],
-                tmp_dir_oview)
+                tmp_dir_nav)
 
             # rsync build target directory to backup path
             backup_path = self.config['targets'][self.build_instruction['target']]['backup_path']
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "rsync -lr %s/ %s" % (
-                tmp_dir_oview, backup_path)
+                tmp_dir_nav, backup_path)
 
             # remove contents of backup path for current build instruction
             backup_docset_relative_path = os.path.join(backup_path, self.docset_relative_path)
@@ -149,6 +149,11 @@ class BuildInstructionHandler:
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "rsync -lr %s/ %s" % (backup_path, target_path)
+
+            # remove temp directory for navigation page
+            n += 1
+            commands[n] = {}
+            commands[n]['cmd'] = "rm -rf %s" % tmp_dir_nav
 
         if hasattr(self, 'tmp_bi_path'):
             # remove temp build instruction directory

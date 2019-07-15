@@ -112,7 +112,7 @@ class BuildInstructionHandler:
                 self.config['targets'][self.build_instruction['target']]['languages'],
                 self.deliverable_cache_base_dir,
                 self.config['targets'][self.build_instruction['target']]['template_dir'],
-                sync_source_tmp)
+                tmp_dir_oview)
 
             # rsync build target directory to backup path
             backup_path = self.config['targets'][self.build_instruction['target']]['backup_path']

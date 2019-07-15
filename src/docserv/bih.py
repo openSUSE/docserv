@@ -99,7 +99,7 @@ class BuildInstructionHandler:
         commands = {}
         n = 0
         if hasattr(self, 'tmp_bi_path') and os.listdir(self.tmp_bi_path):
-            # (re-)generate overview page
+            # (re-)generate navigation page
             tmp_dir_oview = tempfile.mkdtemp(prefix="docserv_navigation_")
             n += 1
             commands[n] = {}
@@ -150,6 +150,7 @@ class BuildInstructionHandler:
             commands[n] = {}
             commands[n]['cmd'] = "rsync -lr %s/ %s" % (backup_path, target_path)
 
+        if hasattr(self, 'tmp_bi_path'):
             # remove temp build instruction directory
             n += 1
             commands[n] = {}

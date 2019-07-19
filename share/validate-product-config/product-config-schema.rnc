@@ -151,7 +151,8 @@ ds.product =
     attribute schemaversion { ds.schema.version },
     attribute navigation-visible { "visible" | "hidden" }?,
     ds.name,
-    ds.shortname?,
+    ds.sortname?,
+    ds.acronym?,
     ds.maintainers,
     ds.category*,
     ds.desc_default,
@@ -167,10 +168,16 @@ ds.name =
     text
   }
 
-ds.shortname =
-  element shortname {
+ds.sortname =
+  element sortname {
     text
   }
+
+ds.acronym =
+  element acronym {
+    text
+  }
+
 
 ds.maintainers =
   element maintainers {
@@ -227,6 +234,8 @@ ds.docset =
     # To allow for name changes between versions, as in the example of SUSE
     # Cloud -> SUSE OpenStack Cloud: optional ds.name here
     ds.name?,
+    ds.sortname?,
+    ds.acronym?,
     ds.version,
     (
       (ds.builddocs,

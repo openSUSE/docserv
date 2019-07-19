@@ -110,7 +110,7 @@ def generate_config(args, git_url, branches, version=SCHEMAVERSION):
     """
     root = etree.Element("product", productid=args.productid, schemaversion=version)
     etree.SubElement(root, "name").text = FIXME
-    etree.SubElement(root, "shortname").text = FIXME
+    etree.SubElement(root, "acronym").text = FIXME
     maintainers = etree.SubElement(root, "maintainers")
     etree.SubElement(maintainers, "contact").text = FIXME if not args.contact else args.contact
 

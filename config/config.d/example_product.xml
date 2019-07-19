@@ -18,12 +18,18 @@
       please upgrade"
   -->
 
+  <!-- Product name -->
   <name>Example Product</name>
-  <shortname>XP</shortname>
+  <!-- Sort name of the product, in case that needs to be different from the product name. -->
+  <sortname>Product, Example</sortname>
+  <!-- Acronym for the product name -->
+  <acronym>XP</acronym>
+  <!-- Product maintainers receive e-mail from Docserv2 when a build fails. -->
   <maintainers>
     <contact>p.erson@doma.in</contact>
   </maintainers>
 
+  <!-- Categories allow sorting documents on the navigational pages -->
   <category categoryid="example">
     <name default="1" lang="en-us">Example Category</name>
     <name lang="fr-fr">Catégorie exemplaire</name>
@@ -137,17 +143,17 @@
     <extralinks>
       <link>
         <language lang="en-us" default="1" title="Release Notes">
-          <url format="html" href="https://..."/>
+          <url format="html" href="https://www.example.org/1"/>
         </language>
       </link>
       <link>
         <language lang="en-us" default="1" title="Example Product Best Practices">
-          <url format="pdf" href="https://..."/>
+          <url format="pdf" href="https://www.example.org/2"/>
         </language>
       </link>
       <link>
         <language lang="en-us" default="1" title="Example Product Evil Curls Documentation">
-          <url format="html" href="https://..."/>
+          <url format="html" href="https://www.example.org/3"/>
         </language>
       </link>
     </extralinks>

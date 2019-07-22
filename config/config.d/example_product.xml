@@ -156,8 +156,16 @@
 
     </builddocs>
 
+    <internal>
+      <ref product="example_product" category="another_example"/>
+      <ref product="example_product" docset="1.0"/>
+      <ref product="example_product" docset="1.0" dc="DC-example-admin"/>
+      <ref product="example_product" docset="1.0" dc="DC-example-all" subdeliverable="book.admin"/>
+      <ref product="example_product" docset="1.0" link="release-notes"/>
+    </internal>
+
     <external>
-      <link>
+      <link linkid="rn">
         <language lang="en-us" default="1" title="Release Notes">
           <url format="html" href="https://www.example.org/1"/>
           <url format="pdf" href="https://www.example.org/1.pdf"/>
@@ -218,7 +226,7 @@
     </builddocs>
 
     <external>
-      <link>
+      <link linkid="release-notes">
         <language lang="en-us" default="1" title="Release Notes">
           <url format="html" href="https://www.example.org/1"/>
         </language>

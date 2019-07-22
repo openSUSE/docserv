@@ -329,8 +329,8 @@
                 "format": {
                 <xsl:for-each select="exsl:node-set($hash-match)/dscr:result">
                   <!-- Let's sort formats by their (likely) importance:
-                  HTML, Single-HTML, PDF, EPUB with this one werid trick!
-                  Luckily, they all start with a different letter, otherwise
+                  HTML, Single-HTML, PDF, EPUB with THIS ONE WEIRD TRICK!
+                  Luckily, the formats all start with a different letter, otherwise
                   this might have become icky. -->
                   <xsl:sort lang="en" select="normalize-space(translate(@format, 'hHsSpPeEoO', '1122334455'))"/>
                   <!-- NB: We intentionally accept _any_ DC file with the

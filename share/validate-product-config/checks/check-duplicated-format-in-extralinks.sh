@@ -5,10 +5,10 @@
 
 file=$1
 
-links=$($starlet sel -t -v "count(//language[parent::link/parent::extralinks])" $file)
+links=$($starlet sel -t -v "count(//language[parent::link/parent::external])" $file)
 for link in $(seq 1 "$links"); do
-  current_id=$($starlet sel -t -v '(//language[parent::link/parent::extralinks])['"$link"']/url[1]/@href' $file | sort)
-  formats=$($starlet sel -t -v '(//language[parent::link/parent::extralinks])['"$link"']/url/@format' $file | sort)
+  current_id=$($starlet sel -t -v '(//language[parent::link/parent::external])['"$link"']/url[1]/@href' $file | sort)
+  formats=$($starlet sel -t -v '(//language[parent::link/parent::external])['"$link"']/url/@format' $file | sort)
   uniqueformats=$(echo -e "$formats" | sort -u)
   [[ ! "$formats" == "$uniqueformats" ]] && \
   echo -e \

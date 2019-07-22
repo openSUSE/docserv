@@ -5,10 +5,10 @@
 
 file=$1
 
-links=$($starlet sel -t -v "count(//link[parent::extralinks])" $file)
+links=$($starlet sel -t -v "count(//link[parent::external])" $file)
 for link in $(seq 1 "$links"); do
-  current_id=$($starlet sel -t -v '(//link[parent::extralinks])['"$link"']/language[1]/url[1]/@href' $file | sort)
-  langcodes=$($starlet sel -t -v '(//link[parent::extralinks])['"$link"']/language/@lang' $file | sort)
+  current_id=$($starlet sel -t -v '(//link[parent::external])['"$link"']/language[1]/url[1]/@href' $file | sort)
+  langcodes=$($starlet sel -t -v '(//link[parent::external])['"$link"']/language/@lang' $file | sort)
   uniquelangcodes=$(echo -e "$langcodes" | sort -u)
   [[ ! "$langcodes" == "$uniquelangcodes" ]] && \
   echo -e \

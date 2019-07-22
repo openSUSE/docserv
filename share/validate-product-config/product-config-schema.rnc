@@ -254,8 +254,8 @@ ds.docset =
     ds.version,
     (
       (ds.builddocs,
-       ds.extralinks?) |
-      ds.extralinks
+       ds.external?) |
+      ds.external
     )
   }
 
@@ -403,8 +403,8 @@ ds.subdeliverablerestricted =
     ds.type.id
   }
 
-ds.extralinks =
-  element extralinks {
+ds.external =
+  element external {
     ds.link*
   }
 

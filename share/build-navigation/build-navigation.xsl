@@ -197,7 +197,7 @@
           </xsl:when>
         </xsl:choose>
         <ul class="doclist">
-          <xsl:apply-templates select="builddocs/language[@lang = $doc_language]/deliverable|extralinks/link[not(@lang) or @lang = 'all' or @lang = $doc_language]"/>
+          <xsl:apply-templates select="builddocs/language[@lang = $doc_language]/deliverable|external/link[not(@lang) or @lang = 'all' or @lang = $doc_language]"/>
         </ul>
       </li>
     </xsl:if>

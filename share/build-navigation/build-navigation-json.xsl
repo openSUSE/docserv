@@ -179,7 +179,7 @@
           select="( builddocs/language[@default = 'true']/deliverable[not(subdeliverable)][not(@category)] |
                     builddocs/language[@default = 'true']/deliverable/subdeliverable[not(@category)] )"
           mode="generate-docset-json"/>
-        <xsl:apply-templates select="extralinks/link[not(@category)]" mode="generate-docset-json"/>
+        <xsl:apply-templates select="external/link[not(@category)]" mode="generate-docset-json"/>
       </xsl:variable>
       <xsl:variable name="documents">
         <xsl:call-template name="dedupe-documents">
@@ -210,7 +210,7 @@
           select="( $node/builddocs/language[@default = 'true']/deliverable[not(subdeliverable)][contains(concat(' ', @category,' '), $categoryid)] |
                     $node/builddocs/language[@default = 'true']/deliverable/subdeliverable[contains(concat(' ',@category,' '), $categoryid)] )"
           mode="generate-docset-json"/>
-        <xsl:apply-templates select="$node/extralinks/link[contains(concat(' ',@category,' '), $categoryid)]" mode="generate-docset-json"/>
+        <xsl:apply-templates select="$node/external/link[contains(concat(' ',@category,' '), $categoryid)]" mode="generate-docset-json"/>
       </xsl:variable>
       <xsl:variable name="documents">
         <xsl:call-template name="dedupe-documents">
@@ -430,7 +430,7 @@
   </xsl:template>
 
 
-  <xsl:template match="extralinks/link" mode="generate-docset-json">
+  <xsl:template match="external/link" mode="generate-docset-json">
     <xsl:variable name="title-escaped-default">
       <xsl:call-template name="escape-text" mode="escape-html">
         <xsl:with-param name="input" select="language[default='true']/@title"/>

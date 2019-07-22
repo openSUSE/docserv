@@ -156,7 +156,7 @@
 
     </builddocs>
 
-    <extralinks>
+    <external>
       <link>
         <language lang="en-us" default="1" title="Release Notes">
           <url format="html" href="https://www.example.org/1"/>
@@ -177,7 +177,7 @@
           <url format="html" href="https://www.example.org/3"/>
         </language>
       </link>
-    </extralinks>
+    </external>
 
   </docset>
 
@@ -217,7 +217,7 @@
 
     </builddocs>
 
-    <extralinks>
+    <external>
       <link>
         <language lang="en-us" default="1" title="Release Notes">
           <url format="html" href="https://www.example.org/1"/>
@@ -228,7 +228,7 @@
           <url format="pdf" href="https://www.example.org/2"/>
         </language>
       </link>
-    </extralinks>
+    </external>
 
   </docset>
 

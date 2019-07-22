@@ -31,15 +31,27 @@
 
   <!-- Categories allow sorting documents on the navigational pages -->
   <category categoryid="example">
-    <name default="1" lang="en-us">Example Category</name>
-    <name lang="fr-fr">Catégorie exemplaire</name>
-    <name lang="de-de">Beispielkategorie</name>
+    <language default="1" lang="en-us" title="Example Category">
+      <p>
+        This is the description of this example category.
+      </p>
+    </language>
+    <language lang="fr-fr" title="Catégorie exemplaire">
+      <p>
+        C'est la description de ce catégorie examplaire.
+      </p>
+    </language>
+    <language lang="de-de" title="Beispielkategorie">
+      <p>
+        Dies ist die Beschreibung dieser Beispielkategorie.
+      </p>
+    </language>
   </category>
 
   <category categoryid="another_example">
-    <name default="1" lang="en-us">Example Category 2</name>
-    <name lang="fr-fr">Catégorie exemplaire 2</name>
-    <name lang="de-de">Beispielkategorie 2</name>
+    <language default="1" lang="en-us" title="Example Category 2"/>
+    <language lang="fr-fr" title="Catégorie exemplaire 2"/>
+    <language lang="de-de" title="Beispielkategorie 2"/>
   </category>
 
   <desc default="1" lang="en-us">

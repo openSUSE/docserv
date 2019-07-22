@@ -89,14 +89,6 @@ class Deliverable:
         """
         Create a dict of commands that build the document.
         """
-        if self.parent.build_instruction['commit'] == self.parent.deliverables[self.id]['successful_build_commit']:
-            logger.debug("Deliverable %s (%s, %s) for BI %s already up to date. Skipping daps run.",
-                         self.id,
-                         self.dc_file,
-                         self.build_format,
-                         self.parent.build_instruction['id'],
-                         )
-            return self.finish(True)
         with self.parent.deliverables_open_lock:
             self.parent.deliverables[self.id]['last_build_attempt_commit'] = self.parent.build_instruction['commit']
         logger.info("Building deliverable %s (%s, %s) for BI %s. Commit: %s",

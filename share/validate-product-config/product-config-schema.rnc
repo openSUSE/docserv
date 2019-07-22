@@ -254,6 +254,9 @@ ds.docset =
     ds.version,
     (
       (ds.builddocs,
+       ds.internal?,
+       ds.external?) |
+      (ds.internal,
        ds.external?) |
       ds.external
     )
@@ -403,6 +406,34 @@ ds.subdeliverablerestricted =
     ds.type.id
   }
 
+ds.internal =
+  element internal {
+    ds.ref+
+  }
+
+# The following definition is a bit complicated, so -- the intention is to
+# allow links to either of:
+# * a specific product (i.e. show the most recent product revision, link will
+#   only support the current UI language)
+# * a specific docset (link will only support the current UI language)
+# * a specific deliverable (by DC), subdeliverable (by DC and rootid), or an
+#   external link (by link ID)
+ds.ref =
+  element ref {
+    attribute product { ds.type.id },
+    (attribute docset { ds.type.id }? |
+      (attribute docset { ds.type.id },
+        (
+          (attribute dc { ds.type.id },
+           attribute subdeliverable { ds.type.id }?) |
+          attribute link { ds.type.id }
+        )
+      )
+    ),
+    attribute category { ds.type.idmulti }?,
+    empty
+  }
+
 ds.external =
   element external {
     ds.link*
@@ -410,6 +441,7 @@ ds.external =
 
 ds.link =
   element link {
+    attribute linkid { ds.type.id }?,
     attribute category { ds.type.idmulti }?,
     ds.linklanguage_default,
     ds.linklanguage_translation*

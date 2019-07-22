@@ -82,6 +82,7 @@ java_flags="-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=org.apache.xer
 
 schema_file=$share_dir/validate-product-config/product-config-schema.rnc
 checks_dir=$share_dir/validate-product-config/checks
+references_stylesheet=$share_dir/validate-product-config/global-check-ref-list.xsl
 simplify_stylesheet=$share_dir/simplify-product-config/simplify.xsl
 
 [[ ! -f $schema_file ]] && out "Schema $schema_file does not exist.$(readme_message)"
@@ -195,8 +196,15 @@ productids=$(echo -e "$outfile" | $starlet sel -t -v '//@productid|//urlredirect
 uniqueproductids=$(echo -e "$productids" | sort -u)
 
 [[ ! "$productids" == "$uniqueproductids" ]] && \
-    out \
-      "Some productid/urlredirect values in $input_dir are not unique. Check for the following productid/urlredirect values: "$(comm -2 -3 <(echo -e "$productids") <(echo -e "$uniqueproductids") | tr '\n' ' ')"."
+    add_issue \
+      "(global check): Some productid/urlredirect values in $input_dir are not unique. Check for the following productid/urlredirect values: "$(comm -2 -3 <(echo -e "$productids") <(echo -e "$uniqueproductids") | tr '\n' ' ')"."
+
+referencecheck=$(echo -e "$outfile" | xsltproc $references_stylesheet -)
+[[ "$referencecheck" ]] && add_multiple_issues "(global check)" "$referencecheck"
+
+if [[ "$issuelist" ]]; then
+  out "The following issues occurred when validating:$issuelist\n"
+fi
 
 cd - >/dev/null
 

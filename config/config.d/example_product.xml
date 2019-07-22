@@ -24,6 +24,10 @@
   <sortname>Product, Example</sortname>
   <!-- Acronym for the product name -->
   <acronym>XP</acronym>
+  <!-- Automatically generate redirects for these directory names to go
+  to site.com/la-ng/[PRODUCTID]/[DOCSET] -->
+  <urlredirect>xp</urlredirect>
+  <urlredirect docset="1.0">xp_10</urlredirect>
   <!-- Product maintainers receive e-mail from Docserv2 when a build fails. -->
   <maintainers>
     <contact>p.erson@doma.in</contact>

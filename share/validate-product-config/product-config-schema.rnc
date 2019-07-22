@@ -50,6 +50,12 @@ ds.type.dirname =
     pattern="""[^/\\]+(/[^/\\]+)*"""
   }
 
+ds.type.singledirname =
+  # A relative directory name
+  xsd:anyURI {
+    pattern="""[\-_\.\+a-zA-Z0-9]+"""
+  }
+
 ds.type.branch =
   # A Git branch name
   xsd:token {
@@ -153,6 +159,7 @@ ds.product =
     ds.name,
     ds.sortname?,
     ds.acronym?,
+    ds.urlredirect*,
     ds.maintainers,
     ds.category*,
     ds.desc_default,
@@ -178,6 +185,11 @@ ds.acronym =
     text
   }
 
+ds.urlredirect =
+  element urlredirect {
+    attribute docset { ds.type.id }?,
+    ds.type.singledirname
+  }
 
 ds.maintainers =
   element maintainers {

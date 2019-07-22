@@ -255,7 +255,7 @@
           <xsl:when test="$is-actual-category != 'false'">
         "category": "<xsl:value-of select="$categoryid"/>",
         "title": [
-          <xsl:apply-templates select="name" mode="generate-docset-json"/>
+          <xsl:apply-templates select="language" mode="generate-docset-json"/>
         ],
           </xsl:when>
           <xsl:otherwise>
@@ -280,11 +280,21 @@
     <xsl:text> </xsl:text>
   </xsl:template>
 
-  <xsl:template match="category/name" mode="generate-docset-json">
+  <xsl:template match="category/language" mode="generate-docset-json">
         {
           "lang": "<xsl:value-of select="@lang"/>",
-          "default":  <xsl:call-template name="determine-default"/>,
-          "localname": "<xsl:value-of select="."/>"
+          "default": <xsl:call-template name="determine-default"/>,
+          "title": "<xsl:value-of select="@title"/>",
+          "description": <xsl:choose>
+            <xsl:when test="*">
+              <xsl:text>"</xsl:text>
+              <xsl:apply-templates select="text()|*" mode="escape-html"/>
+              <xsl:text>"</xsl:text>
+            </xsl:when>
+            <xsl:otherwise>
+              <xsl:text>false</xsl:text>
+            </xsl:otherwise>
+          </xsl:choose>
         },
   </xsl:template>
 

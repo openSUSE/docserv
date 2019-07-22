@@ -5,13 +5,13 @@
 
 file=$1
 
-setids=$($starlet sel -t -v "//@categoryid" $file | sort)
-uniquecategoryids=$(echo -e "$categoryids" | sort -u)
+setids=$($starlet sel -t -v "//@setid" $file | sort)
+uniquesetids=$(echo -e "$setids" | sort -u)
 
-[[ ! "$categoryids" == "$uniquecategoryids" ]] && \
+[[ ! "$setids" == "$uniquesetids" ]] && \
   echo -e \
-    "Some categoryid values are not unique. Check for occurrences of the following duplicated categoryid(s): " \
-    $(comm -2 -3 <(echo -e "$categoryids") <(echo -e "$uniquecategoryids") | tr '\n' ' ') \
+    "Some setid values are not unique. Check for occurrences of the following duplicated setid(s): " \
+    $(comm -2 -3 <(echo -e "$setids") <(echo -e "$uniquesetids") | tr '\n' ' ') \
     "."
 
 exit 0

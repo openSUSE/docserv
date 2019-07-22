@@ -206,21 +206,23 @@ ds.desc_translation =
 ds.category =
   element category {
     attribute categoryid { ds.type.id }?,
-    ds.categoryname_default,
-    ds.categoryname_translation*
+    ds.categorylanguage_default,
+    ds.categorylanguage_translation*
   }
 
-ds.categoryname_default =
-  element name {
+ds.categorylanguage_default =
+  element language {
     attribute lang { ds.type.lang },
     attribute default { ds.true.enum },
-    text
+    attribute title { text },
+    ds.htmlblock*
   }
-ds.categoryname_translation =
-  element name {
+ds.categorylanguage_translation =
+  element language {
     attribute lang { ds.type.lang },
     attribute default { ds.false.enum }?,
-    text
+    attribute title { text },
+    ds.htmlblock*
   }
 
 

@@ -68,26 +68,26 @@
     </p>
   </desc>
 
-  <docset setid="1" lifecycle="supported">
-    <version>1</version>
+  <docset setid="2.0" lifecycle="supported" default="true">
+    <version>2.0</version>
 
     <builddocs>
 
-      <git remote="https://github.com/SUSE/doc-sle"/>
+      <git remote="https://github.com/example.org/doc-example"/>
 
       <language default="1" lang="en-us">
         <branch>develop</branch>
 
         <!-- MAXIMALIST (<styleroot>/<param>) COMPILATION (i.e. w/ <subdeliverables/>) DELIVERABLE EXAMPLE -->
         <deliverable remarks="0" draft="false" meta="0">
-          <dc>DC-SLES-all</dc>
+          <dc>DC-example-all</dc>
           <format html="1" single-html="0" pdf="0" epub="0"/>
           <styleroot>/.../.../...</styleroot>
             <!-- Styleroot is totally optional. -->
           <param name="foo.bar">1</param>
             <!-- Automatically forwarded to DAPS as "-stringparam"s. -->
           <subdeliverable category="example">book.admin</subdeliverable>
-          <subdeliverable category="another_example">book.gnomeuser</subdeliverable>
+          <subdeliverable category="another_example">book.user</subdeliverable>
             <!-- Subdeliverables contain the IDs of books we link to from the
             overview page; if there are no subdeliverables, we instead link
             to "index.html" -->
@@ -98,12 +98,12 @@
 
         <!-- MINIMALIST INDIVIDUAL DELIVERABLE EXAMPLES -->
         <deliverable category="example">
-          <dc>DC-SLES-admin</dc>
+          <dc>DC-example-admin</dc>
           <format single-html="1" pdf="true" epub="1"/>
         </deliverable>
         <deliverable category="another_example">
           <!-- Minimalist individual deliverable -->
-          <dc>DC-SLES-gnomeuser</dc>
+          <dc>DC-example-user</dc>
           <format single-html="1" pdf="1" epub="1"/>
         </deliverable>
 
@@ -113,11 +113,11 @@
         <branch>maint/xp15</branch>
         <subdir>sles/de</subdir>
         <deliverable>
-          <dc>DC-SLES-all</dc>
-          <subdeliverable>book.gnomeuser</subdeliverable>
+          <dc>DC-example-all</dc>
+          <subdeliverable>book.user</subdeliverable>
         </deliverable>
         <deliverable>
-          <dc>DC-SLES-gnomeuser</dc>
+          <dc>DC-example-user</dc>
         </deliverable>
       </language>
 
@@ -125,11 +125,11 @@
         <branch>maint/xp15</branch>
         <subdir>sles/zh-cn</subdir>
         <deliverable>
-          <dc>DC-SLES-all</dc>
+          <dc>DC-example-all</dc>
           <subdeliverable>book.admin</subdeliverable>
         </deliverable>
         <deliverable>
-          <dc>DC-SLES-admin</dc>
+          <dc>DC-example-admin</dc>
         </deliverable>
       </language>
 
@@ -144,6 +144,11 @@
       <link>
         <language lang="en-us" default="1" title="Release Notes">
           <url format="html" href="https://www.example.org/1"/>
+          <url format="pdf" href="https://www.example.org/1.pdf"/>
+        </language>
+        <language lang="de-de" title="Release Notes">
+          <url format="html" href="https://www.example.org/1.de"/>
+          <url format="pdf" href="https://www.example.org/1.de.pdf"/>
         </language>
       </link>
       <link>
@@ -154,6 +159,57 @@
       <link>
         <language lang="en-us" default="1" title="Example Product Evil Curls Documentation">
           <url format="html" href="https://www.example.org/3"/>
+        </language>
+      </link>
+    </extralinks>
+
+  </docset>
+
+
+  <docset setid="1.0" lifecycle="supported">
+    <version>1.0</version>
+
+    <builddocs>
+
+      <git remote="https://github.com/example.org/doc-example"/>
+
+      <language default="1" lang="en-us">
+        <branch>develop</branch>
+
+        <deliverable remarks="0" draft="false" meta="0">
+          <dc>DC-example-all</dc>
+          <format html="1" single-html="0" pdf="0" epub="0"/>
+          <subdeliverable category="example">book.admin</subdeliverable>
+          <subdeliverable category="another_example">book.user</subdeliverable>
+        </deliverable>
+
+        <deliverable category="example">
+          <dc>DC-example-admin</dc>
+          <format single-html="1" pdf="true" epub="1"/>
+        </deliverable>
+        <deliverable category="another_example">
+          <dc>DC-example-user</dc>
+          <format single-html="1" pdf="1" epub="1"/>
+        </deliverable>
+
+      </language>
+
+      <language lang="de-de" translation-type="full">
+        <branch>maint/xp15</branch>
+        <subdir>sles/de</subdir>
+      </language>
+
+    </builddocs>
+
+    <extralinks>
+      <link>
+        <language lang="en-us" default="1" title="Release Notes">
+          <url format="html" href="https://www.example.org/1"/>
+        </language>
+      </link>
+      <link>
+        <language lang="en-us" default="1" title="Example Product Best Practices">
+          <url format="pdf" href="https://www.example.org/2"/>
         </language>
       </link>
     </extralinks>

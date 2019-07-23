@@ -406,7 +406,7 @@ Repo/Branch: %s %s
 
     def generate_deliverables(self):
         """
-        Iterate through delvierable elements in configuration and create
+        Iterate through deliverable elements in configuration and create
         instances of the Deliverable class for each.
         """
         if not self.initialized:

@@ -77,7 +77,7 @@ class BuildInstructionHandler:
         This directory is used within a build instruction.
         Example: /tmp/ds_caasp_2_en-us_12e312d3/en-us/caasp/2
         """
-        prefix = "ds_{}_{}_{}_".format(self.product, self.docset, self.lang)
+        prefix = "docserv_{}_{}_{}_".format(self.product, self.docset, self.lang)
         self.tmp_dir_bi = tempfile.mkdtemp(prefix=prefix)
 
         self.docset_relative_path = os.path.join(self.lang, self.product, self.docset)

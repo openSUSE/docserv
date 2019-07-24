@@ -19,7 +19,7 @@ class DocservState:
 
     ###################################################
     #   The following section contains all dicts and  #
-    #   queues that keep track of stuff to be build   #
+    #   queues that keep track of stuff to be built   #
     ###################################################
     #
     # 1. "queue" for build instructions from REST API

@@ -7,6 +7,11 @@
 #                                 # (optional)
 # --simplify                      # Simplify user-generated productconfig so the
 #                                 # docserv daemon can use it (optional)
+# --revalidate-only               # If a file named of the same name as the
+#                                 # output file already exists and it contains a
+#                                 # <hashes/> section matching the current MD5
+#                                 # sums of the XML files in the input directory,
+#                                 # do not do a complete validation
 # --spinner                       # Show a spinner while working, if you or your
 #                                 # CI are impatient and eager to kill processes
 # INPUT_DIR                       # Directory with config files
@@ -91,6 +96,7 @@ simplify_stylesheet=$share_dir/simplify-product-config/simplify.xsl
 
 simplify_config=0
 enable_spinner=0
+revalidate=1
 valid_languages=""
 unknown=""
 input_dir=""
@@ -104,6 +110,9 @@ for i in "$@"
       ;;
       --simplify)
         simplify_config=1
+      ;;
+      --revalidate-only)
+        revalidate=1
       ;;
       --spinner)
         enable_spinner=1
@@ -132,12 +141,32 @@ done
 ([[ "$simplify_config" -eq 1 ]] && [[ -z "$output_file" ]]) && \
   out "--simplify can only be used together with an OUTPUT_FILE parameter."
 
+([[ "$revalidate" -eq 1 ]] && [[ -z "$output_file" ]]) && \
+  out "--revalidate-only can only be used together with an OUTPUT_FILE parameter."
+
 cd $input_dir
+
+[[ ! $(ls *.xml 2>/dev/null) ]] && \
+  out "There are no product configuration files."
+
 
 valid_languages_sorted=''
 [[ "$valid_languages" ]] && valid_languages_sorted=$(echo -e "$valid_languages" | tr ' ' '\n' | sort -u)
 
 issuelist=''
+
+
+# Create md5 hashes for all config files. From the md5sum output, we are only
+# keeping the hashes, as the file names of the config files are actually
+# irrelevant.
+hashsums=$(md5sum *.xml | sort | sed -r 's/\s*[^ ]+$//' | tr '\n' '!')
+
+if [[ "$revalidate" == '1' ]]; then
+  if [[ -f $output_file ]]; then
+    comparisonhashsums=$($starlet sel -t -v "(//hashes)[1]" $output_file)
+    [[ "$comparisonhashsums" == "$hashsums" ]] && exit 0
+  fi
+fi
 
 for file in *.xml; do
 
@@ -180,7 +209,8 @@ if [[ "$issuelist" ]]; then
   out "The following issues occurred when validating:$issuelist\n"
 fi
 
-outfile='<?xml version="1.0" encoding="UTF-8"?>\n<docservconfig>\n\n'
+outfile='<?xml version="1.0" encoding="UTF-8"?>\n<docservconfig>\n'
+outfile+="<hashes>${hashsums}</hashes>\n\n"
 
 for file in *.xml; do
   outfile+=$($starlet sel -t -c "/*" $file)

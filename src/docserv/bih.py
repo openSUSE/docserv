@@ -244,11 +244,17 @@ Repo/Branch: %s %s
         if not self.config['targets'][target]['active'] == "yes":
             logger.debug("Target %s not active.", target)
             return False
-        self.stitch_tmp_file = os.path.join(tempfile.mkdtemp(
-            prefix="docserv_stitch_"), 'docserv_config_full.xml')
+
+        self.stitch_tmp_dir = os.path.join(tempfile.gettempdir(), 'docserv_stitch')
+        try:
+            os.mkdir(self.stitch_tmp_dir)
+        except FileExistsError:
+            pass
+        self.stitch_tmp_file = os.path.join(self.stitch_tmp_dir,
+            ('productconfig_simplified_%s.xml' % target))
         logger.debug("Stitching XML config directory to %s",
                      self.stitch_tmp_file)
-        cmd = '%s --simplify --valid-languages="%s" %s %s' % (
+        cmd = '%s --simplify --revalidate-only --valid-languages="%s" %s %s' % (
             os.path.join(BIN_DIR, 'docserv-stitch'),
             self.config['server']['valid_languages'],
             self.config['targets'][target]['config_dir'],
@@ -257,7 +263,7 @@ Repo/Branch: %s %s
         cmd = shlex.split(cmd)
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
-        s.communicate()[0]
+        self.out, self.err = s.communicate()
         rc = int(s.returncode)
         if rc == 0:
             logger.debug("Stitching of %s successful",
@@ -265,6 +271,9 @@ Repo/Branch: %s %s
         else:
             logger.warning("Stitching of %s failed!",
                            self.config['targets'][target]['config_dir'])
+            logger.warning("Stitching STDOUT: %s", self.out.decode('utf-8'))
+            logger.warning("Stitching STDERR: %s", self.err.decode('utf-8'))
+
             self.initialized = False
             return False
 

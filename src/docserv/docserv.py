@@ -3,8 +3,11 @@ import json
 import logging
 import os
 import queue
+import shlex
+import subprocess
 import sys
 import threading
+import tempfile
 import time
 from configparser import ConfigParser as configparser
 
@@ -325,6 +328,43 @@ class Docserv(DocservState, DocservConfig):
         Create worker and REST API threads.
         """
         try:
+            # After starting docserv, make sure to stitch as the first thing,
+            # this increases startup time but means that as long as the config
+            # does not change, we don't have to do another complete validation
+            for target in self.config['targets']:
+                self.stitch_tmp_dir = os.path.join(tempfile.gettempdir(), 'docserv_stitch')
+                try:
+                    os.mkdir(self.stitch_tmp_dir)
+                except FileExistsError:
+                    pass
+                stitch_tmp_file = os.path.join(self.stitch_tmp_dir,
+                    ('productconfig_simplified_%s.xml' % target))
+                # Largely copypasta from bih.py cuz I dunno how to share stuff
+                logger.debug("Stitching XML config directory to %s",
+                             stitch_tmp_file)
+                # Don't use --revalidate-only parameter: after starting we
+                # really want to make sure that the config is alright.
+                cmd = '%s --simplify --valid-languages="%s" %s %s' % (
+                    os.path.join(BIN_DIR, 'docserv-stitch'),
+                    self.config['server']['valid_languages'],
+                    self.config['targets'][target]['config_dir'],
+                    stitch_tmp_file)
+                logger.debug("Stitching command: %s", cmd)
+                cmd = shlex.split(cmd)
+                s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE)
+                self.out, self.err = s.communicate()
+                rc = int(s.returncode)
+                if rc == 0:
+                    logger.debug("Stitching of %s successful",
+                                 self.config['targets'][target]['config_dir'])
+                else:
+                    logger.warning("Stitching of %s failed!",
+                                   self.config['targets'][target]['config_dir'])
+                    logger.warning("Stitching STDOUT: %s", self.out.decode('utf-8'))
+                    logger.warning("Stitching STDERR: %s", self.err.decode('utf-8'))
+                # End copypasta
+
             thread_receive = threading.Thread(target=self.listen)
             thread_receive.start()
             workers = []

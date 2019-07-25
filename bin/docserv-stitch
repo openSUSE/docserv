@@ -96,7 +96,7 @@ simplify_stylesheet=$share_dir/simplify-product-config/simplify.xsl
 
 simplify_config=0
 enable_spinner=0
-revalidate=1
+revalidate=0
 valid_languages=""
 unknown=""
 input_dir=""

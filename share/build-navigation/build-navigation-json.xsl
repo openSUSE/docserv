@@ -433,7 +433,7 @@
   <xsl:template match="external/link" mode="generate-docset-json">
     <xsl:variable name="title-escaped-default">
       <xsl:call-template name="escape-text" mode="escape-html">
-        <xsl:with-param name="input" select="language[default='true']/@title"/>
+        <xsl:with-param name="input" select="language[@default='true']/@title"/>
       </xsl:call-template>
     </xsl:variable>
           <dscr:jsondocument title="{$title-escaped-default}" hash="link-{generate-id(.)}">

@@ -377,7 +377,7 @@
         <dscr:jsondocument title="{$title-escaped}" hash="{$hash}">
             [
               <xsl:value-of select="$content"/>
-              <!-- for each non-default lang call this template but with a
+              <!-- for each non-default lang call, run this template but with a
               parameter that prevents dscr + outer json thing -->
               <xsl:apply-templates select="ancestor::builddocs/language[not(@default = 'true')]" mode="fatedtopretend">
                 <xsl:sort lang="en" select="normalize-space(translate(@lang, '&sortlower;', '&sortupper;'))"/>

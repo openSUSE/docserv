@@ -156,6 +156,7 @@ ds.product =
     attribute productid { ds.type.id },
     attribute schemaversion { ds.schema.version },
     attribute navigation-visible { "visible" | "hidden" }?,
+    attribute enabled { xsd:boolean }?,
     ds.name,
     ds.sortname?,
     ds.acronym?,

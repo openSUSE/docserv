@@ -168,6 +168,9 @@ if [[ "$revalidate" == '1' ]]; then
   fi
 fi
 
+outfile='<?xml version="1.0" encoding="UTF-8"?>\n<docservconfig>\n'
+outfile+="<hashes>${hashsums}</hashes>\n\n"
+
 for file in *.xml; do
 
   # xmllint is faster and gives more readable error messages than jing, so
@@ -181,6 +184,12 @@ for file in *.xml; do
     $jing -ci $schema_file $file)
   [[ $? -gt 0 ]] && add_issue "$input_dir/$file: File is not valid:\n$valid"
   spin
+
+  # This attribute is optional, and defaults to '1'/'true'
+  enabled=$($starlet sel -t -v "/product/@enabled" $file)
+  if [[ "$enabled" == 'false' ]] || [[ "$enabled" == '0' ]]; then
+    continue
+  fi
 
   # Additional validation checks may come either as XSLTs or Bash scripts.
   # No script output is assumed to mean there are no issues.
@@ -201,7 +210,12 @@ for file in *.xml; do
     spin
   done
 
+  outfile+=$($starlet sel -t -c "/*" $file)
+  outfile+='\n'
+
 done
+
+outfile+='\n</docservconfig>\n'
 
 spin 'clear'
 
@@ -209,15 +223,6 @@ if [[ "$issuelist" ]]; then
   out "The following issues occurred when validating:$issuelist\n"
 fi
 
-outfile='<?xml version="1.0" encoding="UTF-8"?>\n<docservconfig>\n'
-outfile+="<hashes>${hashsums}</hashes>\n\n"
-
-for file in *.xml; do
-  outfile+=$($starlet sel -t -c "/*" $file)
-  outfile+='\n'
-done
-
-outfile+='\n</docservconfig>\n'
 
 # check for uniqueness of productid values (which we can't do before
 # stitching the file together)

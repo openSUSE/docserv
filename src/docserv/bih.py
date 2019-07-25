@@ -127,15 +127,16 @@ class BuildInstructionHandler:
             commands[n] = {}
             commands[n]['cmd'] = "rm -rf %s" % (backup_docset_relative_path)
 
-            # copy temp build instruction directory to  backup path
-            n += 1
-            commands[n] = {}
-            commands[n]['cmd'] = "cp -r %s/. %s" % (self.tmp_dir_bi, backup_path)
+            # copy temp build instruction directory to backup path
+            if self.lifecycle != 'unsupported':
+                n += 1
+                commands[n] = {}
+                commands[n]['cmd'] = "rsync -lr %s/ %s" % (self.tmp_dir_bi, backup_path)
 
             # create zip archive
             n += 1
             commands[n] = {}
-            zip_name = "{}-{}.zip".format(self.product, self.docset)
+            zip_name = "{}-{}-{}.zip".format(self.product, self.docset, self.lang)
             zip_formats = self.config['targets'][self.build_instruction['target']]['zip_formats'].replace(" ",",")
             create_archive_cmd = '%s --input-path %s --output-path %s --zip-formats %s' % (
                 os.path.join(BIN_DIR, 'docserv-create-archive'),

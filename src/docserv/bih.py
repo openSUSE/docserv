@@ -297,6 +297,10 @@ Repo/Branch: %s %s
             xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/git/@remote" % (
                 self.product, self.docset)
             self.remote_repo = str(self.tree.xpath(xpath)[0])
+
+            xpath = "//product[@productid='%s']/docset[@setid='%s']/@lifecycle" % (
+                self.product, self.docset)
+            self.lifecycle = str(self.tree.xpath(xpath)[0])
         except AttributeError:
             logger.warning("Failed to parse xpath: %s", xpath)
             return False
@@ -310,6 +314,13 @@ Repo/Branch: %s %s
 
         except AttributeError:
             self.build_source_dir = self.local_repo_build_dir
+
+        if self.lifecycle == 'unpublished' and self.config['targets'][target]['internal'] != 'yes':
+            logger.warning("Intentionally not building 'unpublished' docset '%s' of product '%s' for public target server '%s'.",
+               self.docset, self.product, target)
+            logger.warning("Set docset lifecycle value to 'beta'/'supported'/'unsupported' to make it appear publicly.")
+            self.initialized = False
+            return False
 
         self.deliverable_cache_base_dir = os.path.join(
             CACHE_DIR, self.config['server']['name'])

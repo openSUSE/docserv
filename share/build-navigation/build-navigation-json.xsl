@@ -112,7 +112,7 @@
         "setid": "<xsl:value-of select="@setid"/>",
         "visible": <xsl:value-of select="$visible"/>,
         "name": "<xsl:value-of select="$name"/>",
-        "shortname": "<xsl:value-of select="ancestor::product/shortname"/>",
+        "acronym": "<xsl:value-of select="ancestor::product/acronym"/>",
         "version": "<xsl:value-of select="version"/>",
         "defaultlanguage": "<xsl:value-of select="builddocs/language[@default='true']/@lang"/>",
         "languages": [<xsl:apply-templates select="builddocs/language[not(@default='true')]" mode="generate-product-list"/>
@@ -143,7 +143,7 @@
      media-type="application/x-json">
 {
   "productname": "<xsl:value-of select="$name"/>",
-  "shortname": "<xsl:value-of select="ancestor::product/shortname"/>",
+  "acronym": "<xsl:value-of select="ancestor::product/acronym"/>",
   "version": "<xsl:value-of select="version"/>",
   "description": [
     <xsl:apply-templates select="ancestor::product/desc" mode="generate-docset-json"/>

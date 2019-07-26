@@ -142,11 +142,16 @@ class BuildInstructionHandler:
             commands[n] = {}
             zip_name = "{}-{}-{}.zip".format(self.product, self.docset, self.lang)
             zip_formats = self.config['targets'][self.build_instruction['target']]['zip_formats'].replace(" ",",")
-            create_archive_cmd = '%s --input-path %s --output-path %s --zip-formats %s' % (
+            create_archive_cmd = '%s --input-path %s --output-path %s --zip-formats %s --cache-path %s --relative-output-path %s --product %s --docset %s --language %s' % (
                 os.path.join(BIN_DIR, 'docserv-create-archive'),
                 self.tmp_bi_path,
                 os.path.join(backup_docset_relative_path, zip_name),
-                zip_formats)
+                zip_formats,
+                self.deliverable_cache_base_dir,
+                os.path.join(self.docset_relative_path, zip_name),
+                self.product,
+                self.docset,
+                self.lang)
             commands[n]['cmd'] = create_archive_cmd
 
             # rsync local backup path with web server target path

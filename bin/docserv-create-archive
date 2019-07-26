@@ -2,9 +2,11 @@
 """
 Create a zip archive with all files in specified formats from given directory.
 """
+import argparse
 import os
 import sys
-import argparse
+import time
+from xml.etree import ElementTree, cElementTree
 from zipfile import ZipFile, ZIP_DEFLATED
 
 def file_paths(input_path, zip_formats):
@@ -41,6 +43,27 @@ def create_zip_archive(input_path, output_path, zip_formats):
             filename = filepath.replace(input_path, "")
             zip.write(filepath, filename)
 
+
+def write_archive_cache(cache_path, relative_path, product, docset, language):
+    """
+    Create an XML file that contains information about the ZIP
+    including its path. This is required for the
+    'docserv-build-navigation' command.
+    """
+    root = cElementTree.Element("archive",
+                                lang=language,
+                                productid=product,
+                                setid=docset,
+                                cachedate=str(time.time()))
+    cElementTree.SubElement(
+        root, "path", format='zip').text = relative_path
+
+    full_cache_path = os.path.join(cache_path, language, product, docset, 'zip')
+    os.makedirs(full_cache_path, exist_ok = True)
+    tree = cElementTree.ElementTree(root)
+    tree.write(os.path.join(full_cache_path, 'product-zip.xml'))
+
+
 def parse_cli(cliargs=None):
     """Parse CLI with :class:`argparse.ArgumentParser` and return parsed result.
 
@@ -61,6 +84,26 @@ def parse_cli(cliargs=None):
                         dest="zip_formats",
                         help="Documentation formats to save in the archive.",
                         )
+    parser.add_argument("-c", "--cache-path",
+                        dest="cache_path",
+                        help="Path to metadata cache directory.",
+                        )
+    parser.add_argument("-r", "--relative-output-path",
+                        dest="relative_output_path",
+                        help="Path to directory where the archive is to be saved, relative to to top=level Docserv2 output dir.",
+                        )
+    parser.add_argument("-p", "--product",
+                        dest="product",
+                        help="Product that was built.",
+                        )
+    parser.add_argument("-d", "--docset",
+                        dest="docset",
+                        help="Docset that was built.",
+                        )
+    parser.add_argument("-l", "--language",
+                        dest="language",
+                        help="Language that was built.",
+                        )
     args = parser.parse_args(args=cliargs)
 
     return args
@@ -68,4 +111,5 @@ def parse_cli(cliargs=None):
 if __name__ == "__main__":
     args = parse_cli()
     create_zip_archive(args.input_path, args.output_path, args.zip_formats)
+    write_archive_cache(args.cache_path, args.relative_output_path, args.product, args.docset, args.language)
     sys.exit(0)

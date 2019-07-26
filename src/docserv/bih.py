@@ -256,10 +256,7 @@ Repo/Branch: %s %s
             return False
 
         self.stitch_tmp_dir = os.path.join(tempfile.gettempdir(), 'docserv_stitch')
-        try:
-            os.mkdir(self.stitch_tmp_dir)
-        except FileExistsError:
-            pass
+        os.makedirs(self.stitch_tmp_dir, exist_ok = True)
         self.stitch_tmp_file = os.path.join(self.stitch_tmp_dir,
             ('productconfig_simplified_%s.xml' % target))
         logger.debug("Stitching XML config directory to %s",

@@ -173,6 +173,7 @@ class Deliverable:
         # create directory for Deliverable cache file
         self.deliverable_cache_dir = os.path.join(
             self.parent.deliverable_cache_base_dir,
+            self.parent.build_instruction['target'],
             self.docset_relative_path,
             self.build_format,
         )

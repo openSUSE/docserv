@@ -136,13 +136,13 @@ class Deliverable:
         n += 1
         tmp_dir_docker = tempfile.mkdtemp(prefix="docserv_out_")
         commands[n] = {}
-        commands[n]['cmd'] = "d2d_runner -b=1 -v=1 -u=1 -x=%s -d=%s -o=%s -i=%s -f=%s %s" % (
-            xslt_params_file[1],       # -x
-            daps_params_file[1],       # -d
-            tmp_dir_docker,          # -o
-            self.parent.build_source_dir,  # -i
-            self.build_format,         # -f
-            self.dc_file               # last param
+        commands[n]['cmd'] = "d2d_runner --create-bigfile=1 --auto-validate=1 --container-update=1 --xslt-param-file=%s --daps-param-file=%s --out=%s --in=%s --formats=%s %s" % (
+            xslt_params_file[1],
+            daps_params_file[1],
+            tmp_dir_docker,
+            self.parent.build_source_dir,
+            self.build_format,
+            self.dc_file
         )
 
         # Create correct directory structure

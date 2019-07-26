@@ -110,7 +110,7 @@ class BuildInstructionHandler:
                 self.build_instruction['docset'],
                 self.stitch_tmp_file,
                 self.config['targets'][self.build_instruction['target']]['languages'],
-                self.deliverable_cache_base_dir,
+                os.path.join(self.deliverable_cache_base_dir, self.build_instruction['target']),
                 self.config['targets'][self.build_instruction['target']]['template_dir'],
                 tmp_dir_nav)
 
@@ -147,7 +147,7 @@ class BuildInstructionHandler:
                 self.tmp_bi_path,
                 os.path.join(backup_docset_relative_path, zip_name),
                 zip_formats,
-                self.deliverable_cache_base_dir,
+                os.path.join(self.deliverable_cache_base_dir, self.build_instruction['target']),
                 os.path.join(self.docset_relative_path, zip_name),
                 self.product,
                 self.docset,

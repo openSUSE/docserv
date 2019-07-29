@@ -161,11 +161,9 @@ issuelist=''
 # irrelevant.
 hashsums=$(md5sum *.xml | sort | sed -r 's/\s*[^ ]+$//' | tr '\n' '!')
 
-if [[ "$revalidate" == '1' ]]; then
-  if [[ -f $output_file ]]; then
-    comparisonhashsums=$($starlet sel -t -v "(//hashes)[1]" $output_file)
-    [[ "$comparisonhashsums" == "$hashsums" ]] && exit 0
-  fi
+if [[ "$revalidate" == '1' ]] && [[ -f $output_file ]]; then
+  comparisonhashsums=$($starlet sel -t -v "(//hashes)[1]" $output_file)
+  [[ "$comparisonhashsums" == "$hashsums" ]] && exit 0
 fi
 
 outfile='<?xml version="1.0" encoding="UTF-8"?>\n<docservconfig>\n'

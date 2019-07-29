@@ -43,10 +43,14 @@ class Deliverable:
         self.subdeliverables = subdeliverables
         self.id = self.generate_id()
         self.prev_state()
-        logger.debug("Created deliverable %s (%s, %s) for BI %s",
+        logger.debug("Queued deliverable %s -- %s of %s:%s/%s/%s/%s for BI %s",
                      self.id,
-                     self.dc_file,
                      self.build_format,
+                     self.parent.build_instruction['target'],
+                     self.parent.build_instruction['lang'],
+                     self.parent.build_instruction['docset'],
+                     self.parent.build_instruction['product'],
+                     self.dc_file,
                      self.parent.build_instruction['id']
                      )
 

@@ -142,7 +142,7 @@ cache_file=$temp_dir/cache.xml
 cache_files=$(find "$cache_dir" -name '*.xml')
 stitched_cache='<?xml version="1.0" encoding="UTF-8"?>\n<docservcache>\n\n'
 for file in $cache_files; do
-  stitched_cache+=$($starlet sel -t -c "/document" $file)
+  stitched_cache+=$($starlet sel -t -c "(/document|/archive)" $file)
   stitched_cache+='\n'
 done
 stitched_cache+='\n</docservcache>\n'

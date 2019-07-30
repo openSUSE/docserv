@@ -3,6 +3,7 @@ import logging
 import os
 import random
 import shlex
+import shutil
 import string
 import subprocess
 import tempfile
@@ -438,6 +439,19 @@ Repo/Branch: %s %s
         """
         if not self.initialized:
             return False
+
+        # Clean up cache for the product now, so we're not confused later on
+        # when it comes to building the navigational pages.
+        deliverable_cache_dir = os.path.join(
+            self.deliverable_cache_base_dir,
+            self.build_instruction['target'],
+            self.docset_relative_path,
+        )
+        try:
+            shutil.rmtree(deliverable_cache_dir)
+        except FileNotFoundError:
+            pass
+
         logger.debug("Generating deliverables.")
         xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/deliverable" % (
             self.product, self.docset, self.lang)

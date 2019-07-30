@@ -126,10 +126,10 @@ class Deliverable:
         meta = self.parent.config['targets'][self.parent.build_instruction['target']]['meta']
         daps_params = " ".join([
             "--remarks" if (remarks == "true" or remarks == "1") else "",
-            "--draft" if (draft ==
-                          "true" or draft == "1") else "",
-            "--meta" if (meta ==
-                         "true" or meta == "1") else ""
+            "--draft" if (draft == "true" or draft == "1" or
+                          self.parent.lifecycle == "beta" or
+                          self.parent.lifecycle == "unpublished") else "",
+            "--meta" if (meta == "true" or meta == "1") else ""
         ])
         commands[n] = {}
         commands[n]['cmd'] = "echo \"%s\" > %s" % (daps_params,

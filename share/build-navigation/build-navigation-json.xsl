@@ -153,11 +153,11 @@
       <xsl:with-param name="node" select="."/>
     </xsl:apply-templates>
     <xsl:call-template select="." name="generate-docset-json-no-cat"/>
-  ]
+  ],
+  "archive": {
+    <xsl:call-template name="zip-cache"/>
+  }
 }
-      <!--
-      zip: docset-en-us.zip, docset-de-de.zip
-      -->
     </exsl:document>
 
   </xsl:template>

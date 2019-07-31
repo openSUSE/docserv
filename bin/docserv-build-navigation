@@ -14,6 +14,8 @@
 #                                              supposed to be shown publically
 #   --product                                # Product to build UI for
 #   --docset                                 # Docset to build UI for
+#   --base_path                              # Relative path to the root of the
+#                                            # docserv2 directory on the host
 #
 # Optional parameters:
 #   --help                                   # Show this help screen
@@ -46,8 +48,8 @@ docserv_js=$share_dir/build-navigation/web-resources/docservui.js
 stitched_config=
 
 ui_languages=
-product=
-docset=
+relevant_product=
+relevant_docset=
 
 template_dir=
 cache_dir=
@@ -64,10 +66,10 @@ for i in "$@"
         internal_mode='true'
       ;;
       --product=*)
-        product="${i#*=}"
+        relevant_product="${i#*=}"
       ;;
       --docset=*)
-        docset="${i#*=}"
+        relevant_docset="${i#*=}"
       ;;
       --ui-languages=*)
         ui_languages="${i#*=}"
@@ -83,6 +85,9 @@ for i in "$@"
       ;;
       --output-dir=*)
         output_dir="${i#*=}"
+      ;;
+      --base-path=*)
+        base_path="${i#*=}"
       ;;
       *)
         unknown+="  $i\n"
@@ -106,8 +111,10 @@ for dir in "$cache_dir" "$template_dir" "$output_dir"; do
 done
 
 allproducts=$($xsltproc $share_dir/build-navigation/list-all-products.xsl "$stitched_config")
-if [[ ! $(echo -e "$allproducts" | grep -oP "^${product}/${docset}\$") ]]; then
-  out "Either product $product or docset $docset does not exist."
+always_update_products=$($xsltproc $share_dir/build-navigation/list-always-updateable-products.xsl "$stitched_config")
+
+if [[ ! $(echo -e "$allproducts" | grep -oP "^${relevant_product}/${relevant_docset}\$") ]]; then
+  out "Either product $relevant_product or docset $relevant_docset does not exist."
 fi
 
 
@@ -121,7 +128,7 @@ template_main=$template_dir/template-main.html
 template_product=$template_dir/template-product.html
 [[ ! -f $template_product ]] && template_product=$template_dir/template-product.php
 template_unsupported=$template_dir/template-unsupported.html
-[[ ! -f $template_product ]] && template_product=$template_dir/template-unsupported.php
+[[ ! -f $template_unsupported ]] && template_unsupported=$template_dir/template-unsupported.php
 
 # FIXME: put translation to use!
 #template_translation=$template_dir/translation.xml
@@ -137,12 +144,10 @@ temp_dir=$(mktemp -d /tmp/docserv-build-navigation-XXXXXXXX)
 # Where to place the JSON data files
 data_path='docserv/data'
 # Where to place the template's resource files (JS, CSS, images)
-res_path='docserv/res'
+res_path='docserv/res/'
 for product in $allproducts; do
   mkdir -p $output_dir/$data_path/$product
-done
-for lang in "$ui_languages"; do
-  for product in $allproducts; do
+  for lang in "$ui_languages"; do
     mkdir -p $output_dir/$lang/$product
   done
 done
@@ -157,14 +162,13 @@ done
 stitched_cache+='\n</docservcache>\n'
 echo -e "$stitched_cache" > $cache_file
 
-
 xsltproc \
   --stringparam "output_root" "$output_dir/$data_path/" \
   --stringparam "cache_file" "$cache_file" \
   --stringparam "internal_mode" "$internal_mode" \
   --stringparam "ui_languages" "$ui_languages" \
-  --stringparam "product" "$product" \
-  --stringparam "docset" "$docset" \
+  --stringparam "product" "$relevant_product" \
+  --stringparam "docset" "$relevant_docset" \
   "$stylesheet" \
   "$stitched_config"
 
@@ -187,19 +191,49 @@ done
 rm -rf $output_dir/$res_path
 mkdir -p $output_dir/$res_path
 cp $docserv_js $output_dir/$res_path
-cp -r $template_resources $output_dir/$res_path
+cp -r $template_resources/* $output_dir/$res_path
 
 # FIXME: we're not actually copying the template for the navigational pages
 # that we build automatically (currently that'd be SUMA).
 # FIXME: generate a meta http-equiv redirect page to the default docset?
 for lang in $ui_languages; do
-  mkdir -p $output_dir/$lang/$product/$docset
+
+  mkdir -p $output_dir/$lang
+
   # FIXME: can we really assume that all files of the template have the same
   # file extension?
   ext=html
   [[ $(echo "$template_main" | grep -oP '[^.]+$') ]] && ext=$(echo "$template_main" | grep -oP '[^.]+$')
-  cp $template_main $output_dir/$lang/index.$ext
-  cp $template_product $output_dir/$lang/$product/$docset/index.$ext
+
+  cat $template_main | sed -r \
+    -e 's%@\{\{#base_path#}}%'"${base_path}"'%g' \
+    -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
+    -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
+    > $output_dir/$lang/index.$ext
+
+  cat $template_unsupported | sed -r \
+    -e 's%@\{\{#base_path#}}%'"${base_path}"'%g' \
+    -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
+    -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
+    > $output_dir/$lang/unsupported.$ext
+
+  for product_set in $relevant_product/$relevant_docset $always_update_products; do
+
+    product=$(echo "$product_set" | grep -oP '^[^/]+')
+    docset=$(echo "$product_set" | grep -oP '[^/]+$')
+
+    mkdir -p $output_dir/$lang/$product_set
+
+    cat $template_product | sed -r \
+      -e 's%@\{\{#base_path#}}%'"${base_path}"'%g' \
+      -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
+      -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
+      -e 's%@\{\{#product#}}%'"$product"'%g' \
+      -e 's%@\{\{#docset#}}%'"$docset"'%g' \
+      > $output_dir/$lang/$product_set/index.$ext
+
+  done
+
 done
 echo "-> $output_dir"
 

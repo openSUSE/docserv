@@ -81,7 +81,7 @@ function populateVersionSelect(productid) {
   for (var i = 0; i < versionlist.length; i++) {
     var link = document.createElement('a');
     // FIXME: actually find out the correct language at this point
-    link.setAttribute( 'href', basePath + 'en-us/' + versionlist[ i ] );
+    link.setAttribute( 'href', basePath + pageLanguage + '/' + versionlist[ i ] + '/index.html');
     var selectedProduct = productData.product[ productid ][ Object.keys( productData.product[productid] )[ i ] ]
     link.textContent = selectedProduct['name'] + ' ' + selectedProduct["version"];
     versionSelect.appendChild( link );
@@ -194,8 +194,8 @@ function dsInit() {
     getProductData();
   }
   else if (pageRole == 'product') {
-    // FIXME: the following too fragile?
-    setid = window.location.pathname.match(/([^\/]+\/[^\/]+)(\/(index.[a-z]+)?)?$/)[1];
+    setid = pageProduct + '/' + pageDocSet;
+
     loadDocSet(setid);
   };
 

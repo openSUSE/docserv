@@ -302,6 +302,8 @@ class DocservConfig:
                                        ]['internal'] = config[section]['internal']
                 self.config['targets'][config[section]['name']
                                        ]['zip_formats'] = config[section]['zip_formats']
+                self.config['targets'][config[section]['name']
+                                       ]['server_base_path'] = config[section]['server_base_path']
         except KeyError as error:
             logger.warning(
                 "Invalid configuration file, missing configuration key '%s'. Exiting.", error)

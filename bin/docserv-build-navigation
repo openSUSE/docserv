@@ -114,11 +114,18 @@ template_dir=$(readlink -f $template_dir)
 cache_dir=$(readlink -f $cache_dir)
 output_dir=$(readlink -f $output_dir)
 
-template_html=$template_dir/template.html
-template_translation=$template_dir/translation.xml
+# FIXME: the template might also have a different file extension than html/php
+template_main=$template_dir/template-main.html
+[[ ! -f $template_main ]] && template_main=$template_dir/template-main.php
+template_product=$template_dir/template-product.html
+[[ ! -f $template_product ]] && template_product=$template_dir/template-product.php
+
+# FIXME: put these two to use!
+#template_unsupported=$template_dir/template-unsupported.html
+#template_translation=$template_dir/translation.xml
 template_resources=$template_dir/res
 
-for file in $template_html $template_translation $template_resources; do
+for file in $template_main $template_product $template_resources; do
   ([[ ! -d "$file" ]] && [[ ! -f "$file" ]]) && out "File/directory $file does not exist."
 done
 
@@ -174,7 +181,19 @@ for json_file in $json_files; do
   mv "$json_file.0" "$json_file"
 done
 
-#cp -r $template_resources $output_dir
+cp -r $template_resources $output_dir/docserv/res
+# FIXME: we're not actually copying the template for the navigational pages
+# that we build automatically (currently that'd be SUMA).
+# FIXME: generate a meta http-equiv redirect page to the default docset?
+for lang in $ui_languages; do
+  mkdir -p $output_dir/$lang/$product/$docset
+  # FIXME: can we really assume that all files of the template have the same
+  # file extension?
+  ext=html
+  [[ $(echo "$template_main" | grep -oP '[^.]+$') ]] && ext=$(echo "$template_main" | grep -oP '[^.]+$')
+  cp $template_main $output_dir/$lang/index.$ext
+  cp $template_product $output_dir/$lang/$product/$docset/index.$ext
+done
 echo "-> $output_dir"
 
 rm -rf $temp_dir

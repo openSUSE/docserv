@@ -161,4 +161,44 @@
   </xsl:template>
 
 
+
+  <xsl:template name="zip-cache">
+    <xsl:param name="productid" select="ancestor::product/@productid"/>
+    <xsl:param name="setid" select="@setid"/>
+    <xsl:param name="default_language" select="language[@default = 'true']/@lang"/>
+
+    <xsl:variable name="result">
+      <xsl:if
+        test="($cache_content/archive[@productid = $productid][@setid = $setid][@lang = $default_language]/path)[1]">
+        <xsl:text>    "</xsl:text>
+        <xsl:value-of select="$default_language"/>
+        <xsl:text>": "</xsl:text>
+        <xsl:value-of select="($cache_content/archive[@productid = $productid][@setid = $setid][@lang = $default_language]/path)[1]"/>
+        <xsl:text>",&#10;</xsl:text>
+      </xsl:if>
+      <xsl:if test="$cache_content/archive[@productid = $productid][@setid = $setid][not(@lang = $default_language)]">
+        <xsl:for-each select="$cache_content/archive[@productid = $productid][@setid = $setid][not(@lang = $default_language)]">
+          <xsl:sort
+            lang="en"
+            select="normalize-space(translate(@lang,'&sortlower;', '&sortupper;'))"/>
+          <xsl:text>    "</xsl:text>
+          <xsl:value-of select="@lang"/>
+          <xsl:text>": "</xsl:text>
+          <xsl:value-of select="(path)[1]"/>
+          <xsl:text>",&#10;</xsl:text>
+        </xsl:for-each>
+      </xsl:if>
+    </xsl:variable>
+
+    <xsl:choose>
+      <xsl:when test="$result != ''">
+        <xsl:value-of select="$result"/>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:message>Requested cached data about zip archives for <xsl:value-of select="concat($productid,'/',$setid)"/> does not exist.</xsl:message>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
+
 </xsl:stylesheet>

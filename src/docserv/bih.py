@@ -106,7 +106,7 @@ class BuildInstructionHandler:
             commands[n] = {}
             commands[n]['cmd'] = "docserv-build-navigation %s --product=\"%s\" --docset=\"%s\" --stitched-config=\"%s\" --ui-languages=\"%s\" --cache-dir=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\"" % (
                 "--internal-mode" if self.config['targets'][self.build_instruction['target']
-                                                             ]['languages'] == "yes" else "",
+                                                             ]['internal'] == "yes" else "",
                 self.build_instruction['product'],
                 self.build_instruction['docset'],
                 self.stitch_tmp_file,

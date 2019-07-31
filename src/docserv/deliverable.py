@@ -34,6 +34,7 @@ class Deliverable:
         self.successful_build_commit = None
         self.last_build_attempt_commit = None
         self.root_id = None  # False if no root id exists
+        self.pdf_name = None # False if no PDFNAME value exists in DC file
         self.cleanup_done = False
 
         self.tmp_dir_bi, self.docset_relative_path = dir_struct_paths
@@ -337,6 +338,10 @@ Language: %s
         are defined, extract titles for them as well.
         """
         # extract root id from DC file and then title from bigfile
+
+        # FIXME: It seems unnecessary to guess the bigfile's name from the DC
+        # file itself -- daps2docker creates a filelist that already includes
+        # the correct bigfile name, no guessing involved.
         dc_path = os.path.join(self.parent.build_source_dir, self.dc_file)
         with open(dc_path) as f:
             import re
@@ -347,26 +352,38 @@ Language: %s
                 if m:
                     self.root_id = m.group(1)
                     break
+            # PDFNAME parameter trumps ROOTID and DC file name
+            for line in f:
+                #pylint: disable=W1401
+                m = re.search(
+                    '^\s*PDFNAME\s*=\s*[\"\']?([^\"\']+)[\"\']?.*', line.strip())
+                if m:
+                    self.pdf_name = m.group(1)
+                    break
         xmlstarlet = {}
         xmlstarlet['ret_val'] = 0
         dchash = {}
         dchash['ret_val'] = 0
-        if self.root_id:
+
+        bigfile = self.dc_file.replace('DC-', '')
+        if self.pdf_name:
+            logger.debug("Found PDFNAME for %s", self.id)
+            bigfile = self.pdf_name
+        elif self.root_id:
             bigfile = self.root_id
+        bigfile_path = (os.path.join(
+            command['tmp_dir_docker'], '.tmp', '%s_bigfile.xml' % bigfile))
+
+        if self.root_id:
             logger.debug("Found ROOTID for %s: %s", self.id, self.root_id)
-            bigfile_path = (os.path.join(
-                command['tmp_dir_docker'], '.tmp', '%s_bigfile.xml' % bigfile))
             xpath = ("(//*[@*[local-name(.)='id']='{ID}']/*[contains(local-name(.),'info')]/*[local-name(.)='title']|"
                      "//*[@*[local-name(.)='id']='{ID}']/*[local-name(.)='title'])[1]"
                      ).format(ID=self.root_id)
             xmlstarlet['cmd'] = "xmlstarlet sel -t -v \"%s\" %s" % (
                 xpath, bigfile_path)
         else:
-            bigfile = self.dc_file.replace('DC-', '')
             logger.debug(
                 "No ROOTID found for %s, using DC file name: %s", self.id, self.dc_file)
-            bigfile_path = (os.path.join(
-                command['tmp_dir_docker'], '.tmp', '%s_bigfile.xml' % bigfile))
             xpath = "(/*/*[contains(local-name(.),'info')]/*[local-name(.)='title']|/*/*[local-name(.)='title'])[1]"
             xmlstarlet['cmd'] = "xmlstarlet sel -t -v \"%s\" %s" % (
                 xpath, bigfile_path)

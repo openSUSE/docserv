@@ -426,6 +426,13 @@ Language: %s
         including path and title. This is required for the
         'docserv-build-navigation' command.
         """
+
+        # If the product is unsupported, we don't copy the output files as
+        # such, we only copy a zip archive of the output files, thus we don't
+        # need to worry about the document titles
+        if self.parent.lifecycle == "unsupported":
+            return command
+
         root = cElementTree.Element("document",
                                     lang=self.parent.build_instruction['lang'],
                                     productid=self.parent.build_instruction['product'],

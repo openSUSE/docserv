@@ -40,6 +40,7 @@ jing='jing'
 starlet='xmlstarlet'
 
 stylesheet=$share_dir/build-navigation/build-navigation-json.xsl
+docserv_js=$share_dir/build-navigation/web-resources/docservui.js
 [[ ! -f $stylesheet ]] && out "Stylesheet $stylesheet does not exist.$(readme_message)"
 
 stitched_config=
@@ -119,9 +120,10 @@ template_main=$template_dir/template-main.html
 [[ ! -f $template_main ]] && template_main=$template_dir/template-main.php
 template_product=$template_dir/template-product.html
 [[ ! -f $template_product ]] && template_product=$template_dir/template-product.php
+template_unsupported=$template_dir/template-unsupported.html
+[[ ! -f $template_product ]] && template_product=$template_dir/template-unsupported.php
 
-# FIXME: put these two to use!
-#template_unsupported=$template_dir/template-unsupported.html
+# FIXME: put translation to use!
 #template_translation=$template_dir/translation.xml
 template_resources=$template_dir/res
 
@@ -181,7 +183,12 @@ for json_file in $json_files; do
   mv "$json_file.0" "$json_file"
 done
 
-cp -r $template_resources $output_dir/docserv/res
+# Clean up & then copy images, CSS, & JS resources again
+rm -rf $output_dir/$res_path
+mkdir -p $output_dir/$res_path
+cp $docserv_js $output_dir/$res_path
+cp -r $template_resources $output_dir/$res_path
+
 # FIXME: we're not actually copying the template for the navigational pages
 # that we build automatically (currently that'd be SUMA).
 # FIXME: generate a meta http-equiv redirect page to the default docset?

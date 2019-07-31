@@ -14,6 +14,7 @@
 
   <xsl:include href="string-replace.xsl"/>
   <xsl:include href="cache-request.xsl"/>
+  <xsl:include href="relevant-docs.xsl"/>
   <xsl:include href="escape-html.xsl"/>
 
   <xsl:param name="output_root">
@@ -34,11 +35,19 @@
   </xsl:param>
   <xsl:param name="internal_mode" select="'false'"/>
 
+
+  <xsl:variable name="existing-sets-supported">
+    <xsl:call-template name="list-existing-sets-supported"/>
+  </xsl:variable>
+
+  <xsl:variable name="existing-sets-unsupported">
+    <xsl:call-template name="list-existing-sets-unsupported"/>
+  </xsl:variable>
+
   <xsl:template match="node()|@*"/>
 
   <xsl:template match="/">
     <!-- Create a list of available products. -->
-    <!-- FIXME: We need to cross-check this list against what is available in the cache to avoid showing products that aren't built yet (at least in the public version.) -->
     <exsl:document
       href="{$output_root}product.json"
       method="text"
@@ -67,13 +76,15 @@
     <xsl:apply-templates select="//docset" mode="generate-docset-json"/>
   </xsl:template>
 
-  <!-- FIXME: Make sure to exclude products based on lifecycle. -->
   <!-- FIXME: Make sure to handle SBP differently. -->
   <xsl:template match="product" mode="generate-productline-list">
-    "<xsl:value-of select="@productid"/>": "<xsl:value-of select="name"/>",</xsl:template>
+    <xsl:if test="contains($existing-sets-supported, concat(' ',@productid,'/'))">
+    "<xsl:value-of select="@productid"/>": "<xsl:value-of select="name"/>",</xsl:if>
+  </xsl:template>
 
 
   <xsl:template match="product" mode="generate-product-list">
+    <xsl:if test="contains($existing-sets-supported, concat(' ',@productid,'/'))">
     "<xsl:value-of select="@productid"/>": {<xsl:apply-templates select="docset" mode="generate-product-list">
       <!-- FIXME: sort translate() lists need to be expanded for other langs. -->
       <xsl:sort
@@ -81,9 +92,9 @@
         select="normalize-space(translate(version,
           '&sortlower;', '&sortupper;'))"/>
     </xsl:apply-templates>
-    },</xsl:template>
+    },</xsl:if>
+  </xsl:template>
 
-  <!-- FIXME: Make sure to exclude products based on lifecycle. -->
   <!-- FIXME: Make sure to handle SBP differently. -->
   <xsl:template match="docset" mode="generate-product-list">
     <xsl:variable name="visible">
@@ -107,7 +118,7 @@
         </xsl:otherwise>
       </xsl:choose>
     </xsl:variable>
-
+    <xsl:if test="contains($existing-sets-supported, concat(' ',ancestor::product/@productid,'/',@setid,' '))">
       "<xsl:value-of select="ancestor::product/@productid"/>/<xsl:value-of select="@setid"/>": {
         "setid": "<xsl:value-of select="@setid"/>",
         "visible": <xsl:value-of select="$visible"/>,
@@ -118,6 +129,7 @@
         "languages": [<xsl:apply-templates select="builddocs/language[not(@default='true')]" mode="generate-product-list"/>
           ]
       },
+    </xsl:if>
   </xsl:template>
 
   <xsl:template match="language" mode="generate-product-list">
@@ -135,12 +147,16 @@
       </xsl:choose>
     </xsl:variable>
 
-    <exsl:document
-     href="{$output_root}{parent::product/@productid}/{@setid}/setdata.json"
-     method="text"
-     encoding="UTF-8"
-     indent="no"
-     media-type="application/x-json">
+    <!-- Always generate navigation for docsets that have no documents that
+    would need to be built. -->
+    <xsl:if test="(ancestor::product/@productid = $product and @setid = $docset) or
+                  not(builddocs)">
+      <exsl:document
+        href="{$output_root}{parent::product/@productid}/{@setid}/setdata.json"
+        method="text"
+        encoding="UTF-8"
+        indent="no"
+        media-type="application/x-json">
 {
   "productname": "<xsl:value-of select="$name"/>",
   "acronym": "<xsl:value-of select="ancestor::product/acronym"/>",
@@ -158,7 +174,8 @@
     <xsl:call-template name="zip-cache"/>
   }
 }
-    </exsl:document>
+      </exsl:document>
+    </xsl:if>
 
   </xsl:template>
 
@@ -197,9 +214,8 @@
   <xsl:template match="category" mode="generate-docset-json">
     <xsl:param name="node" select="."/>
     <xsl:variable name="categoryid" select="concat(' ', @categoryid, ' ')"/>
-    <!-- FIXME: categories are not yet sorted in any way. wondering whether
-    to sort alphabetically, implicitly by order in the config document or
-    explicitly with rank attribute. -->
+    <!-- Categories are sorted by order of appearance, not alphabetically and
+    not by an explicit ranking attribute. Seems like a good (lazy) solution. -->
     <xsl:variable name="used-categories">
       <xsl:text> </xsl:text>
       <xsl:apply-templates select="parent::product/descendant::*[@category]/@category" mode="category-name-list"/>

@@ -159,7 +159,7 @@ class BuildInstructionHandler:
             target_path = self.config['targets'][self.build_instruction['target']]['target_path']
             n += 1
             commands[n] = {}
-            commands[n]['cmd'] = "rsync -lr %s/ %s" % (backup_path, target_path)
+            commands[n]['cmd'] = "rsync --delete-after -lr %s/ %s" % (backup_path, target_path)
 
             # remove temp directory for navigation page
             n += 1

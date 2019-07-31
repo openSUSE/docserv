@@ -44,6 +44,7 @@
     <xsl:call-template name="list-existing-sets-unsupported"/>
   </xsl:variable>
 
+
   <xsl:template match="node()|@*"/>
 
   <xsl:template match="/">
@@ -69,6 +70,43 @@
          select="normalize-space(translate(name,'&sortlower;', '&sortupper;'))"/>
      </xsl:apply-templates>
   }
+}
+    </exsl:document>
+
+    <exsl:document
+      href="{$output_root}unsupported.json"
+      method="text"
+      encoding="UTF-8"
+      indent="no"
+      media-type="application/x-json">
+{
+  <xsl:for-each select="//product/docset">
+    <!-- FIXME: Sorting by @setid is not a great idea though easy. Actual
+    product (sort) name would be much better. -->
+    <xsl:sort
+      lang="en"
+      select="normalize-space(translate(@setid,'&sortlower;', '&sortupper;'))"/>
+    <xsl:if test="contains($existing-sets-unsupported, concat(' ',ancestor::product/@productid,'/',@setid,' '))">
+      <xsl:variable name="name">
+        <xsl:choose>
+          <xsl:when test="name">
+            <xsl:value-of select="name"/>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:value-of select="ancestor::product/name"/>
+          </xsl:otherwise>
+        </xsl:choose>
+      </xsl:variable>
+  "<xsl:value-of select="concat(ancestor::product/@productid,'/',@setid)"/>": {
+    "productname": "<xsl:value-of select="$name"/>",
+    "acronym": "<xsl:value-of select="ancestor::product/acronym"/>",
+    "version": "<xsl:value-of select="version"/>",
+    "archive": {
+      <xsl:call-template name="zip-cache"/>
+    }
+  },
+    </xsl:if>
+  </xsl:for-each>
 }
     </exsl:document>
 

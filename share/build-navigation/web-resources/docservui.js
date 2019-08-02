@@ -178,7 +178,7 @@ function populateDocSet() {
         var e_documentLink = document.createElement('a');
         e_documentLink.classList.add('ds-docset-table-link');
         e_documentLink.textContent = Object.keys(formatList)[k];
-        e_documentLink.setAttribute( 'href', formatList[ Object.keys(formatList)[k] ] );
+        e_documentLink.setAttribute( 'href', basePath + formatList[ Object.keys(formatList)[k] ] );
         e_documentFormats.appendChild(e_documentLink);
       };
     };

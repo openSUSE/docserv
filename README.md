@@ -88,18 +88,20 @@ The Docserv² configuration consists of three parts:
 
 ## Preparation:
 
-   0. Make sure that the server(s) you want to sync to are set up with
+   1. Make sure that the server(s) you want to sync to are set up with
       passwordless SSH access for the users `docserv` or `root` on your machine.
-   1. Enable/start the Docker engine: `systemctl enable docker.service && systemctl start docker.service`
-   2. Adapt the configuration in `/etc/docserv` to your needs.
-   3. Choose how to run Docserv²:
+   2. Make sure your machine has a working command-line mail setup via
+      `sendmail`.
+   3. Enable/start the Docker engine: `systemctl enable docker.service && systemctl start docker.service`
+   4. Adapt the configuration in `/etc/docserv` to your needs.
+   5. Choose how to run Docserv²:
       * When running from an installed system package, you can run Docserv²
         as a service: `systemctl enable --now docserv@docserv.service`
       * When running from the Git repostory or you are just trying out
         Docserv², use: `docserv docserv`
         The second `docserv` denotes the name of your INI file.
 
-## Test your installation:
+## Test Your Installation:
 
 Send a build instruction, for example: `curl --header "Content-Type: application/json" --request POST --data '[{"docset": "15ga","lang": "de-de", "product": "sles", "target": "internal"}, {"docset": "15ga","lang": "en-us", "product": "sles", "target": "internal"}]' http://localhost:8080`
 To send a build instruction, you can also use `sendbuildinstruction.sh` from
@@ -117,3 +119,66 @@ Example:
 ```
 docserv-createconfig --languages="en-us de-de" --contact="mail@example.com" /path/to/repo
 ```
+
+# Developing Web Templates
+
+Web templates allow customizing the web front-end of Docserv2. There is an
+example template in `config/templates/` in this Git repository.
+
+Our web templates currently consist of the following files:
+
+* `/path/to/template/dir/template-main.html` - main index page, copied into the
+  directory for each UI language
+* `/path/to/template/dir/template-product.html` - a product page, copied into
+  the directory for each docset
+* `/path/to/template/dir/template-unsupported.html` - a listing of unsupported
+  documents (which will only be available within Zip archives and not unpacked)
+* `/path/to/template/dir/res/*` - web resources, such as CSS, Javascript, or
+  images. Docserv2 will automatically copy a Javascript file called
+  `docservui.js` into this directory. This is an offer you can use to parse
+  the JSON data that the templates rely on but there is no obligation to use it.
+
+The HTML templates must literally include a Javascript block with the following
+variables to properly work with `docservui.js`:
+
+* `template-main.html`:
+  ```
+  <script>
+  var basePath = '@{{#base_path#}}';
+  var templateExtension = '@{{#template_extension#}}';
+  var pageRole = 'main';
+  var pageLanguage = '@{{#ui_language#}}';
+  </script>
+  ```
+
+* `template-product.html`:
+  ```
+  <script>
+  var basePath = '@{{#base_path#}}';
+  var templateExtension = '@{{#template_extension#}}';
+  var pageRole = 'product';
+  var pageLanguage = '@{{#ui_language#}}';
+  var pageProduct = '@{{#product#}}';
+  var pageDocSet = '@{{#docset#}}';
+  </script>
+  ```
+
+* `template-unsupported.html`:
+  ```
+  <script>
+  var basePath = '@{{#base_path#}}';
+  var templateExtension = '@{{#template_extension#}}';
+  var pageRole = 'unsupported';
+  var pageLanguage = '@{{#ui_language#}}';
+  </script>
+  ```
+
+
+All three of the HTML template files largely depend on JSON data to fill them
+in. To locally test whether everything works without running a server, you
+need to disable some browser security mechanisms:
+
+* Firefox: In `about:config`, set `security.fileuri.strict_origin_policy` to
+  `false`.
+
+* Chrome: Start the browser with `chromium --allow-file-access-from-files`

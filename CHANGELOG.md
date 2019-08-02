@@ -1,6 +1,11 @@
 # Release History
 
-## v3.0, 2019-08-03, sknorr
+## v3.3, 2019-08-03, sknorr
+
+- Correctly pick up file extension of the template
+
+
+## v3.1/v3.2, 2019-08-03, sknorr
 
 - Make sure not to delete product pages of current product
 

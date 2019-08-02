@@ -117,14 +117,15 @@ class BuildInstructionHandler:
                 self.config['targets'][self.build_instruction['target']]['server_base_path'],
             )
 
-            # remove contents of backup path for current build instruction
+            backup_path = self.config['targets'][self.build_instruction['target']]['backup_path']
             backup_docset_relative_path = os.path.join(backup_path, self.docset_relative_path)
+
+            # remove contents of backup path for current build instruction
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "rm -rf %s" % (backup_docset_relative_path)
 
             # rsync navigational pages dir to backup path
-            backup_path = self.config['targets'][self.build_instruction['target']]['backup_path']
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "rsync -lr %s/ %s" % (

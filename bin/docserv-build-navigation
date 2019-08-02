@@ -208,12 +208,14 @@ for lang in $ui_languages; do
   cat $template_main | sed -r \
     -e 's%@\{\{#base_path#}}%'"${base_path}"'%g' \
     -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
+    -e 's%@\{\{#template_extension#}}%'"$ext"'%g' \
     -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
     > $output_dir/$lang/index.$ext
 
   cat $template_unsupported | sed -r \
     -e 's%@\{\{#base_path#}}%'"${base_path}"'%g' \
     -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
+    -e 's%@\{\{#template_extension#}}%'"$ext"'%g' \
     -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
     > $output_dir/$lang/unsupported.$ext
 
@@ -227,6 +229,7 @@ for lang in $ui_languages; do
     cat $template_product | sed -r \
       -e 's%@\{\{#base_path#}}%'"${base_path}"'%g' \
       -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
+      -e 's%@\{\{#template_extension#}}%'"$ext"'%g' \
       -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
       -e 's%@\{\{#product#}}%'"$product"'%g' \
       -e 's%@\{\{#docset#}}%'"$docset"'%g' \

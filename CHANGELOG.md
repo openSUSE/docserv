@@ -2,6 +2,11 @@
 
 ## v3.0, 2019-08-03, sknorr
 
+- Make sure not to delete product pages of current product
+
+
+## v3.0, 2019-08-03, sknorr
+
 - Update product configuration schema to 3.0
   - Rename `<extralinks/>` to `<external/>`
   - Allow internal links

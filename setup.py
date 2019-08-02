@@ -25,7 +25,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="docserv",
-    version="2.0",
+    version="3.0",
     packages=find_packages('src'),
     package_dir={'': 'src'},
     entry_points={
@@ -55,7 +55,7 @@ setup(
     author="SUSE Documentation Team",
     author_email="doc-team@suse.com",
     description="Build server for DAPS documentation",
-    license="GPL-2.0-or-later",
+    license="GPL-3.0-or-later",
     keywords="DAPS build documentation",
     url="http://github.com/SUSEdoc/",
     classifiers=[

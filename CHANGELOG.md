@@ -1,5 +1,20 @@
 # Release History
 
+## v3.0, 2019-08-03, sknorr
+
+- Update product configuration schema to 3.0
+  - Rename `<extralinks/>` to `<external/>`
+  - Allow internal links
+  - Add default docset value
+  - For product acronym, use `<acronym/>` instead of `<shortname/>`
+  - Add `<sortname/>` tag for product sort name
+- Use `@lifecycle` values across build process
+- Major improvements to build-navigation
+  - Generate JSON files for all content
+  - Use updated template system
+- Tons of other fixes
+
+
 ## v2.0, 2019-06-03, sknorr
 
 - Update product configuration schema to 2.0

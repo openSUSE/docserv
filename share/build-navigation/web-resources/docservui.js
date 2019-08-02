@@ -1,8 +1,3 @@
-//var lastBuildDataCheck = 0;
-//var pollInterval = 32;
-// chromium --allow-file-access-from-files
-// about:config security.fileuri.strict_origin_policy = false
-
 var body = '';
 var productSelect = '';
 var versionSelect = '';

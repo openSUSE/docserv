@@ -100,23 +100,6 @@ class BuildInstructionHandler:
         commands = {}
         n = 0
         if hasattr(self, 'tmp_bi_path') and os.listdir(self.tmp_bi_path):
-            # (re-)generate navigation page
-            tmp_dir_nav = tempfile.mkdtemp(prefix="docserv_navigation_")
-            n += 1
-            commands[n] = {}
-            commands[n]['cmd'] = "docserv-build-navigation %s --product=\"%s\" --docset=\"%s\" --stitched-config=\"%s\" --ui-languages=\"%s\" --cache-dir=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\" --base-path=\"%s\"" % (
-                "--internal-mode" if self.config['targets'][self.build_instruction['target']
-                                                             ]['internal'] == "yes" else "",
-                self.build_instruction['product'],
-                self.build_instruction['docset'],
-                self.stitch_tmp_file,
-                self.config['targets'][self.build_instruction['target']]['languages'],
-                os.path.join(self.deliverable_cache_base_dir, self.build_instruction['target']),
-                self.config['targets'][self.build_instruction['target']]['template_dir'],
-                tmp_dir_nav,
-                self.config['targets'][self.build_instruction['target']]['server_base_path'],
-            )
-
             backup_path = self.config['targets'][self.build_instruction['target']]['backup_path']
             backup_docset_relative_path = os.path.join(backup_path, self.docset_relative_path)
 
@@ -124,12 +107,6 @@ class BuildInstructionHandler:
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "rm -rf %s" % (backup_docset_relative_path)
-
-            # rsync navigational pages dir to backup path
-            n += 1
-            commands[n] = {}
-            commands[n]['cmd'] = "rsync -lr %s/ %s" % (
-                tmp_dir_nav, backup_path)
 
             # copy temp build instruction directory to backup path;
             # we only do that for products that are unpublished/beta/supported,
@@ -157,6 +134,28 @@ class BuildInstructionHandler:
                 self.docset,
                 self.lang)
             commands[n]['cmd'] = create_archive_cmd
+
+            # (re-)generate navigation page
+            tmp_dir_nav = tempfile.mkdtemp(prefix="docserv_navigation_")
+            n += 1
+            commands[n] = {}
+            commands[n]['cmd'] = "docserv-build-navigation %s --product=\"%s\" --docset=\"%s\" --stitched-config=\"%s\" --ui-languages=\"%s\" --cache-dir=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\" --base-path=\"%s\"" % (
+                "--internal-mode" if self.config['targets'][self.build_instruction['target']
+                                                             ]['internal'] == "yes" else "",
+                self.build_instruction['product'],
+                self.build_instruction['docset'],
+                self.stitch_tmp_file,
+                self.config['targets'][self.build_instruction['target']]['languages'],
+                os.path.join(self.deliverable_cache_base_dir, self.build_instruction['target']),
+                self.config['targets'][self.build_instruction['target']]['template_dir'],
+                tmp_dir_nav,
+                self.config['targets'][self.build_instruction['target']]['server_base_path'],
+            )
+            # rsync navigational pages dir to backup path
+            n += 1
+            commands[n] = {}
+            commands[n]['cmd'] = "rsync -lr %s/ %s" % (
+                tmp_dir_nav, backup_path)
 
             # rsync local backup path with web server target path
             target_path = self.config['targets'][self.build_instruction['target']]['target_path']

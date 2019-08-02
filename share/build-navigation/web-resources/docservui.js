@@ -173,7 +173,15 @@ function populateDocSet() {
         var e_documentLink = document.createElement('a');
         e_documentLink.classList.add('ds-docset-table-link');
         e_documentLink.textContent = Object.keys(formatList)[k];
-        e_documentLink.setAttribute( 'href', basePath + formatList[ Object.keys(formatList)[k] ] );
+        var linkPath = formatList[ Object.keys(formatList)[k] ];
+        if (! (linkPath.lastIndexOf('https://', 0) === 0 ||
+               linkPath.lastIndexOf('http://', 0) === 0  ||
+               linkPath.lastIndexOf('mailto:', 0) === 0  ||
+               linkPath.lastIndexOf('ftp://', 0) === 0)  ||
+               linkPath.lastIndexOf('//', 0) === 0) {
+          linkPath = basePath + linkPath;
+        };
+        e_documentLink.setAttribute( 'href', linkPath );
         e_documentFormats.appendChild(e_documentLink);
       };
     };

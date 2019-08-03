@@ -60,14 +60,14 @@
      <xsl:apply-templates select="//product" mode="generate-productline-list">
        <xsl:sort
          lang="en"
-         select="normalize-space(translate(name, '&sortlower;', '&sortupper;'))"/>
+         select="normalize-space(translate((name|sortname)[last()], '&sortlower;', '&sortupper;'))"/>
      </xsl:apply-templates>
   },
   "product": {
      <xsl:apply-templates select="//product" mode="generate-product-list">
        <xsl:sort
          lang="en"
-         select="normalize-space(translate(name,'&sortlower;', '&sortupper;'))"/>
+         select="normalize-space(translate((name|sortname)[last()],'&sortlower;', '&sortupper;'))"/>
      </xsl:apply-templates>
   }
 }

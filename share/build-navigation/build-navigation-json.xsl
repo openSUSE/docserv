@@ -516,12 +516,88 @@
         </xsl:apply-templates>
       </xsl:when>
       <xsl:when test="$docset != ''">
-        <xsl:message>Unhandled type of internal reference to docset detected.</xsl:message>
+        <xsl:call-template name="internal-ref-docset">
+          <xsl:with-param name="product" select="$product"/>
+          <xsl:with-param name="docset" select="$docset"/>
+        </xsl:call-template>
       </xsl:when>
       <xsl:when test="$product != ''">
-        <xsl:message>Unhandled type of internal reference to product detected.</xsl:message>
+        <xsl:call-template name="internal-ref-docset">
+          <xsl:with-param name="product" select="$product"/>
+          <xsl:with-param name="docset" select="//product[@productid = $product]/docset[@default = 'true']/@setid"/>
+        </xsl:call-template>
       </xsl:when>
     </xsl:choose>
+  </xsl:template>
+
+  <xsl:template name="internal-ref-docset" mode="generate-docset-json">
+    <xsl:param name="product" select="''"/>
+    <xsl:param name="docset" select="''"/>
+    <!-- FIXME: These titles would be way better if they included something
+    like "Documentation for ..." instead of just being the name of the
+    docset. However, that would necessitate enabling localization here. Our UI
+    localization story is currently dodgy (read: non-existent) anyhow, so... -->
+    <xsl:variable name="title-default">
+      <xsl:call-template name="inject-docset-title">
+        <xsl:with-param name="node" select="//product[@productid = $product]/docset[@setid = $docset]/*[1]"/>
+        <xsl:with-param name="postfix" select="0"/>
+      </xsl:call-template>
+    </xsl:variable>
+    <xsl:variable name="title-escaped-default">
+      <xsl:call-template name="escape-text" mode="escape-html">
+        <xsl:with-param name="input" select="$title-default"/>
+      </xsl:call-template>
+    </xsl:variable>
+          <dscr:jsondocument title="{$title-escaped-default}" hash="link-{generate-id(.)}">
+            [
+              <xsl:call-template name="internal-ref-docset-lang">
+                <xsl:with-param name="title" select="$title-escaped-default"/>
+                <xsl:with-param name="product" select="$product"/>
+                <xsl:with-param name="docset" select="$docset"/>
+              </xsl:call-template>
+            ],
+          </dscr:jsondocument>
+  </xsl:template>
+
+  <xsl:template name="internal-ref-docset-lang" mode="generate-docset-json">
+    <xsl:param name="title" select="''"/>
+    <xsl:param name="product" select="''"/>
+    <xsl:param name="docset" select="''"/>
+    <xsl:param name="languages" select="concat($ui_languages, ' ')"/>
+    <xsl:variable name="default">
+      <!-- We'll assume that the default UI language is the one first
+      mentioned in $ui_languages. We iterate recursively, so our $languages
+      string is getting shorter. Hence, when $ui_languages == $languages, we
+      are on the first element. -->
+      <xsl:choose>
+        <xsl:when test="$languages = concat($ui_languages, ' ')">true</xsl:when>
+        <xsl:otherwise>false</xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
+    <xsl:variable name="language">
+      <xsl:value-of select="substring-before($languages, ' ')"/>
+    </xsl:variable>
+
+              {
+                "lang": "<xsl:value-of select="$language"/>",
+                "default": <xsl:value-of select="$default"/>,
+                "title": "<xsl:value-of select="$title"/>",
+                "format": {
+                  <!-- FIXME: Not completely happy that we are generating a link
+                  path here. There are a ton of assumptions about URL
+                  structure here. We don't even know whether it is index.php
+                  or index.html that we should be linking to. -->
+                  "html": "<xsl:value-of select="concat($language,'/',$product,'/', $docset, '/')"/>",
+                }
+              },
+    <xsl:if test="substring-after($languages, ' ')">
+      <xsl:call-template name="internal-ref-docset-lang">
+        <xsl:with-param name="title" select="$title"/>
+        <xsl:with-param name="product" select="$product"/>
+        <xsl:with-param name="docset" select="$docset"/>
+        <xsl:with-param name="languages" select="substring-after($languages, ' ')"/>
+      </xsl:call-template>
+    </xsl:if>
   </xsl:template>
 
   <xsl:template match="external/link" mode="generate-docset-json">
@@ -573,13 +649,19 @@
   </xsl:template>
 
   <xsl:template name="inject-docset-title">
+    <xsl:param name="node" select="."/>
+    <xsl:param name="postfix" select="1"/>
     <!-- Finding out the correct product name is hard. FIXME: Is that logic
     quite right? It should be:
     docset/acronym > docset/name > product/acronym > product/name. -->
-    <xsl:value-of select="((ancestor::product/name|ancestor::product/acronym)[last()]|(ancestor::docset/name|ancestor::docset/acronym)[last()])[last()]"/>
+    <xsl:value-of
+      select="(($node/ancestor::product/name|$node/ancestor::product/acronym)[last()]|
+               ($node/ancestor::docset/name|$node/ancestor::docset/acronym)[last()])[last()]"/>
     <xsl:text> </xsl:text>
-    <xsl:value-of select="ancestor::docset/version"/>
-    <xsl:text>: </xsl:text>
+    <xsl:value-of select="$node/ancestor::docset/version"/>
+    <xsl:if test="$postfix = 1">
+      <xsl:text>: </xsl:text>
+    </xsl:if>
   </xsl:template>
 
 </xsl:stylesheet>

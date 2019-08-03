@@ -13,8 +13,8 @@
     <xsl:text> </xsl:text>
     <xsl:for-each select="//product/docset">
       <xsl:if
-        test="@lifecycle = 'beta' or @lifecycle = 'supported' or
-              (@lifecycle = 'unpublished' and $internal_mode = 'true') and
+        test="(@lifecycle = 'beta' or @lifecycle = 'supported' or
+              (@lifecycle = 'unpublished' and $internal_mode = 'true')) and
               (not(@navigation-visible = 'hidden') or $internal_mode = 'true')">
           <xsl:choose>
             <xsl:when test="builddocs">

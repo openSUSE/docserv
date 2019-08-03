@@ -230,7 +230,7 @@ class DocservState:
         build_instruction = self.get_scheduled_build_instruction()
         if build_instruction is not None:
             myBIH = BuildInstructionHandler(
-                build_instruction, self.config, self.gitLocks, self.gitLocksLock, thread_id)
+                build_instruction, self.config, self.stitch_tmp_dir, self.gitLocks, self.gitLocksLock, thread_id)
             # If the initialization failed, immediately delete the BuildInstructionHandler
             if myBIH.initialized == False:
                 self.abort_build_instruction(build_instruction['id'])
@@ -333,12 +333,11 @@ class Docserv(DocservState, DocservConfig):
             # After starting docserv, make sure to stitch as the first thing,
             # this increases startup time but means that as long as the config
             # does not change, we don't have to do another complete validation
+            self.stitch_tmp_dir = tempfile.mkdtemp(prefix='docserv_stitch_')
+
+            # Notably, the config dir can be different for different targets.
+            # So, stitch for each.
             for target in self.config['targets']:
-                self.stitch_tmp_dir = os.path.join(tempfile.gettempdir(), 'docserv_stitch')
-                try:
-                    os.mkdir(self.stitch_tmp_dir)
-                except FileExistsError:
-                    pass
                 stitch_tmp_file = os.path.join(self.stitch_tmp_dir,
                     ('productconfig_simplified_%s.xml' % target))
                 # Largely copypasta from bih.py cuz I dunno how to share stuff

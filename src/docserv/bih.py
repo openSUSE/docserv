@@ -30,7 +30,7 @@ class BuildInstructionHandler:
     configuration creates a set of Deliverables.
     """
 
-    def __init__(self, build_instruction, config, gitLocks, gitLocksLock, thread_id):
+    def __init__(self, build_instruction, config, stitch_tmp_dir, gitLocks, gitLocksLock, thread_id):
         # A dict with meta information about a Deliverable.
         # It is filled with Deliverable.dict().
         self.deliverables = {}
@@ -51,6 +51,8 @@ class BuildInstructionHandler:
 
         self.cleanup_done = False
         self.cleanup_lock = threading.Lock()
+
+        self.stitch_tmp_dir = stitch_tmp_dir
 
         if self.validate(build_instruction, config):
             self.initialized = True
@@ -258,8 +260,6 @@ Repo/Branch: %s %s
             logger.debug("Target %s not active.", target)
             return False
 
-        self.stitch_tmp_dir = os.path.join(tempfile.gettempdir(), 'docserv_stitch')
-        os.makedirs(self.stitch_tmp_dir, exist_ok = True)
         self.stitch_tmp_file = os.path.join(self.stitch_tmp_dir,
             ('productconfig_simplified_%s.xml' % target))
         logger.debug("Stitching XML config directory to %s",

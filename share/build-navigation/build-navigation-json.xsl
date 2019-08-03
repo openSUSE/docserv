@@ -399,6 +399,7 @@
                 "lang": "<xsl:value-of select="$lang"/>",
                 "default": <xsl:value-of select="$default"/>,
                 "title": "<xsl:value-of select="$title-escaped"/>",
+                "lang-switchable": true,
                 "format": {
                 <xsl:for-each select="exsl:node-set($hash-match)/dscr:result">
                   <!-- Let's sort formats by their (likely) importance:
@@ -582,6 +583,7 @@
                 "lang": "<xsl:value-of select="$language"/>",
                 "default": <xsl:value-of select="$default"/>,
                 "title": "<xsl:value-of select="$title"/>",
+                "lang-switchable": false,
                 "format": {
                   <!-- FIXME: Not completely happy that we are generating a link
                   path here. There are a ton of assumptions about URL
@@ -625,6 +627,7 @@
                 "lang": "<xsl:value-of select="@lang"/>",
                 "default": <xsl:call-template name="determine-default"/>,
                 "title": "<xsl:value-of select="$title-escaped"/>",
+                "lang-switchable": true,
                 "format": {
                 <xsl:for-each select="url">
                   "<xsl:value-of select="@format"/>": "<xsl:value-of select="@href"/>",

@@ -234,6 +234,7 @@
           select="( builddocs/language[@default = 'true']/deliverable[not(subdeliverable)][not(@category)] |
                     builddocs/language[@default = 'true']/deliverable/subdeliverable[not(@category)] )"
           mode="generate-docset-json"/>
+        <xsl:apply-templates select="internal/ref[not(@category)]" mode="generate-docset-json"/>
         <xsl:apply-templates select="external/link[not(@category)]" mode="generate-docset-json"/>
       </xsl:variable>
       <xsl:variable name="documents">
@@ -264,6 +265,7 @@
           select="( $node/builddocs/language[@default = 'true']/deliverable[not(subdeliverable)][contains(concat(' ', @category,' '), $categoryid)] |
                     $node/builddocs/language[@default = 'true']/deliverable/subdeliverable[contains(concat(' ',@category,' '), $categoryid)] )"
           mode="generate-docset-json"/>
+        <xsl:apply-templates select="$node/internal/ref[contains(concat(' ',@category,' '), $categoryid)]" mode="generate-docset-json"/>
         <xsl:apply-templates select="$node/external/link[contains(concat(' ',@category,' '), $categoryid)]" mode="generate-docset-json"/>
       </xsl:variable>
       <xsl:variable name="documents">
@@ -360,8 +362,15 @@
         <xsl:with-param name="node" select="ancestor::language"/>
       </xsl:call-template>
     </xsl:param>
+    <xsl:param name="docset-title-inject" select="0"/>
 
+    <xsl:variable name="injected-title">
+      <xsl:if test="$docset-title-inject = 1">
+        <xsl:call-template name="inject-docset-title"/>
+      </xsl:if>
+    </xsl:variable>
     <xsl:variable name="title">
+      <xsl:value-of select="$injected-title"/>
       <xsl:call-template name="cache-request">
         <xsl:with-param name="information" select="'title'"/>
       </xsl:call-template>
@@ -483,11 +492,49 @@
     </xsl:choose>
   </xsl:template>
 
+  <xsl:template match="internal/ref" mode="generate-docset-json">
+    <xsl:variable name="product" select="@product"/>
+    <xsl:variable name="docset" select="@docset"/>
+    <xsl:variable name="dc" select="@dc"/>
+    <xsl:variable name="subdeliverable" select="@subdeliverable"/>
+    <xsl:variable name="link" select="@link"/>
+
+    <xsl:choose>
+      <xsl:when test="$link != ''">
+        <xsl:apply-templates select="(//product[@productid = $product]/docset[@setid = $docset]/external/link[@linkid = $link])[1]" mode="generate-docset-json">
+          <xsl:with-param name="docset-title-inject" select="1"/>
+        </xsl:apply-templates>
+      </xsl:when>
+      <xsl:when test="$subdeliverable != ''">
+        <xsl:apply-templates select="(//product[@productid = $product]/docset[@setid = $docset]/builddocs/language[@default = 'true']/deliverable[dc = $dc]/subdeliverable[. = $subdeliverable])[1]" mode="generate-docset-json">
+          <xsl:with-param name="docset-title-inject" select="1"/>
+        </xsl:apply-templates>
+      </xsl:when>
+      <xsl:when test="$dc != ''">
+        <xsl:apply-templates select="(//product[@productid = $product]/docset[@setid = $docset]/builddocs/language[@default = 'true']/deliverable[dc = $dc])[1]" mode="generate-docset-json">
+          <xsl:with-param name="docset-title-inject" select="1"/>
+        </xsl:apply-templates>
+      </xsl:when>
+      <xsl:when test="$docset != ''">
+        <xsl:message>Unhandled type of internal reference to docset detected.</xsl:message>
+      </xsl:when>
+      <xsl:when test="$product != ''">
+        <xsl:message>Unhandled type of internal reference to product detected.</xsl:message>
+      </xsl:when>
+    </xsl:choose>
+  </xsl:template>
 
   <xsl:template match="external/link" mode="generate-docset-json">
+    <xsl:param name="docset-title-inject" select="0"/>
+
+    <xsl:variable name="injected-title">
+      <xsl:if test="$docset-title-inject = 1">
+        <xsl:call-template name="inject-docset-title"/>
+      </xsl:if>
+    </xsl:variable>
     <xsl:variable name="title-escaped-default">
       <xsl:call-template name="escape-text" mode="escape-html">
-        <xsl:with-param name="input" select="language[@default='true']/@title"/>
+        <xsl:with-param name="input" select="concat($injected-title,language[@default='true']/@title)"/>
       </xsl:call-template>
     </xsl:variable>
           <dscr:jsondocument title="{$title-escaped-default}" hash="link-{generate-id(.)}">
@@ -495,7 +542,7 @@
             <xsl:for-each select="language">
               <xsl:variable name="title-escaped">
                 <xsl:call-template name="escape-text" mode="escape-html">
-                  <xsl:with-param name="input" select="@title"/>
+                  <xsl:with-param name="input" select="concat($injected-title,@title)"/>
                 </xsl:call-template>
               </xsl:variable>
               {
@@ -523,6 +570,16 @@
         <xsl:text>false</xsl:text>
       </xsl:otherwise>
     </xsl:choose>
+  </xsl:template>
+
+  <xsl:template name="inject-docset-title">
+    <!-- Finding out the correct product name is hard. FIXME: Is that logic
+    quite right? It should be:
+    docset/acronym > docset/name > product/acronym > product/name. -->
+    <xsl:value-of select="((ancestor::product/name|ancestor::product/acronym)[last()]|(ancestor::docset/name|ancestor::docset/acronym)[last()])[last()]"/>
+    <xsl:text> </xsl:text>
+    <xsl:value-of select="ancestor::docset/version"/>
+    <xsl:text>: </xsl:text>
   </xsl:template>
 
 </xsl:stylesheet>

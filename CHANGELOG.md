@@ -1,16 +1,29 @@
 # Release History
 
-## v3.3, 2019-08-03, sknorr
+## v3.4, 2019-08-04, sknorr
+
+- Support `<ref/>` elements in the web UI (and not only in the config)
+- Much better support for localized pages via docservui.js (still
+  completely missing any semblance of actual UI translation, but at
+  least we show the right documents now)
+- Make `<sortname/>` actually sort items in the UI
+- Fix `@navigation-visible=hidden` functionality (works now)
+- Add build dates to the web UI
+- Add `@lifecycle` value to web UI (for beta and unpublished documents)
+- Add links to Zip files in the web UI
+
+
+## v3.3, 2019-08-02, sknorr
 
 - Correctly pick up file extension of the template
 
 
-## v3.1/v3.2, 2019-08-03, sknorr
+## v3.1/v3.2, 2019-08-02, sknorr
 
 - Make sure not to delete product pages of current product
 
 
-## v3.0, 2019-08-03, sknorr
+## v3.0, 2019-08-02, sknorr
 
 - Update product configuration schema to 3.0
   - Rename `<extralinks/>` to `<external/>`

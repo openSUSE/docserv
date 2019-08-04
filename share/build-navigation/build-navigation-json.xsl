@@ -163,15 +163,10 @@
         "name": "<xsl:value-of select="$name"/>",
         "acronym": "<xsl:value-of select="ancestor::product/acronym"/>",
         "version": "<xsl:value-of select="version"/>",
-        "defaultlanguage": "<xsl:value-of select="builddocs/language[@default='true']/@lang"/>",
-        "languages": [<xsl:apply-templates select="builddocs/language[not(@default='true')]" mode="generate-product-list"/>
-          ]
+        "lifecycle": "<xsl:value-of select="@lifecycle"/>"
       },
     </xsl:if>
   </xsl:template>
-
-  <xsl:template match="language" mode="generate-product-list">
-           "<xsl:value-of select="@lang"/>",</xsl:template>
 
   <xsl:template match="docset" mode="generate-docset-json">
     <xsl:variable name="name">
@@ -199,6 +194,7 @@
   "productname": "<xsl:value-of select="$name"/>",
   "acronym": "<xsl:value-of select="ancestor::product/acronym"/>",
   "version": "<xsl:value-of select="version"/>",
+  "lifecycle": "<xsl:value-of select="@lifecycle"/>",
   "description": [
     <xsl:apply-templates select="ancestor::product/desc" mode="generate-docset-json"/>
   ],

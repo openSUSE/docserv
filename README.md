@@ -22,8 +22,8 @@ High notes:
 RPM builds are available in the openSUSE Build Service in the
 [`Documentation:Tools` repository](https://build.opensuse.org/project/show/Documentation:Tools).
 
-## openSUSE Leap 15.0
-   1. ```zypper ar --refresh https://download.opensuse.org/repositories/Documentation:/Tools/openSUSE_Leap_15.0/Documentation:Tools.repo```
+## openSUSE Leap 15.1
+   1. ```zypper ar --refresh https://download.opensuse.org/repositories/Documentation:/Tools/openSUSE_Leap_15.1/Documentation:Tools.repo```
    2. ```zypper in docserv```
 
 # Dependencies
@@ -47,7 +47,6 @@ Docserv² does not run straight out of the Git repository. To use it, first
 make sure that the dependencies listed above are installed and then set up
 a development environment:
 
-
    1. Make sure the Docker service is running: `systemctl start docker`
       (To run Docserv² as a regular user, make sure your user is part of the group `docker`.)
    2. `cd` to the local repository checkout
@@ -58,9 +57,7 @@ a development environment:
    5. Create a virtual environment with Python: `python3 -m venv .venv`
    6. Activate the virtual environment: `source .venv/bin/activate`
    7. Update the pip Python package manager: `pip install -U pip setuptools`
-   8. The next step depends on package compatibility, and hence is distribution-dependent:
-      * *On openSUSE Leap 15.0:* Make sure the RPM package `python3-pygit2` is installed
-      * *On other distributions:* Install requirements via pip: `pip install -r requirements.txt`
+   8. Install requirements via pip: `pip install -r requirements.txt`
    9. Install Docserv² with setuptools in develop mode: `python3 setup.py develop`
 
 # Scripts That Are Part of Docserv²
@@ -92,7 +89,7 @@ The Docserv² configuration consists of three parts:
       passwordless SSH access for the users `docserv` or `root` on your machine.
    2. Make sure your machine has a working command-line mail setup via
       `sendmail`.
-   3. Enable/start the Docker engine: `systemctl enable docker.service && systemctl start docker.service`
+   3. Enable/start the Docker engine: `systemctl enable --now docker.service`
    4. Adapt the configuration in `/etc/docserv` to your needs.
    5. Choose how to run Docserv²:
       * When running from an installed system package, you can run Docserv²

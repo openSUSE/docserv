@@ -198,7 +198,7 @@ class BuildInstructionHandler:
             if int(s.returncode) != 0:
                 logger.warning("Clean up failed! Unexpected return value %i for '%s'",
                     s.returncode, commands[i]['cmd'])
-                self.mail(out, err, commands[i]['cmd'])
+                self.mail(commands[i]['cmd'], out, err)
         self.cleanup_done = True
         self.cleanup_lock.release()
 
@@ -223,30 +223,50 @@ class BuildInstructionHandler:
         return self.build_instruction
 
     def mail(self, command, out, err):
-        msg = """Sorry. docserv² failed on build instruction:
-Repo/Branch: %s %s
+        msg = """Cheerio!
 
-=== Build instruction ===
+Docserv² failed to execute a command during the following build instruction:
+
+Product:        %s
+Docset:         %s
+Language:       %s
+Target Server:  %s
+
+Repository:     %s
+Branch:         %s
+
+
+These are the details:
+
+=== Failed Command ===
+
 %s
 
-=== Failed command ===
+
+=== stdout ===
+
 %s
 
-=== STDOUT ===
-%s
 
-=== STDERR ===
+=== stderr ===
+
 %s
 """ % (
+            self.build_instruction['product'],
+            self.build_instruction['docset'],
+            self.build_instruction['lang'],
+            self.build_instruction['target'],
             self.remote_repo,
             self.branch,
-            self.build_instruction,
             command,
             out,
             err
         )
         to = ', '.join(self.maintainers)
-        subject = "[docserv²] Failed build preparation"
+        subject = ("[docserv²] Failed to execute command (%s/%s, %s)" % (
+            self.build_instruction['product'],
+            self.build_instruction['docset'],
+            self.build_instruction['lang']))
         mail(msg, subject, to)
 
     def read_conf_dir(self):

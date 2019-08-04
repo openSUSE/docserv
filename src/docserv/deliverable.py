@@ -275,42 +275,59 @@ class Deliverable:
         """
         Mail for failed builds.
         """
-        msg = """Sorry. docserv² failed to build deliverable:
-Repo/Branch: %s %s
-DC-File: %s %s
-Format: %s
-Language: %s
+        msg = """Cheerio!
 
-=== Deliverable ===
+Docserv² failed to build the following deliverable:
+
+Product:        %s
+Docset:         %s
+Language:       %s
+Target Server:  %s
+
+Repository:     %s
+Branch:         %s
+Commit:         %s
+
+DC File:        %s
+Format:         %s
+
+
+These are the details:
+
+=== Failed Command ===
+
 %s
 
-=== Build instruction ===
+
+=== stdout ===
+
 %s
 
-=== Failed command ===
-%s
 
-=== STDOUT ===
-%s
+=== stderr ===
 
-=== STDERR ===
 %s
 """ % (
+            self.parent.build_instruction['product'],
+            self.parent.build_instruction['docset'],
+            self.parent.build_instruction['lang'],
+            self.parent.build_instruction['target'],
             self.parent.remote_repo,
             self.parent.branch,
-            self.parent.build_source_dir,
+            self.parent.build_instruction['commit'],
             self.dc_file,
             self.build_format,
-            self.parent.build_instruction['lang'],
-            self.dict(),
-            self.parent.build_instruction,
             self.failed_command,
             self.out.decode('utf-8'),
             self.err.decode('utf-8'),
         )
         to = ', '.join(self.parent.maintainers)
-        subject = "[docserv²] Failed building %s for %s " % (
-            self.build_format, self.dc_file)
+        subject = "[docserv²] Failed to build %s (%s, %s/%s, %s)" % (
+            self.dc_file,
+            self.build_format,
+            self.parent.build_instruction['product'],
+            self.parent.build_instruction['docset'],
+            self.parent.build_instruction['lang'])
         mail(msg, subject, to)
 
     def parse_d2d_filelist(self, command, thread_id):

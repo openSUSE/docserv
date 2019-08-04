@@ -118,15 +118,19 @@ Docserv², notably.)
 
 # Using `docserv-createconfig`
 
-The `docserv-createconfig` tool helps to create a template for the XML
-configuration from an DocBook XML repository. It scans through available
-branches and DC files and creates an XML file that then needs to be fixed.
-The script will guess some basic values, but everything should be checked.
+The `docserv-createconfig` tool creates a template for the XML product
+configuration from a DAPS-compliant Git repository. It scans through available
+branches and DC files and creates an XML file that then needs to be enhanced
+manually. The script will guess many basic values, but the file needs to be
+checked after creation and will not be valid or useful immediately.
 
-Example:
-```
-docserv-createconfig --languages="en-us de-de" --contact="mail@example.com" /path/to/repo
-```
+1. Make sure you have a local repository clone of the Git repository to
+   build the configuration file available.
+2. Run the script: `docserv-createconfig /path/to/repo`
+3. Answer the questions.
+4. At the end, `docserv-creatconfig` will produce a file. Move it to the
+   correct configuration directory and further edit it there.
+
 
 # Developing Web Templates
 

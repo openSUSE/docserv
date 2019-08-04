@@ -402,8 +402,8 @@
                 "lang-switchable": true,
                 "format": {
                 <xsl:for-each select="exsl:node-set($hash-match)/dscr:result">
-                  <!-- Let's sort formats by their (likely) importance:
-                  HTML, Single-HTML, PDF, EPUB with THIS ONE WEIRD TRICK!
+                  <!-- Sort formats by their (likely) importance with THIS
+                  ONE WEIRD TRICK!: 1-HTML, 2-Single-HTML, 3-PDF, 4-EPUB, 5-other
                   Luckily, the formats all start with a different letter, otherwise
                   this might have become icky. -->
                   <xsl:sort lang="en" select="normalize-space(translate(@format, 'hHsSpPeEoO', '1122334455'))"/>
@@ -422,7 +422,12 @@
                   "<xsl:value-of select="@format"/>": "<xsl:value-of select="@path"/>",
                   </xsl:if>
                 </xsl:for-each>
-                }
+                },
+                "date": "<xsl:value-of select="(exsl:node-set($hash-match)/dscr:result[
+                      @productid = $node/ancestor::product/@productid and
+                      @setid = $node/ancestor::docset/@setid and
+                      @lang = $node/ancestor::language/@lang
+                      ]/@date)[1]"/>"
               },
       </xsl:if>
     </xsl:variable>
@@ -590,7 +595,8 @@
                   structure here. We don't even know whether it is index.php
                   or index.html that we should be linking to. -->
                   "html": "<xsl:value-of select="concat($language,'/',$product,'/', $docset, '/')"/>",
-                }
+                },
+                "date": false
               },
     <xsl:if test="substring-after($languages, ' ')">
       <xsl:call-template name="internal-ref-docset-lang">
@@ -632,7 +638,8 @@
                 <xsl:for-each select="url">
                   "<xsl:value-of select="@format"/>": "<xsl:value-of select="@href"/>",
                 </xsl:for-each>
-                }
+                },
+                "date": false
               },
             </xsl:for-each>
             ],

@@ -161,6 +161,7 @@
         lang="{ancestor::document/@lang}"
         productid="{ancestor::document/@productid}"
         setid="{ancestor::document/@setid}"
+        date="{substring-before(ancestor::document/@cachedate, '.')}"
         title="{.}"/>
     </xsl:for-each>
   </xsl:template>

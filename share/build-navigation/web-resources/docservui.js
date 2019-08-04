@@ -105,9 +105,13 @@ function populateDocSet() {
   e_docSetWrap.appendChild(e_title);
   var e_desc = document.createElement('div');
   e_desc.classList.add('ds-docset-desc');
-  // FIXME: l10n support
-  // FIXME: is this at all dangerous? we trust our JSON, right?
-  e_desc.innerHTML = docSetData.description[0].description;
+  desc_text = docSetData.description[0].description;
+  for (var l = 0; l < docSetData.description.length; l++) {
+    if (docSetData.description[l].lang == pageLanguage) {
+      desc_text = docSetData.description[l].description;
+    };
+  };
+  e_desc.innerHTML = desc_text;
   e_docSetWrap.appendChild(e_desc);
   for (var i = 0; i < docSetData.category.length; i++) {
     var e_cat = document.createElement('div');
@@ -117,10 +121,25 @@ function populateDocSet() {
     if (docSetData.category[i].category != false) {
       var e_catTitle = document.createElement('h3');
       e_catTitle.classList.add('ds-docset-category-title');
-      // FIXME: l10n support
-      e_catTitle.textContent = docSetData.category[i].title[0].title;
+      // FIXME: add cat id as id to div
+      var e_catDesc = document.createElement('div');
+      e_catTitle.classList.add('ds-docset-category-desc');
+      cat_text = docSetData.category[i].title[0].title;
+      cat_desc_text = docSetData.category[i].title[0].description;
+      for (var l = 0; l < docSetData.category[i].title.length; l++) {
+        if (docSetData.category[i].title[l].lang == pageLanguage) {
+          cat_text = docSetData.category[i].title[l].title;
+          if (docSetData.category[i].title[l].description != false) {
+            cat_desc_text = docSetData.category[i].title[l].description;
+          }
+        };
+      };
+      e_catTitle.textContent = cat_text;
       e_cat.appendChild(e_catTitle);
-      // FIXME: needs code to fetch description field
+      if (cat_desc_text != false) {
+        e_catDesc.innerHTML = cat_desc_text;
+        e_cat.appendChild(e_catDesc);
+      };
     }
     else {
       e_cat.classList.add('ds-category-no-title');
@@ -134,12 +153,20 @@ function populateDocSet() {
 
       var e_documentTitle = document.createElement('td');
       e_documentTitle.classList.add('ds-docset-table-title');
-      // FIXME: l10n support
-      e_documentTitle.textContent = docSetData.category[i].document[j][0].title;
+      doc_title_text = docSetData.category[i].document[j][0].title;
+      var use_lang = 0;
+      for (var l = 0; l < docSetData.category[i].document[j].length; l++) {
+        if (docSetData.category[i].document[j][l].lang == pageLanguage) {
+          doc_title_text = docSetData.category[i].document[j][l].title;
+          use_lang = l;
+        };
+      };
+      e_documentTitle.textContent = doc_title_text;
       e_documentRow.appendChild(e_documentTitle);
       var e_documentLanguage = document.createElement('td');
       e_documentLanguage.classList.add('ds-docset-table-language');
-      if (docSetData.category[i].document[j].length > 1) {
+      if (docSetData.category[i].document[j].length > 1 &&
+          docSetData.category[i].document[j][0]['lang-switchable'] == true) {
         var e_languageSelector = document.createElement('select');
         e_documentLanguage.classList.add('ds-has-language-selector');
         e_languageSelector.classList.add('ds-docset-table-lang-select');
@@ -151,6 +178,9 @@ function populateDocSet() {
           // probably want to show that by default and not English.
           var e_languageChoice = document.createElement('option');
           e_languageChoice.setAttribute( 'value', docSetData.category[i].document[j][k].lang );
+          if (k == use_lang) {
+            e_languageChoice.setAttribute( 'selected', '')
+          };
           e_languageChoice.textContent = docSetData.category[i].document[j][k].lang;
           e_languageSelector.appendChild(e_languageChoice);
           // FIXME: The current version ~is pretty~exists but does nothing --
@@ -162,10 +192,10 @@ function populateDocSet() {
         };
       }
       else {
-        e_documentLanguage.textContent = docSetData.category[i].document[j][0].lang;
+        e_documentLanguage.textContent = docSetData.category[i].document[j][use_lang].lang;
       };
       e_documentRow.appendChild(e_documentLanguage);
-      var formatList = docSetData.category[i].document[j][0].format;
+      var formatList = docSetData.category[i].document[j][use_lang].format;
       var e_documentFormats = document.createElement('td');
       e_documentFormats.classList.add('ds-docset-table-formats');
       e_documentRow.appendChild(e_documentFormats);

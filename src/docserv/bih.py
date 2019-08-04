@@ -276,8 +276,12 @@ These are the details:
         for the current build instruction.
         """
         target = self.build_instruction['target']
-        if not self.config['targets'][target]['active'] == "yes":
-            logger.debug("Target %s not active.", target)
+        try:
+            if not self.config['targets'][target]['active'] == "yes":
+                logger.debug("Target %s not active.", target)
+                return False
+        except KeyError:
+            logger.debug("Target %s does not exist.", target)
             return False
 
         self.stitch_tmp_file = os.path.join(self.stitch_tmp_dir,

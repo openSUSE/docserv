@@ -336,17 +336,31 @@ These are the details:
         a list of built documents.
         """
         # currently only read from file logic
-        f = open(os.path.join(command['tmp_dir_docker'], 'filelist'), 'r')
-        for line in f:
-            line = line.strip()
-            if '_bigfile.xml' not in line and line != "":
-                self.d2d_out_dir = line
-                self.path = os.path.join(self.deliverable_relative_path,
-                                        line.split('/')[-1])
-        logger.debug("Deliverable build results: %s", self.d2d_out_dir)
-        command['cmd'] = command['cmd'].replace(
-            '__FILELIST__', self.d2d_out_dir)
-        return command
+        try:
+            f = open(os.path.join(command['tmp_dir_docker'], 'filelist'), 'r')
+            for line in f:
+                line = line.strip()
+                if '_bigfile.xml' not in line and line != "":
+                    self.d2d_out_dir = line
+                    # If you build HTML, you get back a directory, d2d puts a /
+                    # at the end of the path in all cases (apparently)
+                    #   /path/to/directory/html/suse-openstack-cloud-all/
+                    # Running .split[-1] over that line gets you an empty string
+                    # and that is expected -- only for PDFs/EPUBs do we want to
+                    # keep the last part of the URL here.
+                    self.path = os.path.join(self.deliverable_relative_path,
+                                            line.split('/')[-1])
+        except FileNotFoundError:
+            return False
+        # Under some circumstances, we get empty file lists. In which case it's
+        # probably better to declare the build failed.
+        try:
+            logger.debug("Deliverable build results: %s", self.d2d_out_dir)
+            command['cmd'] = command['cmd'].replace(
+                '__FILELIST__', self.d2d_out_dir)
+            return command
+        except AttributeError:
+            return False
 
     def extract_root_id(self, command, thread_id):
         """

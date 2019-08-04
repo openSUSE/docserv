@@ -312,3 +312,5 @@ function dsInit() {
   };
 
 }
+
+window.addEventListener("load", dsInit, false);

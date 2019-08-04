@@ -101,11 +101,19 @@ The Docserv² configuration consists of three parts:
         Docserv², use: `docserv docserv`
         The second `docserv` denotes the name of your INI file.
 
-## Test Your Installation:
+
+## Testing Your Installation:
 
 Send a build instruction, for example: `curl --header "Content-Type: application/json" --request POST --data '[{"docset": "15ga","lang": "de-de", "product": "sles", "target": "internal"}, {"docset": "15ga","lang": "en-us", "product": "sles", "target": "internal"}]' http://localhost:8080`
 To send a build instruction, you can also use `sendbuildinstruction.sh` from
 this repository. For more information, see its `--help`.
+
+## Making Docserv² Run Reliably
+
+Since this is a massive-scale tool that ferociously handles exabytes of
+information, it can be helpful to increase the number of file descriptors
+that may be open at the same time: `sudo ulimit -n 4096`. (Before starting
+Docserv², notably.)
 
 
 # Using `docserv-createconfig`

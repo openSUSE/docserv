@@ -29,8 +29,7 @@ dcfile=$(realpath $1)
 minimaldc=$( \
     cat "$dcfile" | \
     sed -r \
-      -e 's/(\r+|\s+|")//g' \
-      -e "s/'//g" \
+      -e 's/(\r+|\s+|"|'"'"')//g' \
       | \
     sed -r -n '/^(ROOTID|MAIN|PROF[A-Z]+)=/ p' \
   )

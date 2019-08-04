@@ -75,7 +75,7 @@ function populateVersionSelect(productid) {
   var versionlist = Object.keys(productData.product[productid]);
   for (var i = 0; i < versionlist.length; i++) {
     var link = document.createElement('a');
-    link.setAttribute( 'href', basePath + pageLanguage + '/' + versionlist[ i ] + '/index.' + templateExtension);
+    link.setAttribute( 'href', normalizePath(pageLanguage + '/' + versionlist[ i ] + '/index.' + templateExtension));
     var selectedProduct = productData.product[ productid ][ Object.keys( productData.product[productid] )[ i ] ]
     link.textContent = selectedProduct['name'] + ' ' + selectedProduct["version"];
     versionSelect.appendChild( link );
@@ -112,6 +112,35 @@ function populateDocSet() {
   };
   e_desc.innerHTML = desc_text;
   e_docSetWrap.appendChild(e_desc);
+
+  if (docSetData.archive[0]) {
+    var e_archives = document.createElement('div');
+    e_archives.classList.add('ds-docset-archive-list');
+    var e_archiveDefault = document.createElement('a');
+    e_archiveDefault.classList.add('ds-docset-archive-link');
+    e_archiveDefault.setAttribute('href', normalizePath(docSetData.archive[0].zip));
+    // FIXME: l10n for "Download as"!
+    e_archiveDefault.textContent = 'Download Documentation as Zip' + ' (' + docSetData.archive[0].lang + ', complete)';
+
+    if (pageLanguage != docSetData.archive[0].lang) {
+      for (var l = 0; l < docSetData.archive.length; l++) {
+        if (pageLanguage == docSetData.archive[l].lang) {
+          var e_archiveTranslation = document.createElement('a');
+          e_archiveTranslation.classList.add('ds-docset-archive-link');
+          e_archiveTranslation.setAttribute('href', normalizePath(docSetData.archive[0].zip));
+          // FIXME: l10n for "Download as"!
+          e_archiveTranslation.textContent = 'Download Documentation as Zip' + ' (' + docSetData.archive[l].lang + ', may be incomplete)';
+          e_archives.appendChild(e_archiveTranslation);
+          // FIXME: this ugly vvv
+          e_archives.appendChild(document.createElement('br'));
+        }
+      }
+    }
+     e_archives.appendChild(e_archiveDefault);
+     e_docSetWrap.appendChild(e_archives);
+  }
+
+
   for (var i = 0; i < docSetData.category.length; i++) {
     var e_cat = document.createElement('div');
     e_cat.id = docSetData.category[i].category;
@@ -222,15 +251,7 @@ function buildFormatList(e_documentFormats, i, j, l) {
     var e_documentLink = document.createElement('a');
     e_documentLink.classList.add('ds-docset-table-link');
     e_documentLink.textContent = Object.keys(formatList)[k];
-    var linkPath = formatList[ Object.keys(formatList)[k] ];
-    if (! (linkPath.lastIndexOf('https://', 0) === 0 ||
-           linkPath.lastIndexOf('http://', 0) === 0  ||
-           linkPath.lastIndexOf('mailto:', 0) === 0  ||
-           linkPath.lastIndexOf('ftp://', 0) === 0)  ||
-           linkPath.lastIndexOf('//', 0) === 0) {
-      linkPath = basePath + linkPath;
-    };
-    e_documentLink.setAttribute( 'href', linkPath );
+    e_documentLink.setAttribute( 'href', normalizePath(formatList[ Object.keys(formatList)[k] ]) );
     e_documentFormats.appendChild(e_documentLink);
   };
 }
@@ -246,6 +267,19 @@ function convertTime(unixTime){
   // var sec = a.getSeconds();
   var time = year + '-' + month + '-' + date;
   return time;
+}
+
+function normalizePath(potentialPath) {
+  if (! (potentialPath.lastIndexOf('https://', 0) === 0 ||
+         potentialPath.lastIndexOf('http://', 0) === 0  ||
+         potentialPath.lastIndexOf('mailto:', 0) === 0  ||
+         potentialPath.lastIndexOf('ftp://', 0) === 0)  ||
+         potentialPath.lastIndexOf('//', 0) === 0) {
+    return basePath + potentialPath;
+  }
+  else {
+    return potentialPath;
+  };
 }
 
 function dsInit() {

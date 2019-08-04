@@ -75,7 +75,6 @@ function populateVersionSelect(productid) {
   var versionlist = Object.keys(productData.product[productid]);
   for (var i = 0; i < versionlist.length; i++) {
     var link = document.createElement('a');
-    // FIXME: actually find out the correct language at this point
     link.setAttribute( 'href', basePath + pageLanguage + '/' + versionlist[ i ] + '/index.' + templateExtension);
     var selectedProduct = productData.product[ productid ][ Object.keys( productData.product[productid] )[ i ] ]
     link.textContent = selectedProduct['name'] + ' ' + selectedProduct["version"];
@@ -172,22 +171,26 @@ function populateDocSet() {
         e_languageSelector.classList.add('ds-docset-table-lang-select');
         e_documentLanguage.appendChild(e_languageSelector);
         for (var k = 0; k < docSetData.category[i].document[j].length; k++) {
-          // FIXME: This currently makes the assumption that the default
-          // document language is also the UI language. E.g. if a user is on
-          // the French site and there is a document available in French, we
-          // probably want to show that by default and not English.
           var e_languageChoice = document.createElement('option');
           e_languageChoice.setAttribute( 'value', docSetData.category[i].document[j][k].lang );
+          e_languageChoice.setAttribute( 'data-category', i);
+          e_languageChoice.setAttribute( 'data-doc', j);
+          e_languageChoice.setAttribute( 'data-lang', k);
           if (k == use_lang) {
             e_languageChoice.setAttribute( 'selected', '')
           };
           e_languageChoice.textContent = docSetData.category[i].document[j][k].lang;
           e_languageSelector.appendChild(e_languageChoice);
-          // FIXME: The current version ~is pretty~exists but does nothing --
-          // evt hdlr ne1?
           e_languageChoice.addEventListener('click',function(){
-              // FIXME This is nonsense, e_documentTitle, i, j, and k are gone from this context already
-              e_documentTitle.textContent = docSetData.category[i].document[j][k].title;
+              // FIXME: this parent.parent.parent thing is ugly.
+              var e_documentFormats = this.parentElement.parentElement.parentElement.getElementsByClassName('ds-docset-table-formats')[0];
+              for (var m = e_documentFormats.getElementsByTagName('a').length - 1; m >= 0; m--) {
+                e_documentFormats.removeChild(e_documentFormats.getElementsByTagName('a')[m]);
+              }
+              var i = this.getAttribute('data-category');
+              var j = this.getAttribute('data-doc');
+              var l = this.getAttribute('data-lang');
+              buildFormatList(e_documentFormats, i, j, l);
           });
         };
       }
@@ -195,27 +198,31 @@ function populateDocSet() {
         e_documentLanguage.textContent = docSetData.category[i].document[j][use_lang].lang;
       };
       e_documentRow.appendChild(e_documentLanguage);
-      var formatList = docSetData.category[i].document[j][use_lang].format;
       var e_documentFormats = document.createElement('td');
       e_documentFormats.classList.add('ds-docset-table-formats');
       e_documentRow.appendChild(e_documentFormats);
-      for (var k = 0; k < Object.keys(formatList).length; k++) {
-        var e_documentLink = document.createElement('a');
-        e_documentLink.classList.add('ds-docset-table-link');
-        e_documentLink.textContent = Object.keys(formatList)[k];
-        var linkPath = formatList[ Object.keys(formatList)[k] ];
-        if (! (linkPath.lastIndexOf('https://', 0) === 0 ||
-               linkPath.lastIndexOf('http://', 0) === 0  ||
-               linkPath.lastIndexOf('mailto:', 0) === 0  ||
-               linkPath.lastIndexOf('ftp://', 0) === 0)  ||
-               linkPath.lastIndexOf('//', 0) === 0) {
-          linkPath = basePath + linkPath;
-        };
-        e_documentLink.setAttribute( 'href', linkPath );
-        e_documentFormats.appendChild(e_documentLink);
-      };
+      buildFormatList(e_documentFormats, i, j, use_lang);
     };
   }
+}
+
+function buildFormatList(e_documentFormats, i, j, l) {
+  var formatList = docSetData.category[i].document[j][l].format;
+  for (var k = 0; k < Object.keys(formatList).length; k++) {
+    var e_documentLink = document.createElement('a');
+    e_documentLink.classList.add('ds-docset-table-link');
+    e_documentLink.textContent = Object.keys(formatList)[k];
+    var linkPath = formatList[ Object.keys(formatList)[k] ];
+    if (! (linkPath.lastIndexOf('https://', 0) === 0 ||
+           linkPath.lastIndexOf('http://', 0) === 0  ||
+           linkPath.lastIndexOf('mailto:', 0) === 0  ||
+           linkPath.lastIndexOf('ftp://', 0) === 0)  ||
+           linkPath.lastIndexOf('//', 0) === 0) {
+      linkPath = basePath + linkPath;
+    };
+    e_documentLink.setAttribute( 'href', linkPath );
+    e_documentFormats.appendChild(e_documentLink);
+  };
 }
 
 function dsInit() {

@@ -114,13 +114,12 @@ function populateDocSet() {
   e_docSetWrap.appendChild(e_desc);
   for (var i = 0; i < docSetData.category.length; i++) {
     var e_cat = document.createElement('div');
+    e_cat.id = docSetData.category[i].category;
     e_cat.classList.add('ds-docset-category');
     e_docSetWrap.appendChild(e_cat);
-    // FIXME: we probably want to set id=product/set/catid on this div
     if (docSetData.category[i].category != false) {
       var e_catTitle = document.createElement('h3');
       e_catTitle.classList.add('ds-docset-category-title');
-      // FIXME: add cat id as id to div
       var e_catDesc = document.createElement('div');
       e_catTitle.classList.add('ds-docset-category-desc');
       cat_text = docSetData.category[i].title[0].title;

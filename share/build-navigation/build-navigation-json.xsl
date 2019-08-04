@@ -101,9 +101,9 @@
     "productname": "<xsl:value-of select="$name"/>",
     "acronym": "<xsl:value-of select="ancestor::product/acronym"/>",
     "version": "<xsl:value-of select="version"/>",
-    "archive": {
+    "archive": [
       <xsl:call-template name="zip-cache"/>
-    }
+    ]
   },
     </xsl:if>
   </xsl:for-each>
@@ -204,9 +204,9 @@
     </xsl:apply-templates>
     <xsl:call-template select="." name="generate-docset-json-no-cat"/>
   ],
-  "archive": {
+  "archive": [
     <xsl:call-template name="zip-cache"/>
-  }
+  ]
 }
       </exsl:document>
     </xsl:if>

@@ -202,6 +202,17 @@ function populateDocSet() {
       e_documentFormats.classList.add('ds-docset-table-formats');
       e_documentRow.appendChild(e_documentFormats);
       buildFormatList(e_documentFormats, i, j, use_lang);
+
+      var e_documentDate = document.createElement('td');
+      if (docSetData.category[i].document[j][use_lang].date != false) {
+        e_documentDate.classList.add('ds-docset-table-date');
+        e_documentDate.textContent = convertTime(docSetData.category[i].document[j][use_lang].date);
+        e_documentRow.appendChild(e_documentDate);
+      }
+      else {
+        e_documentFormats.setAttribute('colspan', '2');
+        e_documentFormats.classList.add('no-date');
+      }
     };
   }
 }
@@ -223,6 +234,19 @@ function buildFormatList(e_documentFormats, i, j, l) {
     e_documentLink.setAttribute( 'href', linkPath );
     e_documentFormats.appendChild(e_documentLink);
   };
+}
+
+// via https://stackoverflow.com/questions/847185
+function convertTime(unixTime){
+  var a = new Date(unixTime * 1000);
+  var year = a.getFullYear();
+  var month = ("0" + a.getMonth()).slice(-2);
+  var date = ("0" + a.getDate()).slice(-2);
+  // var hour = a.getHours();
+  // var min = a.getMinutes();
+  // var sec = a.getSeconds();
+  var time = year + '-' + month + '-' + date;
+  return time;
 }
 
 function dsInit() {

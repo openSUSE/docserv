@@ -77,7 +77,12 @@ function populateVersionSelect(productid) {
     var link = document.createElement('a');
     link.setAttribute( 'href', normalizePath(pageLanguage + '/' + versionlist[ i ] + '/index.' + templateExtension));
     var selectedProduct = productData.product[ productid ][ Object.keys( productData.product[productid] )[ i ] ]
-    link.textContent = selectedProduct['name'] + ' ' + selectedProduct["version"];
+    s_linkText = selectedProduct['name'] + ' ' + selectedProduct["version"];
+    if (selectedProduct.lifecycle == 'beta' || selectedProduct.lifecycle == 'unpublished') {
+      // FIXME: L10n for beta string
+      s_linkText = s_linkText + ' (' + selectedProduct.lifecycle + ')';
+    };
+    link.textContent = s_linkText;
     versionSelect.appendChild( link );
   }
 }
@@ -97,7 +102,17 @@ function loadDocSet(setid) {
 
 function populateDocSet() {
   var e_docSetWrap = document.getElementById('docsetwrap');
+  if (docSetData.lifecycle == 'beta') {
+    body.classList.add('ds-beta-documentation');
+  }
+  else if (docSetData.lifecycle == 'unpublished') {
+    body.classList.add('ds-unpublished-documentation');
+  };
   var s_product = docSetData.productname + ' ' + docSetData.version;
+  if (docSetData.lifecycle == 'beta' || docSetData.lifecycle == 'unpublished') {
+    // FIXME: L10n for beta string
+    s_product = s_product + ' (' + docSetData.lifecycle + ')';
+  };
   var e_title = document.createElement('h2');
   e_title.classList.add('ds-docset-title');
   e_title.textContent = s_product;

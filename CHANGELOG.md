@@ -1,5 +1,13 @@
 # Release History
 
+## v3.5, 2019-08-06, sknorr
+
+- Improve error mails: omit some unnecessary details, add interesting
+  ones
+- Improve DC hash tool to properly normalize profiling values
+- Fix two tracebacks (hopefully)
+
+
 ## v3.4, 2019-08-04, sknorr
 
 - Support `<ref/>` elements in the web UI (and not only in the config)

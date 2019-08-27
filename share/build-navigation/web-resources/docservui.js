@@ -74,7 +74,7 @@ function populateVersionSelect(productid) {
   var versionlist = Object.keys(productData.product[productid]);
   for (var i = 0; i < versionlist.length; i++) {
     var link = document.createElement('a');
-    link.setAttribute( 'href', normalizePath(pageLanguage + '/' + versionlist[ i ] + '/index.' + templateExtension));
+    link.setAttribute( 'href', normalizePath(pageLanguage + '/' + versionlist[ i ] + '/'));
     var selectedProduct = productData.product[ productid ][ Object.keys( productData.product[productid] )[ i ] ]
     s_linkText = selectedProduct['name'] + ' ' + selectedProduct["version"];
     if (selectedProduct.lifecycle == 'beta' || selectedProduct.lifecycle == 'unpublished') {

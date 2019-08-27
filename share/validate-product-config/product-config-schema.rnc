@@ -348,7 +348,6 @@ ds.deliverable =
     attribute category { ds.type.idmulti }?,
     ds.dc,
     ds.format+,
-    ds.styleroot?,
     ds.param*
   }
 
@@ -359,7 +358,6 @@ ds.deliverable_subdeliverable =
     attribute meta { xsd:boolean }?,
     ds.dc,
     ds.format+,
-    ds.styleroot?,
     ds.param*,
     ds.subdeliverable+
   }
@@ -377,11 +375,6 @@ ds.format =
     attribute single-html { xsd:boolean }?,
     attribute pdf { xsd:boolean }?,
     attribute epub { xsd:boolean }?
-  }
-
-ds.styleroot =
-  element styleroot {
-    xsd:anyURI
   }
 
 ds.param =

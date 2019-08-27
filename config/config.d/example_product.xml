@@ -94,12 +94,10 @@
       <language default="1" lang="en-us">
         <branch>develop</branch>
 
-        <!-- MAXIMALIST (<styleroot>/<param>) COMPILATION (i.e. w/ <subdeliverables/>) DELIVERABLE EXAMPLE -->
+        <!-- MAXIMALIST (<param>) COMPILATION (i.e. w/ <subdeliverables/>) DELIVERABLE EXAMPLE -->
         <deliverable remarks="0" draft="false" meta="0">
           <dc>DC-example-all</dc>
           <format html="1" single-html="0" pdf="0" epub="0"/>
-          <styleroot>/.../.../...</styleroot>
-            <!-- Styleroot is totally optional. -->
           <param name="foo.bar">1</param>
             <!-- Automatically forwarded to DAPS as "-stringparam"s. -->
           <subdeliverable category="example">book.admin</subdeliverable>

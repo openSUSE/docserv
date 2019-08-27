@@ -68,8 +68,7 @@ function populateVersionSelect(productid) {
   if ( existingLinks[0] ) {
     // go backwards, to avoid giving the browser hiccups
     for (var i = existingLinks.length - 1; i >= 0; i--) {
-      // FIXME: remove() is apparently not supported in IE 11. relevant?
-      existingLinks[i].remove();
+      existingLinks[i].parentElement.removeChild(existingLinks[i]);
     }
   }
   var versionlist = Object.keys(productData.product[productid]);

@@ -125,15 +125,15 @@ class Deliverable:
         remarks = self.parent.config['targets'][self.parent.build_instruction['target']]['remarks']
         draft = self.parent.config['targets'][self.parent.build_instruction['target']]['draft']
         meta = self.parent.config['targets'][self.parent.build_instruction['target']]['meta']
-        daps_params = " ".join([
-            "--remarks" if (remarks == "true" or remarks == "1") else "",
-            "--draft" if (draft == "true" or draft == "1" or
+        daps_params = "\n".join([
+            "--remarks" if remarks == "yes" else "",
+            "--draft" if (draft == "yes" or
                           self.parent.lifecycle == "beta" or
                           self.parent.lifecycle == "unpublished") else "",
-            "--meta" if (meta == "true" or meta == "1") else ""
+            "--meta" if meta == "yes" else ""
         ])
         commands[n] = {}
-        commands[n]['cmd'] = "echo \"%s\" > %s" % (daps_params,
+        commands[n]['cmd'] = "echo -e \"%s\" > %s" % (daps_params,
                                                    daps_params_file[1])
 
         # Run daps in the docker container, copy results to a

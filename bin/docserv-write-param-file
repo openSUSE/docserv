@@ -1,0 +1,24 @@
+#!/bin/bash
+# Write a DAPS parameter file.
+#
+# $1 - File to write to
+# $2 - Content to write into file
+
+# FIXME: This should be removed as soon as possible again. This command is
+# only a temporary workaround for the fact that Deliverable.execute
+# does not allow redirecting into a file currently.
+
+out() {
+  >&2 echo -e "$1"
+  exit 1
+}
+
+me=$(test -L $(realpath $0) && readlink $(realpath $0) || echo $(realpath $0))
+mydir=$(dirname $me)
+
+[[ ! -f $1 ]] && out "(error) $1 does not exist yet. I only write to files that exist."
+if [[ -n "$2" ]]; then
+  echo -e "$2" > $1
+else
+  echo "(goodbye) No content that needs to be written."
+fi

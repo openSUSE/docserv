@@ -116,8 +116,7 @@ class Deliverable:
         xslt_params_file = tempfile.mkstemp(prefix="docserv_xslt_", text=True)
         xslt_params = ""
         commands[n] = {}
-        commands[n]['cmd'] = "echo \"%s\" > %s" % (xslt_params,
-                                                   xslt_params_file[1])
+        commands[n]['cmd'] = "docserv-write-param-file %s \"%s\"" % (xslt_params_file[1], xslt_params)
 
         # Write daps parameters to temp file
         n += 1
@@ -133,8 +132,7 @@ class Deliverable:
             "--meta" if meta == "yes" else ""
         ])
         commands[n] = {}
-        commands[n]['cmd'] = "echo -e \"%s\" > %s" % (daps_params,
-                                                   daps_params_file[1])
+        commands[n]['cmd'] = "docserv-write-param-file %s \"%s\"" % (daps_params_file[1], daps_params)
 
         # Run daps in the docker container, copy results to a
         # build target directory

@@ -489,12 +489,18 @@ These are the details:
                 subdeliverables = []
                 for subdeliverable in xml_deliverable.findall("subdeliverable"):
                     subdeliverables.append(subdeliverable.text)
+
+                xslt_params = []
+                for param in xml_deliverable.findall("param"):
+                    xslt_params.append("%s='%s'" % (param.xpath("./@name")[0], param.text))
+
                 deliverable = Deliverable(self,
                                           xml_deliverable.find(".//dc").text,
                                           (self.tmp_dir_bi,
                                           self.docset_relative_path),
                                           build_format,
-                                          subdeliverables
+                                          subdeliverables,
+                                          xslt_params,
                                           )
                 self.deliverables[deliverable.id] = deliverable.dict()
                 self.deliverable_objects[deliverable.id] = deliverable

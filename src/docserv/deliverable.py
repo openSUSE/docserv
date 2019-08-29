@@ -26,7 +26,7 @@ class Deliverable:
     one of these objects.
     """
 
-    def __init__(self, parent, dc_file, dir_struct_paths, build_format, subdeliverables):
+    def __init__(self, parent, dc_file, dir_struct_paths, build_format, subdeliverables, xslt_params):
         self.title = None
         self.dc_hash = None
         self.path = None
@@ -42,6 +42,7 @@ class Deliverable:
         self.dc_file = dc_file
         self.build_format = build_format
         self.subdeliverables = subdeliverables
+        self.xslt_params = xslt_params
         self.id = self.generate_id()
         self.prev_state()
         logger.debug("Queued deliverable %s -- %s of %s:%s/%s/%s/%s for BI %s",
@@ -115,6 +116,8 @@ class Deliverable:
         n = 0
         xslt_params_file = tempfile.mkstemp(prefix="docserv_xslt_", text=True)
         xslt_params = ""
+        if len(self.xslt_params) > 0:
+            xslt_params = "\n".join(self.xslt_params)
         commands[n] = {}
         commands[n]['cmd'] = "docserv-write-param-file %s \"%s\"" % (xslt_params_file[1], xslt_params)
 

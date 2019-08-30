@@ -3,6 +3,7 @@
 #
 # $1 - File to write to
 # $2 - Content to write into file
+# $3 - (optional) Additional parameter file, will be merged but not deduped
 
 # FIXME: This should be removed as soon as possible again. This command is
 # only a temporary workaround for the fact that Deliverable.execute
@@ -17,8 +18,13 @@ me=$(test -L $(realpath $0) && readlink $(realpath $0) || echo $(realpath $0))
 mydir=$(dirname $me)
 
 [[ ! -f $1 ]] && out "(error) $1 does not exist yet. I only write to files that exist."
-if [[ -n "$2" ]]; then
-  echo -e "$2" > $1
+if [[ -n "$2" ]] || [[ -f "$3" ]]; then
+  # document-specific parameters have precedence over server-default parameters,
+  # so set server-default parameters first.
+  {
+    [[ -f "$3" ]] && cat $3
+    [[ -n "$2" ]] && echo -e "\n$2"
+  } > $1
 else
   echo "(goodbye) No content that needs to be written."
 fi

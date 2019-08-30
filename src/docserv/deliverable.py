@@ -115,11 +115,12 @@ class Deliverable:
         # Write XSLT parameters to temp file
         n = 0
         xslt_params_file = tempfile.mkstemp(prefix="docserv_xslt_", text=True)
+        default_xslt_params = self.parent.config['targets'][self.parent.build_instruction['target']]['default_xslt_params']
         xslt_params = ""
         if len(self.xslt_params) > 0:
             xslt_params = "\n".join(self.xslt_params)
         commands[n] = {}
-        commands[n]['cmd'] = "docserv-write-param-file %s \"%s\"" % (xslt_params_file[1], xslt_params)
+        commands[n]['cmd'] = "docserv-write-param-file %s \"%s\" %s" % (xslt_params_file[1], xslt_params, default_xslt_params)
 
         # Write daps parameters to temp file
         n += 1

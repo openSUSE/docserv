@@ -144,8 +144,11 @@
       </xsl:variable>
       <xsl:variable name="path">
         <xsl:choose>
-          <xsl:when test="$format = 'html' or $format = 'single-html'">
+          <xsl:when test="$format = 'html'">
             <xsl:value-of select="concat(ancestor::document/path,$rootdoc,'.html')"/>
+          </xsl:when>
+          <xsl:when test="$format = 'single-html' and $rootdoc != 'index'">
+            <xsl:value-of select="concat(ancestor::document/path,'#',$rootdoc)"/>
           </xsl:when>
           <xsl:otherwise>
             <xsl:value-of select="ancestor::document/path"/>

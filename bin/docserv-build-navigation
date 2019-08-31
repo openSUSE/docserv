@@ -10,6 +10,9 @@
 #   --output-dir="/path/to/output"           # Where to output HTML files
 #   --ui-languages="en-us de-de"             # Languages that are supported
 #                                              by the UI templates
+#   --omit-lang-path="en-us"                 # Allows omitting the path
+#                                              component to the default page
+#                                              language
 #   --internal-mode                          # Enable features that are not
 #                                              supposed to be shown publically
 #   --product                                # Product to build UI for
@@ -51,6 +54,7 @@ docserv_js=$share_dir/build-navigation/web-resources/docservui.js
 stitched_config=
 
 ui_languages=
+omit_lang_path=
 relevant_product=
 relevant_docset=
 
@@ -77,6 +81,9 @@ for i in "$@"
       ;;
       --ui-languages=*)
         ui_languages="${i#*=}"
+      ;;
+      --omit-lang-path=*)
+        omit_lang_path="${i#*=}"
       ;;
       --stitched-config=*)
         stitched_config="${i#*=}"
@@ -124,6 +131,7 @@ if [[ ! $(echo -e "$allproducts" | grep -oP "^${relevant_product}/${relevant_doc
   out "Either product $relevant_product or docset $relevant_docset does not exist."
 fi
 
+[[ -n "$omit_lang_path" ]] && omit_lang_path="${omit_lang_path}/"
 
 template_dir=$(readlink -f $template_dir)
 cache_dir=$(readlink -f $cache_dir)
@@ -217,6 +225,7 @@ for lang in $ui_languages; do
     -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
     -e 's%@\{\{#template_extension#}}%'"$ext"'%g' \
     -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
+    -e 's%@\{\{#omit_path_component#}}%'"$omit_lang_path"'%g' \
     > $output_dir/$lang/index.$ext
 
   cat $template_unsupported | sed -r \
@@ -224,6 +233,7 @@ for lang in $ui_languages; do
     -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
     -e 's%@\{\{#template_extension#}}%'"$ext"'%g' \
     -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
+    -e 's%@\{\{#omit_path_component#}}%'"$omit_lang_path"'%g' \
     > $output_dir/$lang/unsupported.$ext
 
   for product_set in $relevant_product/$relevant_docset $always_update_products; do
@@ -238,6 +248,7 @@ for lang in $ui_languages; do
       -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
       -e 's%@\{\{#template_extension#}}%'"$ext"'%g' \
       -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
+      -e 's%@\{\{#omit_path_component#}}%'"$omit_lang_path"'%g' \
       -e 's%@\{\{#product#}}%'"$product"'%g' \
       -e 's%@\{\{#docset#}}%'"$docset"'%g' \
       > $output_dir/$lang/$product_set/index.$ext

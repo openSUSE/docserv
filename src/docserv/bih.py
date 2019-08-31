@@ -141,13 +141,15 @@ class BuildInstructionHandler:
             tmp_dir_nav = tempfile.mkdtemp(prefix="docserv_navigation_")
             n += 1
             commands[n] = {}
-            commands[n]['cmd'] = "docserv-build-navigation %s --product=\"%s\" --docset=\"%s\" --stitched-config=\"%s\" --ui-languages=\"%s\" --cache-dir=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\" --base-path=\"%s\" --htaccess=\"%s\"" % (
+            commands[n]['cmd'] = "docserv-build-navigation %s --product=\"%s\" --docset=\"%s\" --stitched-config=\"%s\" --ui-languages=\"%s\" %s --cache-dir=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\" --base-path=\"%s\" --htaccess=\"%s\"" % (
                 "--internal-mode" if self.config['targets'][self.build_instruction['target']
                                                              ]['internal'] == "yes" else "",
                 self.build_instruction['product'],
                 self.build_instruction['docset'],
                 self.stitch_tmp_file,
                 self.config['targets'][self.build_instruction['target']]['languages'],
+                "--omit-lang-path=\"%s\"" % self.config['targets'][self.build_instruction['target']]['default_lang'] if
+                            self.config['targets'][self.build_instruction['target']]['omit_default_lang_path'] == "yes" else "",
                 os.path.join(self.deliverable_cache_base_dir, self.build_instruction['target']),
                 self.config['targets'][self.build_instruction['target']]['template_dir'],
                 tmp_dir_nav,

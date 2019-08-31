@@ -289,6 +289,10 @@ function normalizePath(potentialPath) {
          potentialPath.lastIndexOf('mailto:', 0) === 0  ||
          potentialPath.lastIndexOf('ftp://', 0) === 0)  ||
          potentialPath.lastIndexOf('//', 0) === 0) {
+    if (typeof(omitPathComponent) === 'string') {
+      var omitPathRegex = new RegExp('^' + omitPathComponent);
+      potentialPath = potentialPath.replace(omitPathRegex, '');
+    };
     return basePath + potentialPath;
   }
   else {

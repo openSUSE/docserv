@@ -27,7 +27,11 @@ function loadJSON(path, success, error) {
 }
 
 function getProductData() {
-  loadJSON(path + 'product.json',
+  var jsonFile = 'product.json';
+  if (pageRole == 'unsupported') {
+    jsonFile = 'unsupported.json';
+  };
+  loadJSON(path + jsonFile,
     function (data) {
         productData = data;
         populateProductSelect();
@@ -108,7 +112,7 @@ function populateDocSet() {
     body.classList.add('ds-unpublished-documentation');
   };
   var s_product = docSetData.productname + ' ' + docSetData.version;
-  if (docSetData.lifecycle == 'beta' || docSetData.lifecycle == 'unpublished') {
+  if (docSetData.lifecycle == 'beta' || docSetData.lifecycle == 'unpublished' || docSetData.lifecycle == 'unsupported') {
     // FIXME: L10n for beta string
     s_product = s_product + ' (' + docSetData.lifecycle + ')';
   };
@@ -302,7 +306,7 @@ function normalizePath(potentialPath) {
 
 function dsInit() {
   body = document.getElementsByTagName( 'body' )[0];
-  if (pageRole == 'main') {
+  if (pageRole == 'main' | pageRole == 'unsupported') {
     productSelect = document.getElementById( 'ds-product-select' );
     versionSelect = document.getElementById( 'ds-version-select' );
 

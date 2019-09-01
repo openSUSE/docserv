@@ -137,8 +137,10 @@ class Deliverable:
                 self.build_format,
                 self.dc_file.replace('DC-', '')])
             )
-
             xslt_params += "\ncanonical-url-base=%s" % (canonical_path)
+        # Special default value to prevent odd errors
+        if xslt_params == "":
+            xslt_params = "--"
         commands[n] = {}
         commands[n]['cmd'] = "docserv-write-param-file %s \"%s\" %s" % (xslt_params_file[1], xslt_params, default_xslt_params)
 

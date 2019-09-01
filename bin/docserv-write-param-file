@@ -18,13 +18,15 @@ me=$(test -L $(realpath $0) && readlink $(realpath $0) || echo $(realpath $0))
 mydir=$(dirname $me)
 
 [[ ! -f $1 ]] && out "(error) $1 does not exist yet. I only write to files that exist."
-if [[ -n "$2" ]] || [[ -f "$3" ]]; then
+if [[ -n "$2" && "$2" != '--' ]] || [[ -f "$3" ]]; then
   # document-specific parameters have precedence over server-default parameters,
   # so set server-default parameters first.
   {
     [[ -f "$3" ]] && cat $3
-    [[ -n "$2" ]] && echo -e "\n$2"
+    [[ -n "$2" && "$2" != '--' ]] && echo -e "\n$2"
   } > $1
 else
-  echo "(goodbye) No content that needs to be written."
+  echo "" > $1
 fi
+
+exit 0

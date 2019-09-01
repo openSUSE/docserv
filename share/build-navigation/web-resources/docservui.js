@@ -34,7 +34,12 @@ function getProductData() {
   loadJSON(path + jsonFile,
     function (data) {
         productData = data;
-        populateProductSelect();
+        if (document.readyState === 'complete') {
+          dsInit();
+        }
+        else {
+          window.addEventListener("load", dsInit, false);
+        };
     },
     function (xhr) {
       console.error(xhr);
@@ -94,7 +99,12 @@ function loadDocSet(setid) {
   loadJSON(path + setid + '/' + 'setdata.json',
     function (data) {
         docSetData = data;
-        populateDocSet();
+        if (document.readyState === 'complete') {
+          dsInit();
+        }
+        else {
+          window.addEventListener("load", dsInit, false);
+        };
     },
     function (xhr) {
       console.error(xhr);
@@ -310,14 +320,22 @@ function dsInit() {
     productSelect = document.getElementById( 'ds-product-select' );
     versionSelect = document.getElementById( 'ds-version-select' );
 
-    getProductData();
+    if ( typeof(productData) === 'object' ) {
+      populateProductSelect();
+    }
   }
   else if (pageRole == 'product') {
-    setid = pageProduct + '/' + pageDocSet;
-
-    loadDocSet(setid);
+    if ( typeof(docSetData) === 'object' ) {
+      populateDocSet();
+    }
   };
 
 }
 
-window.addEventListener("load", dsInit, false);
+if (pageRole == 'main' | pageRole == 'unsupported') {
+  getProductData();
+}
+else if (pageRole == 'product') {
+  setid = pageProduct + '/' + pageDocSet;
+  loadDocSet(setid);
+};

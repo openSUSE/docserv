@@ -1,5 +1,20 @@
 # Release History
 
+## v3.6, 2019-09-02, sknorr
+
+- Make unsupported.html page more useful
+- Remove <styleroot/> element from schema (never properly implemented)
+- Remove beta_warning parameter from INI (never properly implemented)
+- Handle --draft/--meta/--remarks options supplied via INI or XML
+  config
+- Handle XSLT parameters supplied via INI or XML config
+  (needs daps2docker 0.11)
+- Allow omitting the default language's name from path components
+- Set <link rel=canonical> by default
+- Allow copying favicon.ico and .htaccess file
+- Minor bug fixes
+
+
 ## v3.5, 2019-08-06, sknorr
 
 - Improve error mails: omit some unnecessary details, add interesting

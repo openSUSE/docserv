@@ -37,11 +37,13 @@
 
 
   <xsl:variable name="existing-sets-supported">
-    <xsl:call-template name="list-existing-sets-supported"/>
+    <xsl:call-template name="list-existing-sets"/>
   </xsl:variable>
 
   <xsl:variable name="existing-sets-unsupported">
-    <xsl:call-template name="list-existing-sets-unsupported"/>
+    <xsl:call-template name="list-existing-sets">
+      <xsl:with-param name="list" select="'unsupported'"/>
+    </xsl:call-template>
   </xsl:variable>
 
 
@@ -80,33 +82,22 @@
       indent="no"
       media-type="application/x-json">
 {
-  <xsl:for-each select="//product/docset">
-    <!-- FIXME: Sorting by @setid is not a great idea though easy. Actual
-    product (sort) name would be much better. -->
-    <xsl:sort
-      lang="en"
-      select="normalize-space(translate(@setid,'&sortlower;', '&sortupper;'))"/>
-    <xsl:if test="contains($existing-sets-unsupported, concat(' ',ancestor::product/@productid,'/',@setid,' '))">
-      <xsl:variable name="name">
-        <xsl:choose>
-          <xsl:when test="name">
-            <xsl:value-of select="name"/>
-          </xsl:when>
-          <xsl:otherwise>
-            <xsl:value-of select="ancestor::product/name"/>
-          </xsl:otherwise>
-        </xsl:choose>
-      </xsl:variable>
-  "<xsl:value-of select="concat(ancestor::product/@productid,'/',@setid)"/>": {
-    "productname": "<xsl:value-of select="$name"/>",
-    "acronym": "<xsl:value-of select="ancestor::product/acronym"/>",
-    "version": "<xsl:value-of select="version"/>",
-    "archive": [
-      <xsl:call-template name="zip-cache"/>
-    ]
+  "productline": {
+     <xsl:apply-templates select="//product" mode="generate-productline-list">
+       <xsl:sort
+         lang="en"
+         select="normalize-space(translate((name|sortname)[last()], '&sortlower;', '&sortupper;'))"/>
+       <xsl:with-param name="list" select="$existing-sets-unsupported"/>
+     </xsl:apply-templates>
   },
-    </xsl:if>
-  </xsl:for-each>
+  "product": {
+     <xsl:apply-templates select="//product" mode="generate-product-list">
+       <xsl:sort
+         lang="en"
+         select="normalize-space(translate((name|sortname)[last()],'&sortlower;', '&sortupper;'))"/>
+       <xsl:with-param name="list" select="$existing-sets-unsupported"/>
+     </xsl:apply-templates>
+  }
 }
     </exsl:document>
 
@@ -116,25 +107,29 @@
 
   <!-- FIXME: Make sure to handle SBP differently. -->
   <xsl:template match="product" mode="generate-productline-list">
-    <xsl:if test="contains($existing-sets-supported, concat(' ',@productid,'/'))">
+    <xsl:param name="list" select="$existing-sets-supported"/>
+    <xsl:if test="contains($list, concat(' ',@productid,'/'))">
     "<xsl:value-of select="@productid"/>": "<xsl:value-of select="name"/>",</xsl:if>
   </xsl:template>
 
 
   <xsl:template match="product" mode="generate-product-list">
-    <xsl:if test="contains($existing-sets-supported, concat(' ',@productid,'/'))">
+    <xsl:param name="list" select="$existing-sets-supported"/>
+    <xsl:if test="contains($list, concat(' ',@productid,'/'))">
     "<xsl:value-of select="@productid"/>": {<xsl:apply-templates select="docset" mode="generate-product-list">
       <!-- FIXME: sort translate() lists need to be expanded for other langs. -->
       <xsl:sort
         lang="en"
         select="normalize-space(translate(version,
           '&sortlower;', '&sortupper;'))"/>
+      <xsl:with-param name="list" select="$list"/>
     </xsl:apply-templates>
     },</xsl:if>
   </xsl:template>
 
   <!-- FIXME: Make sure to handle SBP differently. -->
   <xsl:template match="docset" mode="generate-product-list">
+    <xsl:param name="list" select="$existing-sets-supported"/>
     <xsl:variable name="visible">
       <xsl:choose>
         <xsl:when test="@navigation-visible = 'hidden'">
@@ -156,7 +151,7 @@
         </xsl:otherwise>
       </xsl:choose>
     </xsl:variable>
-    <xsl:if test="contains($existing-sets-supported, concat(' ',ancestor::product/@productid,'/',@setid,' '))">
+    <xsl:if test="contains($list, concat(' ',ancestor::product/@productid,'/',@setid,' '))">
       "<xsl:value-of select="ancestor::product/@productid"/>/<xsl:value-of select="@setid"/>": {
         "setid": "<xsl:value-of select="@setid"/>",
         "visible": <xsl:value-of select="$visible"/>,

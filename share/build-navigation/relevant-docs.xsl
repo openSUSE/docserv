@@ -9,13 +9,21 @@
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   xmlns:dscr="https://github.com/openSUSE/docserv/docserv2_cache_result">
 
-  <xsl:template name="list-existing-sets-supported">
+  <xsl:template name="list-existing-sets">
+    <xsl:param name="list" select="'supported'"/>
     <xsl:text> </xsl:text>
     <xsl:for-each select="//product/docset">
       <xsl:if
-        test="(@lifecycle = 'beta' or @lifecycle = 'supported' or
-              (@lifecycle = 'unpublished' and $internal_mode = 'true')) and
-              (not(@navigation-visible = 'hidden') or $internal_mode = 'true')">
+        test="((
+               $list = 'supported' and
+               (@lifecycle = 'beta' or @lifecycle = 'supported' or
+               (@lifecycle = 'unpublished' and $internal_mode = 'true'))
+              ) or (
+               $list = 'unsupported' and
+               @lifecycle = 'unsupported'
+              )) and
+              (not(@navigation-visible = 'hidden') or $internal_mode = 'true')
+              ">
           <xsl:choose>
             <xsl:when test="builddocs">
               <xsl:variable name="productid" select="ancestor::product/@productid"/>
@@ -32,30 +40,6 @@
               <xsl:value-of select="concat(ancestor::product/@productid,'/',@setid)"/>
               <xsl:text> </xsl:text>
             </xsl:otherwise>
-          </xsl:choose>
-      </xsl:if>
-    </xsl:for-each>
-  </xsl:template>
-
-  <xsl:template name="list-existing-sets-unsupported">
-    <xsl:text> </xsl:text>
-    <xsl:for-each select="//product/docset">
-      <xsl:if
-        test="@lifecycle = 'unsupported' and
-              (not(@navigation-visible = 'hidden') or $internal_mode = 'true')">
-          <xsl:choose>
-            <xsl:when test="builddocs">
-              <xsl:variable name="productid" select="ancestor::product/@productid"/>
-              <xsl:variable name="setid" select="@setid"/>
-              <xsl:variable name="default-language" select="builddocs/language[@default = 'true']/@lang"/>
-              <xsl:if test="$cache_content/archive[@productid = $productid][@setid = $setid][@lang = $default-language]">
-                <xsl:value-of select="concat(ancestor::product/@productid,'/',@setid)"/>
-                <xsl:text> </xsl:text>
-              </xsl:if>
-            </xsl:when>
-            <!-- FIXME:We currently don't create zip files for such content
-            anyway. So leave this empty for the moment. -->
-            <xsl:otherwise/>
           </xsl:choose>
       </xsl:if>
     </xsl:for-each>

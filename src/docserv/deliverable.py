@@ -45,6 +45,7 @@ class Deliverable:
         self.xslt_params = xslt_params
         self.id = self.generate_id()
         self.prev_state()
+        self.target_config = self.parent.config['targets'][self.parent.build_instruction['target']]
         logger.debug("Queued deliverable %s -- %s of %s:%s/%s/%s/%s for BI %s",
                      self.id,
                      self.build_format,
@@ -119,6 +120,25 @@ class Deliverable:
         xslt_params = ""
         if len(self.xslt_params) > 0:
             xslt_params = "\n".join(self.xslt_params)
+        # The EPUB stylesheets might support this one too, but we don't want it
+        # in there, so make sure to run this only for HTML & single-HTML.
+        if self.build_format in ['html', 'single-html']:
+            canonical_prefix = "%s%s" % (   self.target_config['canonical_url_domain'],
+                                            self.target_config['server_base_path'])
+            # We intentionally do not use os.path.join here, because Web
+            # addresses always use forward slashes
+            canonical_path = "%s%s%s" %(canonical_prefix,
+                "%s/" % self.parent.build_instruction['lang'] if (
+                            self.target_config['omit_default_lang_path'] != "yes" or
+                            self.parent.build_instruction['lang'] != self.target_config['default_lang']) else "",
+                '/'.join([
+                self.parent.build_instruction['product'],
+                self.parent.build_instruction['docset'],
+                self.build_format,
+                self.dc_file.replace('DC-', '')])
+            )
+
+            xslt_params += "\ncanonical-url-base=%s" % (canonical_path)
         commands[n] = {}
         commands[n]['cmd'] = "docserv-write-param-file %s \"%s\" %s" % (xslt_params_file[1], xslt_params, default_xslt_params)
 

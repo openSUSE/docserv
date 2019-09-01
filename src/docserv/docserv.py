@@ -293,6 +293,7 @@ class DocservConfig:
                 self.config['targets'][config[section]['name']]['server_base_path'] = config[section]['server_base_path']
                 self.config['targets'][config[section]['name']]['canonical_url_domain'] = config[section]['canonical_url_domain']
                 self.config['targets'][config[section]['name']]['htaccess'] = config[section]['htaccess']
+                self.config['targets'][config[section]['name']]['favicon'] = config[section]['favicon']
         except KeyError as error:
             logger.warning(
                 "Invalid configuration file, missing configuration key '%s'. Exiting.", error)

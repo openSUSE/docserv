@@ -280,7 +280,6 @@ class DocservConfig:
                 self.config['targets'][config[section]['name']]['draft'] = config[section]['draft']
                 self.config['targets'][config[section]['name']]['remarks'] = config[section]['remarks']
                 self.config['targets'][config[section]['name']]['meta'] = config[section]['meta']
-                self.config['targets'][config[section]['name']]['beta_warning'] = config[section]['beta_warning']
                 self.config['targets'][config[section]['name']]['default_xslt_params'] = config[section]['default_xslt_params']
                 self.config['targets'][config[section]['name']]['target_path'] = config[section]['target_path']
                 self.config['targets'][config[section]['name']]['backup_path'] = config[section]['backup_path']

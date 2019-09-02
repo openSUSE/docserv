@@ -1,5 +1,11 @@
 # Release History
 
+## v3.7, 2019-09-02, sknorr
+
+- Actually make unsupported.html page more useful
+- Truncate error mails over 100k characters in length
+
+
 ## v3.6, 2019-09-02, sknorr
 
 - Make unsupported.html page more useful

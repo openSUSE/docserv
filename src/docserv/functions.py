@@ -24,6 +24,8 @@ def mail(text, subject, to):
     Send mail via the local sendmail command.
     """
     logger.debug("Sending mail to %s", to)
+    # 100kB of text is enough, right?
+    text = ('[message truncated]\n\n' + text[:100000] + '...') if len(text) > 100000 else text
     msg = MIMEText(text)
     msg["To"] = to
     msg["Subject"] = subject

@@ -29,7 +29,7 @@
               <xsl:variable name="productid" select="ancestor::product/@productid"/>
               <xsl:variable name="setid" select="@setid"/>
               <xsl:variable name="default-language" select="builddocs/language[@default = 'true']/@lang"/>
-              <xsl:if test="$cache_content/document[@productid = $productid][@setid = $setid][@lang = $default-language]">
+              <xsl:if test="$cache_content/*[self::document or self::archive][@productid = $productid][@setid = $setid][@lang = $default-language]">
                 <xsl:value-of select="concat(ancestor::product/@productid,'/',@setid)"/>
                 <xsl:text> </xsl:text>
               </xsl:if>

@@ -288,7 +288,7 @@ function buildFormatList(e_documentFormats, i, j, l) {
 function convertTime(unixTime){
   var a = new Date(unixTime * 1000);
   var year = a.getFullYear();
-  var month = ("0" + a.getMonth()).slice(-2);
+  var month = ("0" + (a.getMonth()+1)).slice(-2);
   var date = ("0" + a.getDate()).slice(-2);
   // var hour = a.getHours();
   // var min = a.getMinutes();

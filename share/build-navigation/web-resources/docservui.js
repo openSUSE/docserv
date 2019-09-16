@@ -237,18 +237,19 @@ function populateDocSet() {
           };
           e_languageChoice.textContent = docSetData.category[i].document[j][k].lang;
           e_languageSelector.appendChild(e_languageChoice);
-          e_languageChoice.addEventListener('click',function(){
-              // FIXME: this parent.parent.parent thing is ugly.
-              var e_documentFormats = this.parentElement.parentElement.parentElement.getElementsByClassName('ds-docset-table-formats')[0];
-              for (var m = e_documentFormats.getElementsByTagName('a').length - 1; m >= 0; m--) {
-                e_documentFormats.removeChild(e_documentFormats.getElementsByTagName('a')[m]);
-              }
-              var i = this.getAttribute('data-category');
-              var j = this.getAttribute('data-doc');
-              var l = this.getAttribute('data-lang');
-              buildFormatList(e_documentFormats, i, j, l);
-          });
-        };
+	};
+        e_languageSelector.addEventListener('change',function(){
+          // FIXME: this parent.parent.parent thing is ugly.
+          var e_documentFormats = this.parentElement.parentElement.getElementsByClassName('ds-docset-table-formats')[0];
+          for (var m = e_documentFormats.getElementsByTagName('a').length - 1; m >= 0; m--) {
+            e_documentFormats.removeChild(e_documentFormats.getElementsByTagName('a')[m]);
+          }
+          var i = this.options[this.selectedIndex].getAttribute('data-category');
+          var j = this.options[this.selectedIndex].getAttribute('data-doc');
+          var l = this.options[this.selectedIndex].getAttribute('data-lang');
+          //var l = this.options[this.selectedIndex].text; // for debugging data-lang
+          buildFormatList(e_documentFormats, i, j, l);
+        });
       }
       else {
         e_documentLanguage.textContent = docSetData.category[i].document[j][use_lang].lang;

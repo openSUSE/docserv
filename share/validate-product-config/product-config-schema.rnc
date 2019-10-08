@@ -74,6 +74,12 @@ ds.type.xsltparam =
     pattern="""[\-_\.\+a-zA-Z0-9]+"""
   }
 
+ds.type.alphanumeric =
+  # An alphanumeric value + "-" + "_"
+  xsd:token {
+    pattern="""[\-_a-zA-Z0-9]+"""
+  }
+
 ds.type.id =
   # An ID (however, we do not check for uniqueness via RNC -- we check in
   # docserv-stitch)
@@ -157,6 +163,7 @@ ds.product =
     attribute schemaversion { ds.schema.version },
     attribute navigation-visible { "visible" | "hidden" }?,
     attribute enabled { xsd:boolean }?,
+    attribute site-section { ds.type.alphanumeric }?,
     ds.name,
     ds.sortname?,
     ds.acronym?,
@@ -412,15 +419,23 @@ ds.internal =
 # * a specific docset (link will only support the current UI language)
 # * a specific deliverable (by DC), subdeliverable (by DC and rootid), or an
 #   external link (by link ID)
+# For all links that link to a specific document (i.e. dc, subdeliverable, or
+# link), you can disable the title prefix (i.e. the "PRODUCT 1.0:" string
+# before the document name)
 ds.ref =
   element ref {
     attribute product { ds.type.id },
     (attribute docset { ds.type.id }? |
       (attribute docset { ds.type.id },
         (
-          (attribute dc { ds.type.id },
-           attribute subdeliverable { ds.type.id }?) |
-          attribute link { ds.type.id }
+          attribute title-prefix { xsd:boolean }?,
+          (
+            (
+              attribute dc { ds.type.id },
+              attribute subdeliverable { ds.type.id }?
+            ) |
+            attribute link { ds.type.id }
+          )
         )
       )
     ),

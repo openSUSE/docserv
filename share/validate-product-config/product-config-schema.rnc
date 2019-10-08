@@ -68,6 +68,12 @@ ds.type.xsltparam =
     pattern="""[\-_\.\+a-zA-Z0-9]+"""
   }
 
+ds.type.alphanumeric =
+  # An alphanumeric value + "-" + "_"
+  xsd:token {
+    pattern="""[\-_a-zA-Z0-9]+"""
+  }
+
 ds.type.id =
   # An ID (however, we do not check for uniqueness via RNC -- we check in
   # docserv-stitch)
@@ -178,6 +184,7 @@ ds.product =
     attribute productid { ds.type.id },
     attribute schemaversion { ds.schema.version },
     attribute enabled { xsd:boolean }?,
+    attribute site-section { ds.type.alphanumeric }?,
     ds.name,
     ds.sortname?,
     ds.acronym?,

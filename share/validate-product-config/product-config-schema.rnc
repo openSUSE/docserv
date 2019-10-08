@@ -261,6 +261,10 @@ ds.docset =
     ds.acronym?,
     ds.version,
     (
+      ds.desc_default,
+      ds.desc_translation*
+    )?,
+    (
       (ds.builddocs,
        ds.internal?,
        ds.external?) |

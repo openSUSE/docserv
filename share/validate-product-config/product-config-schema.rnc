@@ -251,7 +251,7 @@ ds.categorylanguage_translation =
 ds.docset =
   element docset {
     attribute setid { ds.type.id },
-    attribute lifecycle { "unpublished" | "beta" | "supported" | "unsupported" },
+    attribute lifecycle { ds.type.alphanumeric },
     attribute navigation-visible { xsd:boolean }?,
     attribute default { xsd:boolean }?,
     # To allow for name changes between versions, as in the example of SUSE

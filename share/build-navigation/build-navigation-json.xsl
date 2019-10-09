@@ -219,6 +219,7 @@
   <xsl:template name="generate-docset-json-no-cat">
     <xsl:if test="descendant::deliverable[not(subdeliverable)][not(@category)] or
                   descendant::subdeliverable[not(@category)] or
+                  descendant::ref[not(@category)] or
                   descendant::link[not(@category)]">
       <xsl:variable name="documents-candidate">
         <xsl:apply-templates

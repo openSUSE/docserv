@@ -120,6 +120,7 @@
       <!-- FIXME: sort translate() lists need to be expanded for other langs. -->
       <xsl:sort
         lang="en"
+        order="descending"
         select="normalize-space(translate(version,
           '&sortlower;', '&sortupper;'))"/>
       <xsl:with-param name="list" select="$list"/>

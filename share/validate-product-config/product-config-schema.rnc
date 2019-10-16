@@ -253,7 +253,6 @@ ds.docset =
     attribute setid { ds.type.id },
     attribute lifecycle { ds.type.alphanumeric },
     attribute navigation-visible { xsd:boolean }?,
-    attribute default { xsd:boolean }?,
     attribute sort-priority { xsd:positiveInteger }?,
     # To allow for name changes between versions, as in the example of SUSE
     # Cloud -> SUSE OpenStack Cloud: optional ds.name here

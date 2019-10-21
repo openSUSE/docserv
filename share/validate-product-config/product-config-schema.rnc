@@ -132,6 +132,8 @@ ds.htmlinline =
   | ds.em
   | ds.q
   | ds.code
+  | ds.br
+  | ds.hr
 }
 
 div
@@ -503,21 +505,25 @@ ds.div =
 
 ds.pre =
   element pre {
+    ds.htmlattr,
     text*
   }
 
 ds.ul =
   element ul {
+    ds.htmlattr,
     ds.li+
   }
 
 ds.ol =
   element ol {
+    ds.htmlattr,
     ds.li+
   }
 
 ds.dl =
   element dl {
+    ds.htmlattr,
     (ds.dt, ds.dd)+
   }
 
@@ -572,9 +578,7 @@ ds.h6 =
 
 ds.sup =
   element sup {
-    ds.htmlattr,
-    (ds.htmlinline |
-     text)*
+    ds.htmlinlinecontent
   }
 
 ds.sub =
@@ -627,4 +631,16 @@ ds.cite =
 ds.span =
   element span {
     ds.htmlinlinecontent
+  }
+
+ds.br =
+  element br {
+    ds.htmlattr,
+    empty
+  }
+
+ds.hr =
+  element hr {
+    ds.htmlattr,
+    empty
   }

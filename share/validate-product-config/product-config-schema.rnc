@@ -444,7 +444,13 @@ ds.ref =
 
 ds.external =
   element external {
-    ds.link*
+    ds.syncdir*,
+    ds.link+
+  }
+
+ds.syncdir =
+  element syncdir {
+    ds.type.dirname
   }
 
 ds.link =

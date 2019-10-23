@@ -169,7 +169,6 @@ ds.product =
     ds.name,
     ds.sortname?,
     ds.acronym?,
-    ds.urlredirect*,
     ds.maintainers,
     ds.category*,
     ds.desc_default,
@@ -193,12 +192,6 @@ ds.sortname =
 ds.acronym =
   element acronym {
     text
-  }
-
-ds.urlredirect =
-  element urlredirect {
-    attribute docset { ds.type.id }?,
-    ds.type.singledirname
   }
 
 ds.maintainers =

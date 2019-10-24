@@ -60,6 +60,7 @@ setup(
         ('/usr/share/docserv/simplify-product-config/', glob('share/simplify-product-config/*.xsl')),
         ('/usr/share/docserv/build-navigation/', glob('share/build-navigation/*.xsl')),
         ('/usr/share/docserv/build-navigation/web-resources/', glob('share/build-navigation/web-resources/*')),
+        ('/usr/share/docserv/rsync/', glob('share/rsync/*')),
         ('/usr/lib/systemd/system/', ['systemd/docserv@.service']),
     ],
     author="SUSE Documentation Team",

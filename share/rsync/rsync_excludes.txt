@@ -1,0 +1,10 @@
+.git/
+.svn/
+.hg/
+.bzr/
+*~
+*.old
+*.bak
+*.BAK
+*.orig
+*.rej

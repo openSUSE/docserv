@@ -66,8 +66,13 @@ class BuildInstructionHandler:
             if not self.read_conf_dir():
                 self.initialized = False
                 return
+            # Allow locking the Git remote's directory for updating the branch
             self.git_lock = ResourceLock('git-remote',
                 self.remote_repo, thread_id, resource_locks,
+                resource_lock_operation_lock)
+            # Allow locking the backup dir during sync operations
+            self.backup_lock = ResourceLock('backup-dir',
+                self.build_instruction['target'], thread_id, resource_locks,
                 resource_lock_operation_lock)
             self.prepare_repo(thread_id)
             self.get_commit_hash()

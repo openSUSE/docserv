@@ -377,56 +377,28 @@ These are the details:
         repository. With this, multiple builds of different branches
         can run at the same time.
         """
-        commands = {}
-        # Clone locally cached repository, does nothing if exists
-        n = 0
-        local_repo_cache_dir = os.path.join(
-            self.config['server']['repo_dir'], resource_to_filename(self.remote_repo))
-        commands[n] = {}
-        commands[n]['cmd'] = "git clone %s %s" % (
-            self.remote_repo, local_repo_cache_dir)
-        commands[n]['ret_val'] = None
-        commands[n]['repo_lock'] = local_repo_cache_dir
-
-        # update locally cached repo
-        n += 1
-        commands[n] = {}
-        commands[n]['cmd'] = "git -C %s pull --all " % local_repo_cache_dir
-        commands[n]['ret_val'] = 0
-        commands[n]['repo_lock'] = local_repo_cache_dir
-
-        # update locally cached repo
-        n += 1
-        commands[n] = {}
-        commands[n]['cmd'] = "git -C %s checkout %s " % (
-            local_repo_cache_dir, self.branch)
-        commands[n]['ret_val'] = 0
-        commands[n]['repo_lock'] = local_repo_cache_dir
-
-        # Create local copy in temp build dir
-        n += 1
-        commands[n] = {}
-        commands[n]['cmd'] = "git clone --single-branch --branch %s %s %s" % (
-            self.branch, local_repo_cache_dir, self.local_repo_build_dir)
-        commands[n]['ret_val'] = 0
-        commands[n]['repo_lock'] = None
-
-        for i in range(0, n + 1):
-            cmd = shlex.split(commands[i]['cmd'])
-            if commands[i]['repo_lock'] is not None:
-                self.git_lock.acquire()
-            logger.debug("Thread %i: %s", thread_id, commands[i]['cmd'])
-            s = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            out, err = s.communicate()
-            self.git_lock.release()
-            if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
-                logger.warning("Build failed! Unexpected return value %i for '%s'",
-                               s.returncode, commands[i]['cmd'])
-                self.mail(commands[i]['cmd'], out.decode(
-                    'utf-8'), err.decode('utf-8'))
-                self.initialized = False
-                return False
+        repo_clone_dir = os.path.join(
+            self.config['server']['repo_dir'], resource_to_filename(self.remote
+_repo))
+        cmd = shlex.split('%s "%s" "%s" "%s" "%s"',
+                    os.path.join(BIN_DIR, 'docserv-git-copy-branch'),
+                    self.remote_repo,
+                    repo_clone_dir,
+                    self.branch,
+                    self.local_repo_build_dir)
+        self.git_lock.acquire()
+        logger.debug("Thread %i: %s", thread_id, commands[i]['cmd'])
+        s = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, err = s.communicate()
+        self.git_lock.release()
+        if not '0' == int(s.returncode):
+            logger.warning("Build failed! Unexpected return value %i for '%s'",
+                           s.returncode, commands[i]['cmd'])
+            self.mail(commands[i]['cmd'], out.decode(
+                'utf-8'), err.decode('utf-8'))
+            self.initialized = False
+            return False
 
         return True
 

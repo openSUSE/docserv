@@ -1,0 +1,55 @@
+#!/bin/bash
+# Clone or clean a Git repo and check out a specified branch to a new directory.
+#
+# Parameters, all mandatory:
+# $1 - remote URL
+# $2 - repo dir
+# $3 - tag/branch to check out
+# $4 - dir to copy branch into
+
+# Design considerations for this script:
+# * We want to trigger as few remote clones as possible while ensuring we are
+#   on the most current state of a branch or tag and are not hit by snags.
+# * We don't want to end up on local branches that do not exist on the remote
+#   anymore.
+# * We don't want to have to do the "double-pull" (first pull fails because refs
+#   are behind, second pull succeeds)
+# * We don't want issues with branches that have been force-pushed since the
+#   last time we looked at the remote.
+
+
+out() {
+  >&2 echo -e "ERR: $1"
+  exit 1
+}
+
+remote=$1
+repo_dir=$2
+branch=$3
+branch_dir=$4
+
+if [[ -z "$1" ]] || [[ -z "$2" ]] || [[ -z "$3" ]] || [[ -z "$4" ]]; then
+  out "$0 needs the following parameters:\n$0 [REMOTE_URL] [REPO_DIR] [BRANCH] [BRANCH_DIR]"
+fi
+
+if [[ ! -d "$repo_dir" ]]; then
+  mkdir -p "$repo_dir"
+  [[ ! -d "$repo_dir" ]] && out "Creating repo directory \"$repo_dir\" failed."
+  git clone --branch "$branch" "$remote" "$repo_dir"
+  [[ -n "$?" ]] && out "Creating repo directory \"$repo_dir\" failed."
+else
+  rgit="git -C $repo_dir"
+  temp_branch="ds_temp_"$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
+  $rgit checkout --orphan "$temp_branch"
+  $rgit fetch --prune
+  $rgit rm -rf '.'
+  branches=$($rgit for-each-ref --format '%(refname:short)' refs/heads/ | sed -n "/${temp_branch}/ !p")
+  for local_branch in $branches; do
+    $rgit branch -D "$local_branch"
+  done
+  $rgit checkout "$branch"
+fi
+
+[[ -d "$branch_dir" ]] && out "Branch directory \"$branch_dir\" already exists."
+mkdir -p "$branch_dir"
+git clone --single-branch --branch "$branch" "$repo_dir" "$branch_dir"

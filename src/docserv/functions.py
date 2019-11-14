@@ -1,7 +1,9 @@
 import logging
 import os
+import re
 import subprocess
 from email.mime.text import MIMEText
+from hashlib import md5
 
 my_env = os.environ
 
@@ -10,13 +12,12 @@ logger = logging.getLogger('docserv')
 
 def resource_to_filename(url):
     """
-    To create valid directory names, transform URLs like https://github.com/SUSE/doc-sle
-    into https___github_com_SUSE_doc_sle
+    To create valid and unique directory names, transform Git remote URLs:
+    https://github.com/SUSE/doc-sle.git -> [MD5_SUM]-doc-sle.git
     """
-    replace = "/\\-.,:;#+`´{}()[]!\"§$%&"
-    for char in replace:
-        url = str(url).replace(char, '_')
-    return url
+    remote_id = md5(bytes(url, 'utf-8')).hexdigest()
+    humane_name = re.sub(r'[^A-Za-z0-9._+-]', '-',(re.sub(r'^.*/', '', url)))
+    return ("%s-%s", remote_id, humane_name)
 
 
 def mail(text, subject, to):

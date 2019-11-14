@@ -66,8 +66,8 @@ class BuildInstructionHandler:
             if not self.read_conf_dir():
                 self.initialized = False
                 return
-            self.git_lock = ResourceLock(resource_to_filename(
-                self.remote_repo), thread_id, resource_locks,
+            self.git_lock = ResourceLock('git-remote',
+                self.remote_repo, thread_id, resource_locks,
                 resource_lock_operation_lock)
             self.prepare_repo(thread_id)
             self.get_commit_hash()

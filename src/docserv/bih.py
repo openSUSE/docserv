@@ -12,7 +12,7 @@ from lxml import etree
 
 from docserv.deliverable import Deliverable
 from docserv.functions import mail, resource_to_filename
-from docserv.repolock import RepoLock
+from docserv.resourcelock import ResourceLock
 
 BIN_DIR = os.getenv('DOCSERV_BIN_DIR', "/usr/bin/")
 CONF_DIR = os.getenv('DOCSERV_CONFIG_DIR', "/etc/docserv/")
@@ -30,7 +30,7 @@ class BuildInstructionHandler:
     configuration creates a set of Deliverables.
     """
 
-    def __init__(self, build_instruction, config, stitch_tmp_dir, gitLocks, gitLocksLock, thread_id):
+    def __init__(self, build_instruction, config, stitch_tmp_dir, resource_locks, resource_lock_operation_lock, thread_id):
         # A dict with meta information about a Deliverable.
         # It is filled with Deliverable.dict().
         self.deliverables = {}
@@ -66,8 +66,9 @@ class BuildInstructionHandler:
             if not self.read_conf_dir():
                 self.initialized = False
                 return
-            self.git_lock = RepoLock(resource_to_filename(
-                self.remote_repo), thread_id, gitLocks, gitLocksLock)
+            self.git_lock = ResourceLock(resource_to_filename(
+                self.remote_repo), thread_id, resource_locks,
+                resource_lock_operation_lock)
             self.prepare_repo(thread_id)
             self.get_commit_hash()
             self.create_dir_structure()

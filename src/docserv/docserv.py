@@ -60,10 +60,10 @@ class DocservState:
     past_builds = {}
     past_builds_lock = threading.Lock()
 
-    # Access to git repositories must be controlled.
-    # gitLocks is a dict of repoLock instances.
-    gitLocks = {}
-    gitLocksLock = threading.Lock()
+    # Access to git repository clones and backup dir(s) must be controlled.
+    # resource_lock_locks is a dict of resource_lock instances.
+    resource_locks = {}
+    resource_lock_operation_lock = threading.Lock()
 
     def __str__(self):
         return json.dumps(self.dict())
@@ -230,7 +230,8 @@ class DocservState:
         build_instruction = self.get_scheduled_build_instruction()
         if build_instruction is not None:
             myBIH = BuildInstructionHandler(
-                build_instruction, self.config, self.stitch_tmp_dir, self.gitLocks, self.gitLocksLock, thread_id)
+                build_instruction, self.config, self.stitch_tmp_dir, self.resource_locks,
+                self.resource_lock_operation_lock, thread_id)
             # If the initialization failed, immediately delete the BuildInstructionHandler
             if myBIH.initialized == False:
                 self.abort_build_instruction(build_instruction['id'])

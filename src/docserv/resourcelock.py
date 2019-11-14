@@ -9,7 +9,7 @@ my_env = os.environ
 logger = logging.getLogger('docserv')
 
 
-class RepoLock:
+class ResourceLock:
     """
     It is not safe to run multiple git commands on one repository
     at the same time. For example, running git pull in parallel
@@ -19,27 +19,29 @@ class RepoLock:
     at a time.
     """
 
-    def __init__(self, repo_dir, thread_id, gitLocks, gitLocksLock):
+    def __init__(self, repo_dir, thread_id, resource_locks,
+      resource_lock_operation_lock):
         """
         repo_dir -- path to a repository
         thread_id -- ID of thread calling this method
-        gitLocks -- dict of all existing gitLocks
-        gitLocksLock -- Lock for accessing gitLocks
+        resource_locks -- dict of all existing resource locks
+        resource_lock_operation_lock -- lock that allows only a single
+            resource lock operation at once
         """
-        self.gitLocks = gitLocks
-        self.gitLocksLock = gitLocksLock
+        self.resource_locks = resource_locks
+        self.resource_lock_operation_lock = resource_lock_operation_lock
         self.resource_name = resource_to_filename(repo_dir)
-        self.gitLocksLock.acquire()
-        if self.resource_name not in gitLocks:
-            self.gitLocks[self.resource_name] = threading.Lock()
-        self.gitLocksLock.release()
+        self.resource_lock_operation_lock.acquire()
+        if self.resource_name not in resource_locks:
+            self.resource_locks[self.resource_name] = threading.Lock()
+        self.resource_lock_operation_lock.release()
         self.acquired = False
         self.thread_id = thread_id
 
     def acquire(self, blocking=True):
-        if self.gitLocks[self.resource_name].acquire(blocking):
+        if self.resource_locks[self.resource_name].acquire(blocking):
             self.acquired = True
-            logger.debug("Thread %i: Acquired lock %s.",
+            logger.debug("Thread %i: Acquired resource lock %s.",
                          self.thread_id,
                          self.resource_name)
             return True
@@ -47,8 +49,8 @@ class RepoLock:
 
     def release(self):
         if self.acquired:
-            self.gitLocks[self.resource_name].release()
+            self.resource_locks[self.resource_name].release()
             self.acquired = False
-            logger.debug("Thread %i: Released lock %s.",
+            logger.debug("Thread %i: Released resource lock %s.",
                          self.thread_id,
                          self.resource_name)

@@ -142,7 +142,8 @@ class BuildInstructionHandler:
             tmp_dir_nav = tempfile.mkdtemp(prefix="docserv_navigation_")
             n += 1
             commands[n] = {}
-            commands[n]['cmd'] = "docserv-build-navigation %s --product=\"%s\" --docset=\"%s\" --stitched-config=\"%s\" --ui-languages=\"%s\" %s --cache-dir=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\" --base-path=\"%s\" --htaccess=\"%s\" --favicon=\"%s\"" % (
+            commands[n]['cmd'] = "%s %s --product=\"%s\" --docset=\"%s\" --stitched-config=\"%s\" --ui-languages=\"%s\" %s --cache-dir=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\" --base-path=\"%s\" --htaccess=\"%s\" --favicon=\"%s\"" % (
+                os.path.join(BIN_DIR, "docserv-build-navigation")
                 "--internal-mode" if self.config['targets'][self.build_instruction['target']
                                                              ]['internal'] == "yes" else "",
                 self.build_instruction['product'],

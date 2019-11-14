@@ -142,7 +142,11 @@ class Deliverable:
         if xslt_params == "":
             xslt_params = "--"
         commands[n] = {}
-        commands[n]['cmd'] = "docserv-write-param-file %s \"%s\" %s" % (xslt_params_file[1], xslt_params, default_xslt_params)
+        commands[n]['cmd'] = "%s %s \"%s\" %s" % (
+                os.path.join(BIN_DIR, 'docserv-write-param-file'),
+                xslt_params_file[1],
+                xslt_params,
+                default_xslt_params)
 
         # Write daps parameters to temp file
         n += 1
@@ -158,7 +162,10 @@ class Deliverable:
             "--meta" if meta == "yes" else ""
         ])
         commands[n] = {}
-        commands[n]['cmd'] = "docserv-write-param-file %s \"%s\"" % (daps_params_file[1], daps_params)
+        commands[n]['cmd'] = "%s %s \"%s\"" % (
+                os.path.join(BIN_DIR, 'docserv-write-param-file'),
+                daps_params_file[1],
+                daps_params)
 
         # Run daps in the docker container, copy results to a
         # build target directory

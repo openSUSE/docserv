@@ -16,6 +16,21 @@
 #   are behind, second pull succeeds)
 # * We don't want issues with branches that have been force-pushed since the
 #   last time we looked at the remote.
+#
+# What we do:
+# * The Python script generates a repo-clone dir name based on the MD5 sum of
+#   the remote URL for us.
+# * The Python script generates a random branch-clone dir name for us.
+# * Because we eventually want to git-clone a single branch into the
+#   branch-clone dir, we unfortunately need a local branch mirroring the remote
+#   branch we are interested in in the the repo-clone dir
+# * To make sure we get the current state of the remote branch:
+#   1. we first generate a randomly named local orphan branch, to be able to
+#      get a clean state next
+#   2. then delete all other local branches
+#   3. do a fresh checkout of the local branch and switch there
+# * Alternatively, if the repo is not yet checked out, we just clone it and
+#   switch to the branch we need immediately
 
 
 out() {

@@ -115,16 +115,7 @@ class BuildInstructionHandler:
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "rm -rf %s" % (backup_docset_relative_path)
-
-            # copy temp build instruction directory to backup path;
-            # we only do that for products that are unpublished/beta/supported,
-            # unsupported products only get an archive
-            n += 1
-            commands[n] = {}
-            if self.lifecycle != 'unsupported':
-                commands[n]['cmd'] = "rsync -lr %s/ %s" % (self.tmp_dir_bi, backup_path)
-            else:
-                commands[n]['cmd'] = "mkdir -p %s" % os.path.join(backup_path, self.docset_relative_path)
+            commands[n]['needs_lock'] = False
 
             # create zip archive
             n += 1
@@ -142,6 +133,7 @@ class BuildInstructionHandler:
                 self.docset,
                 self.lang)
             commands[n]['cmd'] = create_archive_cmd
+            commands[n]['needs_lock'] = False
 
             # (re-)generate navigation page
             tmp_dir_nav = tempfile.mkdtemp(prefix="docserv_navigation_")
@@ -164,11 +156,26 @@ class BuildInstructionHandler:
                 self.config['targets'][self.build_instruction['target']]['htaccess'],
                 self.config['targets'][self.build_instruction['target']]['favicon'],
             )
+            commands[n]['needs_lock'] = False
+
+            # copy temp build instruction directory to backup path;
+            # we only do that for products that are unpublished/beta/supported,
+            # unsupported products only get an archive
+            n += 1
+            commands[n] = {}
+            if self.lifecycle != 'unsupported':
+                commands[n]['cmd'] = "rsync -lr %s/ %s" % (self.tmp_dir_bi, backup_path)
+            else:
+                commands[n]['cmd'] = "mkdir -p %s" % os.path.join(backup_path, self.docset_relative_path)
+            commands[n]['needs_lock'] = True
+
+
             # rsync navigational pages dir to backup path
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "rsync -lr %s/ %s" % (
                 tmp_dir_nav, backup_path)
+            commands[n]['needs_lock'] = True
 
             # rsync local backup path with web server target path
             target_path = self.config['targets'][self.build_instruction['target']]['target_path']
@@ -179,23 +186,27 @@ class BuildInstructionHandler:
                 backup_path,
                 target_path,
             )
+            commands[n]['needs_lock'] = True
 
             # remove temp directory for navigation page
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "rm -rf %s" % tmp_dir_nav
+            commands[n]['needs_lock'] = False
 
         if hasattr(self, 'tmp_bi_path'):
             # remove temp build instruction directory
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "rm -rf %s" % self.tmp_dir_bi
+            commands[n]['needs_lock'] = False
 
         if hasattr(self, 'local_repo_build_dir'):
             # build target directory
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "rm -rf %s" % self.local_repo_build_dir
+            commands[n]['needs_lock'] = False
 
 
         if not commands:
@@ -203,19 +214,29 @@ class BuildInstructionHandler:
             self.cleanup_lock.release()
             return
 
+        has_lock = False
         for i in range(1, n + 1):
+            if commands[i]['needs_lock'] is True and has_lock is False:
+                self.backup_lock.acquire()
+                has_lock = True
             cmd = shlex.split(commands[i]['cmd'])
             logger.debug("Cleaning up %s, %s",
                 self.build_instruction['id'], commands[i]['cmd'])
             s = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = s.communicate()
+            if commands[i]['needs_lock'] is False and has_lock is True:
+                self.backup_lock.release()
+                has_lock = False
             if int(s.returncode) != 0:
                 logger.warning("Clean up failed! Unexpected return value %i for '%s'",
                     s.returncode, commands[i]['cmd'])
                 self.mail(commands[i]['cmd'], out, err)
         self.cleanup_done = True
         self.cleanup_lock.release()
+        if has_lock is True:
+            self.backup_lock.release()
+            has_lock = False
 
     def __del__(self):
         if not self.cleanup_done:

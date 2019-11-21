@@ -1,5 +1,5 @@
 #!/bin/bash
-# Clone or clean a Git repo and check out a specified branch to a new directory.
+# Clone or clean up a Git repo, then clone a specified branch to a new directory.
 #
 # Parameters, all mandatory:
 # $1 - remote URL
@@ -34,7 +34,7 @@
 
 
 out() {
-  >&2 echo -e "ERR: $1"
+  >&2 echo -e "FAIL: $1"
   exit 1
 }
 
@@ -46,25 +46,63 @@ branch_dir=$4
 if [[ -z "$1" ]] || [[ -z "$2" ]] || [[ -z "$3" ]] || [[ -z "$4" ]]; then
   out "$0 needs the following parameters:\n$0 [REMOTE_URL] [REPO_DIR] [BRANCH] [BRANCH_DIR]"
 fi
+[[ -d "$branch_dir" ]] && out "Branch clone directory \"$branch_dir\" already exists."
+
+rgit="git -C $repo_dir"
 
 if [[ ! -d "$repo_dir" ]]; then
   mkdir -p "$repo_dir"
-  [[ ! -d "$repo_dir" ]] && out "Creating repo directory \"$repo_dir\" failed."
-  git clone --branch "$branch" "$remote" "$repo_dir"
-  [[ -n "$?" ]] && out "Creating repo directory \"$repo_dir\" failed."
-else
-  rgit="git -C $repo_dir"
+  [[ ! -d "$repo_dir" ]] && out "Creation of repository clone directory \"$repo_dir\" failed."
+
+  # We could clone with --branch. However, if that fails, it might be less
+  # obvious if the failure was due to the repo not existing or the branch not
+  # existing.
+  # The GIT_ASKPASS variable ensures there is never an SSH prompt, and we just
+  # fail instead of going interactive.
+  GIT_ASKPASS=/bin/echo git clone "$remote" "$repo_dir"
+  [[ "$?" -ne 0 ]] && out "Cloning remote repository \"$remote\" to repository clone directory \"$repo_dir\" failed."
+fi
+
+# The following command returns 'true' within dirs checked into a Git repos,
+# 'false' within dirs that are not checked in, and nothing outside of Git repos.
+if [[ $($rgit rev-parse --is-inside-work-tree 2>/dev/null) == 'true' ]]; then
+
+  remote_alias=$($rgit remote)
+  registered_remotes=$(echo -e "$remote_alias" | wc -l)
+  [[ $registered_remotes -ne 1 ]] && \
+    out "The repository clone directory has $registered_remotes registered remotes. There must be exactly one remote."
+
+  registered_remote=$($rgit config --get "remote.${remote_alias}.url")
+  [[ "$registered_remote" != "$remote" ]] && \
+    out "The registered remote in the repository clone directory, \"$registered_remote\", does not match the command-line remote parameter \"$remote\"."
+
   temp_branch="ds_temp_"$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
+
   $rgit checkout --orphan "$temp_branch"
+  [[ "$?" -ne 0 ]] && out "Creation of temporary local branch in repository clone directory \"$repo_dir\" failed."
+
   $rgit fetch --prune
-  $rgit rm -rf '.'
+  [[ "$?" -ne 0 ]] && out "Fetching remote repository \"$remote\" failed."
+
+  # We need to delete all the previously checked-out content, otherwise Git
+  # will not let us switch branch later on due to conflicts.
+  $rgit rm -rf '.' > /dev/null
+
   branches=$($rgit for-each-ref --format '%(refname:short)' refs/heads/ | sed -n "/${temp_branch}/ !p")
   for local_branch in $branches; do
     $rgit branch -D "$local_branch"
   done
+
   $rgit checkout "$branch"
+  [[ "$?" -ne 0 ]] && out "Checkout of branch/tag \"$branch\" failed."
+
+else
+  out "Repository clone directory \"$repo_dir\" already exists but is not Git-versioned."
 fi
 
-[[ -d "$branch_dir" ]] && out "Branch directory \"$branch_dir\" already exists."
 mkdir -p "$branch_dir"
+
 git clone --single-branch --branch "$branch" "$repo_dir" "$branch_dir"
+[[ "$?" -ne 0 ]] && out "Cloning branch/tag \"$branch\" to branch clone directory \"$branch_dir\" failed."
+
+echo "Successfully cloned branch clone directory \"$branch_dir\"."

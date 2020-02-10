@@ -1,0 +1,33 @@
+#!/bin/bash
+# $1 config file to use
+
+[[ ! -f "$1" ]] && { echo "Config file $1 does not exist"; exit 1; }
+config="$1"
+
+temp_dir=$(mktemp -d /tmp/docserv-build-navigation-XXXXXXXX)
+
+pids=$(xml sel -t -v '//@productid' $config)
+
+echo "-> $temp_dir"
+
+for pid in $pids; do
+
+  sids=$(xml sel -t -v '//product[@productid = "'"$pid"'"]/descendant::docset/@setid' $config)
+
+  for sid in $sids; do
+    echo "  - $pid/$sid"
+    docserv-build-navigation \
+      --product="$pid" \
+      --docset="$sid" \
+      --stitched-config="$config" \
+      --ui-languages="en-us de-de fr-fr pt-br ja-jp zh-cn es-es" \
+      --omit-lang-path="en-us" \
+      --cache-dir="/var/cache/docserv/docserv/doc-suse-com" \
+      --template-dir="/etc/docserv/template-external/" \
+      --output-dir="$temp_dir" \
+      --base-path="/" \
+      --htaccess="/etc/docserv/htaccess-doc-suse-com.txt" \
+      --favicon="/etc/docserv/favicon.ico"
+  done
+done
+cp -r $temp_dir /data/docserv/external-builds/

@@ -157,7 +157,7 @@ function populateDocSet() {
         if (pageLanguage == docSetData.archive[l].lang) {
           var e_archiveTranslation = document.createElement('a');
           e_archiveTranslation.classList.add('ds-docset-archive-link');
-          e_archiveTranslation.setAttribute('href', normalizePath(docSetData.archive[0].zip));
+          e_archiveTranslation.setAttribute('href', normalizePath(docSetData.archive[l].zip));
           // FIXME: l10n for "Download as"!
           e_archiveTranslation.textContent = 'Download Documentation as Zip' + ' (' + docSetData.archive[l].lang + ', may be incomplete)';
           e_archives.appendChild(e_archiveTranslation);

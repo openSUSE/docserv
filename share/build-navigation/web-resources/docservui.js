@@ -267,6 +267,17 @@ function buildArchiveTable(e_docSetWrap) {
     cat_text = 'Archives';
     e_catTitle.textContent = cat_text;
     e_cat.appendChild(e_catTitle);
+
+    var e_catDesc = document.createElement('div');
+    var cat_desc_text = '<p>';
+    if (docSetData.lifecycle == 'unsupported') {
+      cat_desc_text += "For unsupported products, core product documentation is only available as a ZIP archive.\n";
+    }
+    cat_desc_text += "ZIP archives only contain core product documentation but not related documents.";
+    cat_desc_text += '</p>';
+    e_catDesc.innerHTML = cat_desc_text;
+    e_cat.appendChild(e_catDesc);
+
     var e_documentTable = document.createElement('table');
     e_documentTable.classList.add('ds-docset-table');
     e_cat.appendChild(e_documentTable);
@@ -283,7 +294,7 @@ function buildArchiveTable(e_docSetWrap) {
     // Start at l=1, we have already set correct values for l=0
     for (var l = 1; l < docSetData.archive.length; l++) {
       if (docSetData.archive[l].lang == pageLanguage) {
-        doc_title_text = 'Translated Documentation as Zip' + ' (' + docSetData.archive[l].lang + ', may be incomplete)';;
+        doc_title_text = 'Translated Core Documentation as Zip' + ' (' + docSetData.archive[l].lang + ', may be incomplete)';;
         use_lang = l;
       };
     };

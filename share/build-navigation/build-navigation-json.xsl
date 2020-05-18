@@ -405,6 +405,23 @@
                   to group builds of sets (HTML) together with builds of
                   individual books (Single-HTML, PDF, EPUB).-->
                   <xsl:variable name="format" select="@format"/>
+
+                  <!-- As an input value, "other" makes sense - it's a type
+                  of file that is otherwise not supported for linking.
+                  However, reading "other" on the output page as a download
+                  link might be a bit disorienting, hence just use "file".
+                  That is still bad but arguably more descriptive. -->
+                  <xsl:variable name="format-out">
+                    <xsl:choose>
+                      <xsl:when test="@format = 'other'">
+                        <xsl:text>file</xsl:text>
+                      </xsl:when>
+                      <xsl:otherwise>
+                        <xsl:value-of select="@format"/>
+                      </xsl:otherwise>
+                    </xsl:choose>
+                  </xsl:variable>
+
                   <xsl:if
                     test="
                       $node/ancestor::product/@productid = @productid and
@@ -412,7 +429,7 @@
                       $node/ancestor::language/@lang = @lang and
                       $node/ancestor::language/deliverable[format/@*[local-name($format)] = 'true']/dc = @dc
                     ">
-                  "<xsl:value-of select="@format"/>": "<xsl:value-of select="@path"/>",
+                  "<xsl:value-of select="$format-out"/>": "<xsl:value-of select="@path"/>",
                   </xsl:if>
                 </xsl:for-each>
                 },

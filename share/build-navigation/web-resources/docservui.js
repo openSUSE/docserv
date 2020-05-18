@@ -143,33 +143,9 @@ function populateDocSet() {
   e_desc.innerHTML = desc_text;
   e_docSetWrap.appendChild(e_desc);
 
-  if (docSetData.archive[0]) {
-    var e_archives = document.createElement('div');
-    e_archives.classList.add('ds-docset-archive-list');
-    var e_archiveDefault = document.createElement('a');
-    e_archiveDefault.classList.add('ds-docset-archive-link');
-    e_archiveDefault.setAttribute('href', normalizePath(docSetData.archive[0].zip));
-    // FIXME: l10n for "Download as"!
-    e_archiveDefault.textContent = 'Download Documentation as Zip' + ' (' + docSetData.archive[0].lang + ', complete)';
-
-    if (pageLanguage != docSetData.archive[0].lang) {
-      for (var l = 0; l < docSetData.archive.length; l++) {
-        if (pageLanguage == docSetData.archive[l].lang) {
-          var e_archiveTranslation = document.createElement('a');
-          e_archiveTranslation.classList.add('ds-docset-archive-link');
-          e_archiveTranslation.setAttribute('href', normalizePath(docSetData.archive[l].zip));
-          // FIXME: l10n for "Download as"!
-          e_archiveTranslation.textContent = 'Download Documentation as Zip' + ' (' + docSetData.archive[l].lang + ', may be incomplete)';
-          e_archives.appendChild(e_archiveTranslation);
-          // FIXME: this ugly vvv
-          e_archives.appendChild(document.createElement('br'));
-        }
-      }
-    }
-     e_archives.appendChild(e_archiveDefault);
-     e_docSetWrap.appendChild(e_archives);
-  }
-
+  if (docSetData.lifecycle == 'unsupported') {
+    buildArchiveTable(e_docSetWrap);
+  };
 
   for (var i = 0; i < docSetData.category.length; i++) {
     var e_cat = document.createElement('div');
@@ -272,6 +248,93 @@ function populateDocSet() {
         e_documentFormats.classList.add('no-date');
       }
     };
+  };
+
+  if (docSetData.lifecycle != 'unsupported') {
+    buildArchiveTable(e_docSetWrap);
+  };
+
+}
+
+function buildArchiveTable(e_docSetWrap) {
+  if (docSetData.archive[0]) {
+    var e_cat = document.createElement('div');
+    e_cat.id = 'archive-auto';
+    e_cat.classList.add('ds-docset-category');
+    e_docSetWrap.appendChild(e_cat);
+    var e_catTitle = document.createElement('h3');
+    e_catTitle.classList.add('ds-docset-category-title');
+    cat_text = 'Archives';
+    e_catTitle.textContent = cat_text;
+    e_cat.appendChild(e_catTitle);
+    var e_documentTable = document.createElement('table');
+    e_documentTable.classList.add('ds-docset-table');
+    e_cat.appendChild(e_documentTable);
+
+    var e_documentRow = document.createElement('tr');
+    e_documentTable.appendChild(e_documentRow);
+
+    var e_documentTitle = document.createElement('td');
+    e_documentTitle.classList.add('ds-docset-table-title');
+
+    // FIXME: l10n!
+    doc_title_text = 'Original Documentation as Zip' + ' (' + docSetData.archive[0].lang + ', complete)';
+    var use_lang = 0;
+    // Start at l=1, we have already set correct values for l=0
+    for (var l = 1; l < docSetData.archive.length; l++) {
+      if (docSetData.archive[l].lang == pageLanguage) {
+        doc_title_text = 'Translated Documentation as Zip' + ' (' + docSetData.archive[l].lang + ', may be incomplete)';;
+        use_lang = l;
+      };
+    };
+    e_documentTitle.textContent = doc_title_text;
+    e_documentRow.appendChild(e_documentTitle);
+    var e_documentLanguage = document.createElement('td');
+    e_documentLanguage.classList.add('ds-docset-table-language');
+    if (docSetData.archive.length > 1) {
+      var e_languageSelector = document.createElement('select');
+      e_documentLanguage.classList.add('ds-has-language-selector');
+      e_languageSelector.classList.add('ds-docset-table-lang-select');
+      e_documentLanguage.appendChild(e_languageSelector);
+      for (var k = 0; k < docSetData.archive.length; k++) {
+        var e_languageChoice = document.createElement('option');
+        e_languageChoice.setAttribute( 'value', docSetData.archive[k].lang );
+        e_languageChoice.setAttribute( 'data-lang', k);
+        if (k == use_lang) {
+          e_languageChoice.setAttribute( 'selected', '')
+        };
+        e_languageChoice.textContent = docSetData.archive[k].lang;
+        e_languageSelector.appendChild(e_languageChoice);
+      };
+      e_languageSelector.addEventListener('change',function(){
+        // FIXME: this parent.parent.parent thing is ugly.
+        var e_documentFormats = this.parentElement.parentElement.getElementsByClassName('ds-docset-table-formats')[0];
+        for (var m = e_documentFormats.getElementsByTagName('a').length - 1; m >= 0; m--) {
+          e_documentFormats.removeChild(e_documentFormats.getElementsByTagName('a')[m]);
+        }
+        var l = this.options[this.selectedIndex].getAttribute('data-lang');
+        buildFormatListArchive(e_documentFormats, l);
+      });
+    }
+    else {
+      e_documentLanguage.textContent = docSetData.archive[use_lang].lang;
+    };
+    e_documentRow.appendChild(e_documentLanguage);
+    var e_documentFormats = document.createElement('td');
+    e_documentFormats.classList.add('ds-docset-table-formats');
+    e_documentRow.appendChild(e_documentFormats);
+    buildFormatListArchive(e_documentFormats, use_lang);
+
+    var e_documentDate = document.createElement('td');
+    if (typeof(docSetData.archive[use_lang].date) != 'undefined' && docSetData.archive[use_lang].date != false) {
+      e_documentDate.classList.add('ds-docset-table-date');
+      e_documentDate.textContent = convertTime(docSetData.archive[use_lang].date);
+      e_documentRow.appendChild(e_documentDate);
+    }
+    else {
+      e_documentFormats.setAttribute('colspan', '2');
+      e_documentFormats.classList.add('no-date');
+    }
   }
 }
 
@@ -284,6 +347,14 @@ function buildFormatList(e_documentFormats, i, j, l) {
     e_documentLink.setAttribute( 'href', normalizePath(formatList[ Object.keys(formatList)[k] ]) );
     e_documentFormats.appendChild(e_documentLink);
   };
+}
+
+function buildFormatListArchive(e_documentFormats, l) {
+  var e_documentLink = document.createElement('a');
+  e_documentLink.classList.add('ds-docset-table-link');
+  e_documentLink.textContent = 'zip';
+  e_documentLink.setAttribute( 'href', normalizePath(docSetData.archive[l].zip) );
+  e_documentFormats.appendChild(e_documentLink);
 }
 
 // via https://stackoverflow.com/questions/847185

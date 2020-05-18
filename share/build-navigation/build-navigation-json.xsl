@@ -396,10 +396,10 @@
                 "format": {
                 <xsl:for-each select="exsl:node-set($hash-match)/dscr:result">
                   <!-- Sort formats by their (likely) importance with THIS
-                  ONE WEIRD TRICK!: 1-HTML, 2-Single-HTML, 3-PDF, 4-EPUB, 5-other
+                  ONE WEIRD TRICK!: 1-HTML, 2-Single-HTML, 3-PDF, 4-EPUB, 5-ZIP, 6-TAR, 7-other
                   Luckily, the formats all start with a different letter, otherwise
                   this might have become icky. -->
-                  <xsl:sort lang="en" select="normalize-space(translate(@format, 'hHsSpPeEoO', '1122334455'))"/>
+                  <xsl:sort lang="en" select="normalize-space(translate(@format, 'hHsSpPeEzZtToO', '11223344556677'))"/>
                   <!-- NB: We intentionally accept _any_ DC file with the
                   right @format from the same product below. This allows us
                   to group builds of sets (HTML) together with builds of

@@ -460,7 +460,7 @@ ds.linklanguage_translation =
 ds.url =
   element url {
     attribute href { xsd:anyURI },
-    attribute format { "html" | "single-html" | "pdf" | "epub" | "other" },
+    attribute format { "html" | "single-html" | "pdf" | "epub" | "zip" | "tar" | "other" },
     empty
   }
 

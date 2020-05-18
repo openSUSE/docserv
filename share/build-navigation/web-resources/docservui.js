@@ -249,7 +249,6 @@ function populateDocSet() {
           var i = this.options[this.selectedIndex].getAttribute('data-category');
           var j = this.options[this.selectedIndex].getAttribute('data-doc');
           var l = this.options[this.selectedIndex].getAttribute('data-lang');
-          //var l = this.options[this.selectedIndex].text; // for debugging data-lang
           buildFormatList(e_documentFormats, i, j, l);
         });
       }

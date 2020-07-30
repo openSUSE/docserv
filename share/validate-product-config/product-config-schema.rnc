@@ -587,6 +587,7 @@ ds.a =
   element a {
     attribute href { xsd:anyURI },
     attribute target { "_blank" }?,
+    attribute rel { "nofollow" | "prev" | "next" | "license" | "alternate" }?,
     ds.htmlinlinecontent
   }
 

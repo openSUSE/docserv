@@ -445,7 +445,7 @@ These are the details:
         result = self.execute(xmlstarlet, thread_id)
         if not result:
             return False
-        self.title = self.out.decode('utf-8')
+        self.title = self.out.decode('utf-8').replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
         dchash['cmd'] = "%s %s" % (os.path.join(BIN_DIR, 'docserv-dchash'), dc_path)
         result = self.execute(dchash, thread_id)
         if not result:

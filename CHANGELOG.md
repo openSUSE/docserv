@@ -1,5 +1,24 @@
 # Release History
 
+## v3.8, 2021-01-11, sknorr
+
+- Use software license (GPL 3) consistently
+- docservui.js:
+  - Display correct month is displayed in the UI
+  - Make language selector work on Chromium-based browsers
+  - Display internal links that have no category
+  - Fix version sort order for index page
+  - Allow #product to preselect a product on the index page
+  - Fix URL generation to allow downloading localized archive files
+  - Improve presentation of archive files
+- DocServ2 core:
+  - Avoid syncing .git and similar directories
+- schema/build-navigation:
+  - Allow linking manually built archive files
+  - Allow `<a rel=...>` attribute
+  - Correctly export titles with XML special characters in them
+
+
 ## v3.7, 2019-09-02, sknorr
 
 - Actually make unsupported.html page more useful

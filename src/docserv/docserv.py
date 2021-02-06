@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+import multiprocessing
 import os
 import queue
 import shlex
@@ -268,8 +269,10 @@ class DocservConfig:
             self.config['server']['repo_dir'] = config['server']['repo_dir']
             self.config['server']['temp_repo_dir'] = config['server']['temp_repo_dir']
             self.config['server']['valid_languages'] = config['server']['valid_languages']
-            self.config['server']['max_threads'] = int(
-                config['server']['max_threads'])
+            if config['server']['max_threads'] == 'max':
+                self.config['server']['max_threads'] = multiprocessing.cpu_count()
+            else:
+                self.config['server']['max_threads'] = int(config['server']['max_threads'])
             self.config['targets'] = {}
             for section in config.sections():
                 if not str(section).startswith("target_"):
@@ -321,6 +324,13 @@ class Docserv(DocservState, DocservConfig):
         """
         Create worker and REST API threads.
         """
+
+        if self.config['server']['max_threads'] > multiprocessing.cpu_count():
+            self.config['server']['max_threads'] = multiprocessing.cpu_count()
+            logger.info("Reducing number of build threads to avoid using more threads than there are cores.")
+
+        logger.info("Will use %i build threads.", self.config['server']['max_threads'])
+
         try:
             # After starting docserv, make sure to stitch as the first thing,
             # this increases startup time but means that as long as the config

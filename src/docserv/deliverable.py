@@ -116,6 +116,7 @@ class Deliverable:
         # Write XSLT parameters to temp file
         n = 0
         xslt_params_file = tempfile.mkstemp(prefix="docserv_xslt_", text=True)
+        os.close(xslt_params_file[0])
         default_xslt_params = self.parent.config['targets'][self.parent.build_instruction['target']]['default_xslt_params']
         xslt_params = ""
         if len(self.xslt_params) > 0:
@@ -147,6 +148,7 @@ class Deliverable:
         # Write daps parameters to temp file
         n += 1
         daps_params_file = tempfile.mkstemp(prefix="docserv_daps_", text=True)
+        os.close(daps_params_file[0])
         remarks = self.parent.config['targets'][self.parent.build_instruction['target']]['remarks']
         draft = self.parent.config['targets'][self.parent.build_instruction['target']]['draft']
         meta = self.parent.config['targets'][self.parent.build_instruction['target']]['meta']

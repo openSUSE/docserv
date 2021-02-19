@@ -346,6 +346,7 @@ ds.deliverable =
     attribute draft { xsd:boolean }?,
     attribute meta { xsd:boolean }?,
     attribute category { ds.type.idmulti }?,
+    ds.subdir?,
     ds.dc,
     ds.format+,
     ds.param*
@@ -356,6 +357,7 @@ ds.deliverable_subdeliverable =
     attribute remarks { xsd:boolean }?,
     attribute draft { xsd:boolean }?,
     attribute meta { xsd:boolean }?,
+    ds.subdir?,
     ds.dc,
     ds.format+,
     ds.param*,
@@ -391,6 +393,7 @@ ds.subdeliverable =
 
 ds.deliverablerestricted =
   element deliverable {
+    ds.subdir?,
     ds.dc,
     ds.subdeliverablerestricted*
   }

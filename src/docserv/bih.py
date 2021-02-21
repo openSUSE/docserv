@@ -164,14 +164,15 @@ class BuildInstructionHandler:
                 tmp_dir_nav, backup_path)
 
             # rsync local backup path with web server target path
-            target_path = self.config['targets'][self.build_instruction['target']]['target_path']
-            n += 1
-            commands[n] = {}
-            commands[n]['cmd'] = "rsync --exclude-from '%s' --delete-after -lr %s/ %s" % (
-                os.path.join(SHARE_DIR, 'rsync', 'rsync_excludes.txt'),
-                backup_path,
-                target_path,
-            )
+            if self.config['targets'][self.build_instruction['target']]['enable_target_sync'] == 'yes':
+                target_path = self.config['targets'][self.build_instruction['target']]['target_path']
+                n += 1
+                commands[n] = {}
+                commands[n]['cmd'] = "rsync --exclude-from '%s' --delete-after -lr %s/ %s" % (
+                    os.path.join(SHARE_DIR, 'rsync', 'rsync_excludes.txt'),
+                    backup_path,
+                    target_path,
+                )
 
             # remove temp directory for navigation page
             n += 1

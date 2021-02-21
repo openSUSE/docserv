@@ -264,6 +264,7 @@ class DocservConfig:
                 config['server']['loglevel'])
             self.config['server']['host'] = config['server']['host']
             self.config['server']['port'] = int(config['server']['port'])
+            self.config['server']['enable_mail'] = config['server']['enable_mail']
             self.config['server']['repo_dir'] = config['server']['repo_dir']
             self.config['server']['temp_repo_dir'] = config['server']['temp_repo_dir']
             self.config['server']['valid_languages'] = config['server']['valid_languages']

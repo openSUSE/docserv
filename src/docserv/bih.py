@@ -11,7 +11,7 @@ import threading
 from lxml import etree
 
 from docserv.deliverable import Deliverable
-from docserv.functions import mail, resource_to_filename
+from docserv.functions import feedback_message, resource_to_filename
 from docserv.repolock import RepoLock
 
 BIN_DIR = os.getenv('DOCSERV_BIN_DIR', "/usr/bin/")
@@ -276,7 +276,10 @@ These are the details:
             self.build_instruction['product'],
             self.build_instruction['docset'],
             self.build_instruction['lang']))
-        mail(msg, subject, to)
+        send_mail = False
+        if self.config['server']['enable_mail'] == 'yes':
+            send_mail = True
+        feedback_message(msg, subject, to, send_mail)
 
     def read_conf_dir(self):
         """

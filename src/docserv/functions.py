@@ -1,11 +1,18 @@
+import datetime
 import logging
 import os
 import subprocess
+import tempfile
 from email.mime.text import MIMEText
 
 my_env = os.environ
 
 logger = logging.getLogger('docserv')
+
+BIN_DIR = os.getenv('DOCSERV_BIN_DIR', "/usr/bin/")
+CONF_DIR = os.getenv('DOCSERV_CONFIG_DIR', "/etc/docserv/")
+SHARE_DIR = os.getenv('DOCSERV_SHARE_DIR', "/usr/share/docserv/")
+CACHE_DIR = os.getenv('DOCSERV_CACHE_DIR', "/var/cache/docserv/")
 
 
 def resource_to_filename(url):
@@ -19,20 +26,28 @@ def resource_to_filename(url):
     return url
 
 
-def mail(text, subject, to):
+def feedback_message(text, subject, to, send_mail = False):
     """
-    Send mail via the local sendmail command.
+    If mail is enabled, send mail via the local sendmail command.
+    Alternatively, write a text file to the cache directory.
     """
-    logger.debug("Sending mail to %s", to)
     # 100kB of text is enough, right?
     text = ('[message truncated]\n\n' + text[:100000] + '...') if len(text) > 100000 else text
-    msg = MIMEText(text)
-    msg["To"] = to
-    msg["Subject"] = subject
-    p = subprocess.Popen(["/usr/sbin/sendmail", "-t", "-oi"],
-                         stdin=subprocess.PIPE, universal_newlines=True)
-    p.communicate(msg.as_string())
-
+    if send_mail == True:
+        logger.debug("Sending mail to %s", to)
+        msg = MIMEText(text)
+        msg["To"] = to
+        msg["Subject"] = subject
+        p = subprocess.Popen(["/usr/sbin/sendmail", "-t", "-oi"],
+                             stdin=subprocess.PIPE, universal_newlines=True)
+        p.communicate(msg.as_string())
+    else:
+        now = datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()
+        handle, path = tempfile.mkstemp(suffix=".txt", prefix="docserv-message-%s-" % now, dir=CACHE_DIR, text=True)
+        logger.debug("Writing message to %s", path)
+        msg = open(handle, 'w')
+        msg.write('To:      %s\nSubject: %s\n\n%s' % (to, subject, text))
+        msg.close()
 
 def print_help():
     print("""This is a daemon. Invoke it with either of the following commands:

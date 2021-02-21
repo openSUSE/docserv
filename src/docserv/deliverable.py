@@ -8,7 +8,7 @@ import time
 # FIXME: switch to LXML
 from xml.etree import ElementTree, cElementTree
 
-from docserv.functions import mail, resource_to_filename
+from docserv.functions import feedback_message, resource_to_filename
 from docserv.repolock import RepoLock
 
 logger = logging.getLogger('docserv')
@@ -354,7 +354,10 @@ These are the details:
             self.parent.build_instruction['product'],
             self.parent.build_instruction['docset'],
             self.parent.build_instruction['lang'])
-        mail(msg, subject, to)
+        send_mail = False
+        if self.parent.config['server']['enable_mail'] == 'yes':
+            send_mail = True
+        feedback_message(msg, subject, to, send_mail)
 
     def parse_d2d_filelist(self, command, thread_id):
         """

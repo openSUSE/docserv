@@ -490,7 +490,15 @@ These are the details:
         xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/deliverable" % (
             self.product, self.docset, self.lang)
         for xml_deliverable in self.tree.findall(xpath):
+            dc = xml_deliverable.find(".//dc").text
             build_formats = xml_deliverable.find(".//format").attrib
+            try:
+                source_dir = os.path.join(
+                    self.build_source_dir,
+                    xml_deliverable.find(".//subdir").text)
+            except AttributeError:
+                source_dir = self.build_source_dir
+
             for build_format in build_formats:
                 if build_formats[build_format] == "false":
                     continue
@@ -503,8 +511,9 @@ These are the details:
                     xslt_params.append("%s='%s'" % (param.xpath("./@name")[0], param.text))
 
                 deliverable = Deliverable(self,
-                                          xml_deliverable.find(".//dc").text,
-                                          (self.tmp_dir_bi,
+                                          dc,
+                                          (source_dir,
+                                          self.tmp_dir_bi,
                                           self.docset_relative_path),
                                           build_format,
                                           subdeliverables,

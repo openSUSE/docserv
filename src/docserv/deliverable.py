@@ -37,7 +37,7 @@ class Deliverable:
         self.pdf_name = None # False if no PDFNAME value exists in DC file
         self.cleanup_done = False
 
-        self.tmp_dir_bi, self.docset_relative_path = dir_struct_paths
+        self.source_dir, self.tmp_dir_bi, self.docset_relative_path = dir_struct_paths
         self.parent = parent  # Reference to the parent BuildInstructionHandler
         self.dc_file = dc_file
         self.build_format = build_format
@@ -171,7 +171,7 @@ class Deliverable:
             xslt_params_file[1],
             daps_params_file[1],
             tmp_dir_docker,
-            self.parent.build_source_dir,
+            self.source_dir,
             self.build_format,
             self.dc_file
         )
@@ -399,7 +399,7 @@ These are the details:
         # FIXME: It seems unnecessary to guess the bigfile's name from the DC
         # file itself -- daps2docker creates a filelist that already includes
         # the correct bigfile name, no guessing involved.
-        dc_path = os.path.join(self.parent.build_source_dir, self.dc_file)
+        dc_path = os.path.join(self.source_dir, self.dc_file)
         with open(dc_path) as f:
             import re
             for line in f:

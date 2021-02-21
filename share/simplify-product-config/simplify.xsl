@@ -29,6 +29,16 @@
   </xsl:template>
 
 
+  <xsl:template match="deliverable/subdir">
+    <xsl:param name="ignore-subdir" select="0"/>
+    <xsl:if test="$ignore-subdir != 1">
+      <xsl:element name="{local-name(.)}">
+        <xsl:apply-templates select="@*|*|text()"/>
+      </xsl:element>
+    </xsl:if>
+  </xsl:template>
+
+
   <xsl:template match="format/@*|@default">
     <xsl:attribute name="{local-name(.)}">
       <xsl:choose>
@@ -57,7 +67,13 @@
     <deliverable>
       <xsl:apply-templates select="@*"/>
       <xsl:apply-templates select="dc"/>
-      <xsl:apply-templates select="parent::language/preceding-sibling::language[@default='true' or @default='1']/deliverable[dc = $current_dc]/*[not(self::dc or self::subdeliverable)]"/>
+      <!-- subdir is inheritable but overwritable, i.e. there must only be one -->
+      <xsl:apply-templates select="subdir"/>
+      <xsl:apply-templates select="parent::language/preceding-sibling::language[@default='true' or @default='1']/deliverable[dc = $current_dc]/*[not(self::dc or self::subdeliverable)]">
+        <xsl:with-param name="ignore-subdir">
+          <xsl:if test="subdir">1</xsl:if>
+        </xsl:with-param>
+      </xsl:apply-templates>
       <xsl:apply-templates select="subdeliverable"/>
     </deliverable>
   </xsl:template>

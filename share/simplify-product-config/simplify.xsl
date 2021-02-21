@@ -142,7 +142,7 @@
     <xsl:param name="langcode" select="''"/>
     <xsl:if test="not(contains(concat(' ', $blacklist, ' '), concat(' ', dc, ' ')))">
       <deliverable>
-        <xsl:apply-templates select="@*|*[not(self::subdeliverable or self::untranslated)]"/>
+        <xsl:apply-templates select="@*|*[not(self::subdeliverable)]"/>
         <xsl:apply-templates select="subdeliverable" mode="apply_list">
           <xsl:with-param name="langcode" select="$langcode"/>
         </xsl:apply-templates>
@@ -155,9 +155,7 @@
     <xsl:param name="langcode" select="''"/>
     <xsl:variable name="current-dc" select="preceding-sibling::dc[1]"/>
     <xsl:variable name="current-subdeliverable" select="."/>
-    <xsl:if test="not(ancestor::docset/builddocs/language[@lang = $langcode]/untranslated/deliverable[dc = $current-dc and subdeliverable = $current-subdeliverable])">
-      <xsl:apply-templates select="self::*"/>
-    </xsl:if>
+    <xsl:apply-templates select="self::*"/>
   </xsl:template>
 
 </xsl:stylesheet>

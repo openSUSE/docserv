@@ -246,7 +246,6 @@ ds.docset =
     attribute setid { ds.type.id },
     attribute lifecycle { "unpublished" | "beta" | "supported" | "unsupported" },
     attribute navigation-visible { "visible" | "hidden" }?,
-    attribute default { xsd:boolean }?,
     # To allow for name changes between versions, as in the example of SUSE
     # Cloud -> SUSE OpenStack Cloud: optional ds.name here
     ds.name?,

@@ -55,7 +55,7 @@
     </positivedocservconfig>
   </xsl:template>
 
-  <xsl:template match="language[not(@default) or @default='false' or @default='0'][@translation-type='positive-list']">
+  <xsl:template match="language[not(@default) or @default='false' or @default='0'][@translation-type='list']">
     <language>
       <xsl:apply-templates select="@*|*[not(self::deliverable)]"/>
       <xsl:apply-templates select="deliverable" mode="find_extra_elements"/>
@@ -86,76 +86,5 @@
     </language>
   </xsl:template>
 
-
-  <xsl:template match="language[not(@default) or @default='false' or @default='0'][@translation-type='negative-list']">
-    <xsl:variable name="negative_list">
-      <xsl:apply-templates select="deliverable" mode="create_negative_list"/>
-    </xsl:variable>
-    <language>
-      <xsl:apply-templates select="@*|*[not(self::deliverable)]"/>
-      <xsl:apply-templates select="preceding-sibling::language[@default='true' or @default='1']/deliverable" mode="apply_list">
-        <xsl:with-param name="list" select="$negative_list"/>
-        <xsl:with-param name="langcode" select="@lang"/>
-      </xsl:apply-templates>
-    </language>
-  </xsl:template>
-
-  <xsl:template match="deliverable" mode="create_negative_list">
-    <xsl:param name="current-dc" select="dc"/>
-    <xsl:variable name="add-to-list">
-      <xsl:choose>
-        <xsl:when test="subdeliverable">
-          <xsl:variable name="translated-subdeliverables">
-            <xsl:for-each select="subdeliverable">
-              <xsl:sort select="translate(., ' &#10;', '')" order="descending"/>
-              <xsl:value-of select="translate(., ' &#10;', '')"/>
-              <xsl:text> </xsl:text>
-            </xsl:for-each>
-          </xsl:variable>
-          <xsl:variable name="original-subdeliverables">
-            <xsl:if test="ancestor::builddocs/language[@default='true' or @default='1']/deliverable[dc = $current-dc][subdeliverable]">
-              <xsl:for-each select="ancestor::builddocs/language[@default='true' or @default='1']/deliverable[dc = $current-dc][subdeliverable]/subdeliverable">
-                <xsl:sort select="translate(., ' &#10;', '')" order="descending"/>
-                <xsl:value-of select="translate(., ' &#10;', '')"/>
-                <xsl:text> </xsl:text>
-              </xsl:for-each>
-            </xsl:if>
-          </xsl:variable>
-          <xsl:choose>
-            <xsl:when test="$translated-subdeliverables = $original-subdeliverables or $original-subdeliverables = ''">1</xsl:when>
-            <xsl:otherwise>0</xsl:otherwise>
-          </xsl:choose>
-        </xsl:when>
-        <xsl:otherwise>1</xsl:otherwise>
-      </xsl:choose>
-    </xsl:variable>
-
-    <xsl:if test="$add-to-list = 1">
-      <xsl:value-of select="$current-dc"/>
-      <xsl:text> </xsl:text>
-    </xsl:if>
-  </xsl:template>
-
-
-  <xsl:template match="deliverable" mode="apply_list">
-    <xsl:param name="blacklist" select="''"/>
-    <xsl:param name="langcode" select="''"/>
-    <xsl:if test="not(contains(concat(' ', $blacklist, ' '), concat(' ', dc, ' ')))">
-      <deliverable>
-        <xsl:apply-templates select="@*|*[not(self::subdeliverable)]"/>
-        <xsl:apply-templates select="subdeliverable" mode="apply_list">
-          <xsl:with-param name="langcode" select="$langcode"/>
-        </xsl:apply-templates>
-      </deliverable>
-    </xsl:if>
-  </xsl:template>
-
-
-  <xsl:template match="subdeliverable" mode="apply_list">
-    <xsl:param name="langcode" select="''"/>
-    <xsl:variable name="current-dc" select="preceding-sibling::dc[1]"/>
-    <xsl:variable name="current-subdeliverable" select="."/>
-    <xsl:apply-templates select="self::*"/>
-  </xsl:template>
 
 </xsl:stylesheet>

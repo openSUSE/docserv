@@ -285,20 +285,11 @@ ds.git =
   }
 
 # About @translation-type:
-# * "list-positive" creates a list of documents that will be built for the
+# * "list" creates a list of documents that will be built for the
 #   translation in question. This is advantageous in the common case that only
 #   a small subset of documents are translated into a particular language.
-# * "list-negative" creates a list of documents that are not built. This is
-#   advantageous if most documents for a product are translated (which does
-#   not currently appear to happen for real-life SUSE products).
 # * "full" means there is a full translation in this language for
 #   this docset
-
-# FIXME: Do we want to continue to support "negative-list"? While it is already
-#   handled and Eli has written a bunch configuration using it, the handling
-#   is more complicated than for "positive-list". It might also become
-#   confusing to see both types of translations float around.
-
 
 ds.language_default =
   element language {
@@ -315,7 +306,7 @@ ds.language_translation_list =
   element language {
     attribute lang { ds.type.lang },
     attribute default { ds.false.enum }?,
-    attribute translation-type { "positive-list" | "negative-list" },
+    attribute translation-type { "list" },
     ds.branch?,
     ds.subdir?,
     ds.deliverablerestricted+

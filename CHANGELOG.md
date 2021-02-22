@@ -1,5 +1,22 @@
 # Release History
 
+## v4.0, 2021-02-22, sknorr
+
+- Docserv² core:
+  - Fixed "Too many open files" issue (#199) by closing temporary
+    parameter files
+  - Allowed disabling sync to a target server
+  - Added a mode where Docserv² does not send mail
+- Schema:
+  - Updated version number to 4.0
+  - Allowed `<subdir>` as child of `<deliverable>`, so specific
+    deliverables can be built from different subdirs
+  - Removed support for `@translation-type="negative-list"` which went
+    unused so far, `positive-list` is now called `list`
+  - Removed the `@default` attribute from `<docset>` which had no
+    current practical use
+
+
 ## v3.8, 2021-01-11, sknorr
 
 - Use software license (GPL 3) consistently

@@ -318,6 +318,7 @@ def get_git_branches(path):
             branches[branch] = {}
         elif branch_wo_origin == "develop" \
              or branch_wo_origin == "master" \
+             or branch_wo_origin == "main" \
              or branch.startswith('origin/trans/') \
              or branch.startswith('origin/maint/') \
              or branch.startswith('origin/maintenance/'):

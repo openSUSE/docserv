@@ -31,7 +31,7 @@ from lxml import etree
 from contextlib import contextmanager
 
 FIXME = "FIXME"
-SCHEMAVERSION = "3.0"
+SCHEMAVERSION = "4.0"
 
 def get_origin_url(path):
     """Return the repo origin url

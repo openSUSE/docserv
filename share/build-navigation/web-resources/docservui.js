@@ -1,3 +1,5 @@
+var dsUiLoaded = false;
+
 var body = '';
 var productSelect = '';
 var versionSelect = '';
@@ -429,7 +431,7 @@ function dsInit() {
       populateDocSet();
     }
   };
-
+  var dsUiLoaded = true;
 }
 
 if (pageRole == 'main' | pageRole == 'unsupported') {

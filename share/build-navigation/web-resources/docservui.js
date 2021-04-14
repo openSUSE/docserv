@@ -390,8 +390,11 @@ function normalizePath(potentialPath) {
          potentialPath.lastIndexOf('ftp://', 0) === 0)  ||
          potentialPath.lastIndexOf('//', 0) === 0) {
     if (typeof(omitPathComponent) === 'string') {
-      var omitPathRegex = new RegExp('^' + omitPathComponent);
-      potentialPath = potentialPath.replace(omitPathRegex, '');
+      const omitPathRegex = new RegExp('^' + omitPathComponent);
+      // we've (hopefully) filtered paths with protocols in them earlier, so
+      // we can filter double-slashes here without negative side effects
+      const dupeSlashRegex = new RegExp('//+', 'g');
+      potentialPath = potentialPath.replace(omitPathRegex, '').replace(dupeSlashRegex, '/');
     };
     return basePath + potentialPath;
   }

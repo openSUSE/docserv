@@ -88,6 +88,19 @@ ds.type.idmulti =
     pattern="""([\-_\.\+a-zA-Z0-9]+ )*[\-_\.\+a-zA-Z0-9]+"""
   }
 
+ds.type.containerref =
+  # A reference to a remote container image, matches the expression used by
+  # daps2docker
+  xsd:token {
+    pattern="""[\-_\.a-zA-Z0-9]+(/[\-_\.a-zA-Z0-9]+)*(:[\-_\.a-zA-Z0-9]+)?"""
+  }
+
+ds.type.hexdigest =
+  # A hash/hex digest
+  xsd:token {
+    pattern="""[a-f0-9]{7,}"""
+  }
+
 ds.false.enum = "0" | "false"
 ds.true.enum = "1" | "true"
 
@@ -270,6 +283,7 @@ ds.version =
 ds.builddocs =
   element builddocs {
     ds.git,
+    ds.buildcontainer?,
     ds.language_default,
     (
      ds.language_translation_list |
@@ -280,6 +294,12 @@ ds.builddocs =
 ds.git =
   element git {
     attribute remote { ds.type.gitremote },
+    empty
+  }
+
+ds.buildcontainer =
+  element buildcontainer {
+    attribute image { ds.type.hexdigest | ds.type.containerref },
     empty
   }
 

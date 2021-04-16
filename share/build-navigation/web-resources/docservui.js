@@ -8,6 +8,21 @@ var path = basePath + 'docserv/data/'
 var productData = 'no_data';
 var productHashes = [];
 
+
+function dsLocalize(category, string) {
+  if (typeof(dsL10n) === 'object') {
+     if (dsL10n[category][string]) {
+       return dsL10n[category][string];
+     }
+     else {
+       return string;
+     };
+  }
+  else {
+    return string;
+  };
+}
+
 function loadJSON(path, success, error) {
   var xhr = new XMLHttpRequest();
   xhr.onreadystatechange = function() {
@@ -91,8 +106,7 @@ function populateVersionSelect(productid) {
     var selectedProduct = productData.product[ productid ][ Object.keys( productData.product[productid] )[ i ] ]
     s_linkText = selectedProduct['name'] + ' ' + selectedProduct["version"];
     if (selectedProduct.lifecycle == 'beta' || selectedProduct.lifecycle == 'unpublished') {
-      // FIXME: L10n for beta string
-      s_linkText = s_linkText + ' (' + selectedProduct.lifecycle + ')';
+      s_linkText = s_linkText + ' ' + dsLocalize('labels', selectedProduct.lifecycle);
     };
     link.textContent = s_linkText;
     versionSelect.appendChild( link );
@@ -127,8 +141,7 @@ function populateDocSet() {
   };
   var s_product = docSetData.productname + ' ' + docSetData.version;
   if (docSetData.lifecycle == 'beta' || docSetData.lifecycle == 'unpublished' || docSetData.lifecycle == 'unsupported') {
-    // FIXME: L10n for beta string
-    s_product = s_product + ' (' + docSetData.lifecycle + ')';
+    s_product = s_product + ' ' + dsLocalize('labels', docSetData.lifecycle);
   };
   var e_title = document.createElement('h2');
   e_title.classList.add('ds-docset-title');
@@ -215,7 +228,7 @@ function populateDocSet() {
           if (k == use_lang) {
             e_languageChoice.setAttribute( 'selected', '')
           };
-          e_languageChoice.textContent = docSetData.category[i].document[j][k].lang;
+          e_languageChoice.textContent = dsLocalize('languages', docSetData.category[i].document[j][k].lang);
           e_languageSelector.appendChild(e_languageChoice);
         };
         e_languageSelector.addEventListener('change',function(){
@@ -231,7 +244,7 @@ function populateDocSet() {
         });
       }
       else {
-        e_documentLanguage.textContent = docSetData.category[i].document[j][use_lang].lang;
+        e_documentLanguage.textContent = dsLocalize('languages', docSetData.category[i].document[j][use_lang].lang);
       };
       e_documentRow.appendChild(e_documentLanguage);
       var e_documentFormats = document.createElement('td');
@@ -266,16 +279,15 @@ function buildArchiveTable(e_docSetWrap) {
     e_docSetWrap.appendChild(e_cat);
     var e_catTitle = document.createElement('h3');
     e_catTitle.classList.add('ds-docset-category-title');
-    cat_text = 'Archives';
-    e_catTitle.textContent = cat_text;
+    e_catTitle.textContent = dsLocalize('auto-categories','archive');
     e_cat.appendChild(e_catTitle);
 
     var e_catDesc = document.createElement('div');
     var cat_desc_text = '<p>';
     if (docSetData.lifecycle == 'unsupported') {
-      cat_desc_text += "For unsupported products, core product documentation is only available as a ZIP archive.\n";
+      cat_desc_text += dsLocalize('auto-categories','archive-desc-unsupported') + '\n';
     }
-    cat_desc_text += "ZIP archives only contain core product documentation but not related documents.";
+    cat_desc_text += dsLocalize('auto-categories','archive-desc');
     cat_desc_text += '</p>';
     e_catDesc.innerHTML = cat_desc_text;
     e_cat.appendChild(e_catDesc);
@@ -290,13 +302,12 @@ function buildArchiveTable(e_docSetWrap) {
     var e_documentTitle = document.createElement('td');
     e_documentTitle.classList.add('ds-docset-table-title');
 
-    // FIXME: l10n!
-    doc_title_text = 'Original Documentation as Zip' + ' (' + docSetData.archive[0].lang + ', complete)';
+    doc_title_text = dsLocalize('auto-categories', 'archive-title-original') + ' (' + docSetData.archive[0].lang + ')';
     var use_lang = 0;
     // Start at l=1, we have already set correct values for l=0
     for (var l = 1; l < docSetData.archive.length; l++) {
       if (docSetData.archive[l].lang == pageLanguage) {
-        doc_title_text = 'Translated Core Documentation as Zip' + ' (' + docSetData.archive[l].lang + ', may be incomplete)';;
+        doc_title_text = dsLocalize('auto-categories', 'archive-title-translated') + ' (' + docSetData.archive[l].lang + ')';;
         use_lang = l;
       };
     };
@@ -316,7 +327,7 @@ function buildArchiveTable(e_docSetWrap) {
         if (k == use_lang) {
           e_languageChoice.setAttribute( 'selected', '')
         };
-        e_languageChoice.textContent = docSetData.archive[k].lang;
+        e_languageChoice.textContent = dsLocalize('languages', docSetData.archive[k].lang);
         e_languageSelector.appendChild(e_languageChoice);
       };
       e_languageSelector.addEventListener('change',function(){
@@ -330,7 +341,7 @@ function buildArchiveTable(e_docSetWrap) {
       });
     }
     else {
-      e_documentLanguage.textContent = docSetData.archive[use_lang].lang;
+      e_documentLanguage.textContent = dsLocalize('languages', docSetData.archive[use_lang].lang);
     };
     e_documentRow.appendChild(e_documentLanguage);
     var e_documentFormats = document.createElement('td');
@@ -356,7 +367,7 @@ function buildFormatList(e_documentFormats, i, j, l) {
   for (var k = 0; k < Object.keys(formatList).length; k++) {
     var e_documentLink = document.createElement('a');
     e_documentLink.classList.add('ds-docset-table-link');
-    e_documentLink.textContent = Object.keys(formatList)[k];
+    e_documentLink.textContent = dsLocalize('formats', Object.keys(formatList)[k]);
     e_documentLink.setAttribute( 'href', normalizePath(formatList[ Object.keys(formatList)[k] ]) );
     e_documentFormats.appendChild(e_documentLink);
   };
@@ -365,7 +376,7 @@ function buildFormatList(e_documentFormats, i, j, l) {
 function buildFormatListArchive(e_documentFormats, l) {
   var e_documentLink = document.createElement('a');
   e_documentLink.classList.add('ds-docset-table-link');
-  e_documentLink.textContent = 'zip';
+  e_documentLink.textContent = dsLocalize('formats','zip');
   e_documentLink.setAttribute( 'href', normalizePath(docSetData.archive[l].zip) );
   e_documentFormats.appendChild(e_documentLink);
 }

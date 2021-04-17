@@ -26,7 +26,7 @@ class Deliverable:
     one of these objects.
     """
 
-    def __init__(self, parent, dc_file, dir_struct_paths, build_format, subdeliverables, xslt_params):
+    def __init__(self, parent, dc_file, dir_struct_paths, build_format, subdeliverables, xslt_params, build_container):
         self.title = None
         self.dc_hash = None
         self.path = None
@@ -43,6 +43,7 @@ class Deliverable:
         self.build_format = build_format
         self.subdeliverables = subdeliverables
         self.xslt_params = xslt_params
+        self.build_container = build_container
         self.id = self.generate_id()
         self.prev_state()
         self.target_config = self.parent.config['targets'][self.parent.build_instruction['target']]
@@ -166,8 +167,12 @@ class Deliverable:
         # build target directory
         n += 1
         tmp_dir_docker = tempfile.mkdtemp(prefix="docserv_out_")
+        use_build_container = ""
+        if self.build_container:
+            use_build_container = "--container=%s" % self.build_container
         commands[n] = {}
-        commands[n]['cmd'] = "d2d_runner --create-bigfile=1 --auto-validate=1 --container-update=1 --xslt-param-file=%s --daps-param-file=%s --out=%s --in=%s --formats=%s %s" % (
+        commands[n]['cmd'] = "d2d_runner --create-bigfile=1 --auto-validate=1 --container-update=1 %s --xslt-param-file=%s --daps-param-file=%s --out=%s --in=%s --formats=%s %s" % (
+            use_build_container,
             xslt_params_file[1],
             daps_params_file[1],
             tmp_dir_docker,

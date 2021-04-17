@@ -352,12 +352,18 @@ These are the details:
             return False
 
         try:
+            xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/buildcontainer/@image" % (
+                self.product, self.docset)
+            self.build_container = str(self.tree.xpath(xpath)[0])
+        except (AttributeError, IndexError):
+            self.build_container = False
+
+        try:
             xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/subdir" % (
                 self.product, self.docset, self.lang)
             self.build_source_dir = os.path.join(
                 self.local_repo_build_dir,
                 self.tree.find(xpath).text)
-
         except AttributeError:
             self.build_source_dir = self.local_repo_build_dir
 
@@ -532,6 +538,7 @@ These are the details:
                                           build_format,
                                           subdeliverables,
                                           xslt_params,
+                                          self.build_container,
                                           )
                 self.deliverables[deliverable.id] = deliverable.dict()
                 self.deliverable_objects[deliverable.id] = deliverable

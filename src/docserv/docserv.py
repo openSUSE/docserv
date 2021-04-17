@@ -299,6 +299,11 @@ class DocservConfig:
                 self.config['targets'][config[section]['name']]['canonical_url_domain'] = config[section]['canonical_url_domain']
                 self.config['targets'][config[section]['name']]['htaccess'] = config[section]['htaccess']
                 self.config['targets'][config[section]['name']]['favicon'] = config[section]['favicon']
+                # FIXME: I guess this is not the prettiest way to handle
+                # optional values (but it works for now)
+                self.config['targets'][config[section]['name']]['build_container'] = False
+                if 'build_container' in list(config[section].keys()):
+                    self.config['targets'][config[section]['name']]['build_container'] = config[section]['build_container']
         except KeyError as error:
             logger.warning(
                 "Invalid configuration file, missing configuration key '%s'. Exiting.", error)

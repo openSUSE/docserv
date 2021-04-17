@@ -168,6 +168,9 @@ class Deliverable:
         n += 1
         tmp_dir_docker = tempfile.mkdtemp(prefix="docserv_out_")
         use_build_container = ""
+        # intentionally no "elif:" the second "if" overrules the first one
+        if self.parent.config['targets'][self.parent.build_instruction['target']]['build_container']:
+            use_build_container = "--container=%s" % self.parent.config['targets'][self.parent.build_instruction['target']]['build_container']
         if self.build_container:
             use_build_container = "--container=%s" % self.build_container
         commands[n] = {}

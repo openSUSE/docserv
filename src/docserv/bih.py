@@ -380,56 +380,66 @@ These are the details:
         repository. With this, multiple builds of different branches
         can run at the same time.
         """
+
+        # for a few commands below, we assume a default remote named "origin"
+        default_branch="origin"
         commands = {}
-        # Clone locally cached repository, does nothing if exists
+        # clone locally cached repository, does nothing if exists
         n = 0
         local_repo_cache_dir = os.path.join(
             self.config['server']['repo_dir'], resource_to_filename(self.remote_repo))
         commands[n] = {}
-        commands[n]['cmd'] = "git clone %s %s" % (
+        commands[n]['cmd'] = "git clone \'%s\' \'%s\'" % (
             self.remote_repo, local_repo_cache_dir)
         commands[n]['ret_val'] = None
-        commands[n]['repo_lock'] = local_repo_cache_dir
 
-        # update locally cached repo
+        # fetch default remote for locally cached repo
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "git -C %s pull --all " % local_repo_cache_dir
+        commands[n]['cmd'] = "git -C \'%s\' fetch --prune \'%s\'" % (local_repo_cache_dir, default_branch)
         commands[n]['ret_val'] = 0
-        commands[n]['repo_lock'] = local_repo_cache_dir
 
-        # update locally cached repo
+        # check out the required branch
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "git -C %s checkout %s " % (
+        commands[n]['cmd'] = "git -C \'%s\' checkout \'%s\'" % (
             local_repo_cache_dir, self.branch)
         commands[n]['ret_val'] = 0
-        commands[n]['repo_lock'] = local_repo_cache_dir
+
+        # reset the local branch, to be able to deal with force-pushes etc.
+        n += 1
+        commands[n] = {}
+        commands[n]['cmd'] = "git -C \'%s\' reset --hard \'%s/%s\'" % (
+            local_repo_cache_dir, default_branch, self.branch)
+        commands[n]['ret_val'] = 0
 
         # Create local copy in temp build dir
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "git clone --single-branch --branch %s %s %s" % (
+        commands[n]['cmd'] = "git clone --single-branch --branch \'%s\' \'%s\' \'%s\'" % (
             self.branch, local_repo_cache_dir, self.local_repo_build_dir)
         commands[n]['ret_val'] = 0
-        commands[n]['repo_lock'] = None
 
+        # The lock on the Git repo needs to be acquired early, otherwise a
+        # competing BI may lead to us intermittently checking out a different
+        # branch and thus failing to include the most recent changes in our
+        # the single-branch repo we clone at the end.
+        self.git_lock.acquire()
         for i in range(0, n + 1):
             cmd = shlex.split(commands[i]['cmd'])
-            if commands[i]['repo_lock'] is not None:
-                self.git_lock.acquire()
             logger.debug("Thread %i: %s", thread_id, commands[i]['cmd'])
             s = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = s.communicate()
-            self.git_lock.release()
             if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
                 logger.warning("Build failed! Unexpected return value %i for '%s'",
                                s.returncode, commands[i]['cmd'])
                 self.mail(commands[i]['cmd'], out.decode(
                     'utf-8'), err.decode('utf-8'))
                 self.initialized = False
+                self.git_lock.release()
                 return False
+        self.git_lock.release()
 
         return True
 

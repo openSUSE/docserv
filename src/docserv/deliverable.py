@@ -5,8 +5,7 @@ import shlex
 import subprocess
 import tempfile
 import time
-# FIXME: switch to LXML
-from xml.etree import ElementTree, cElementTree
+from lxml import etree
 
 from docserv.functions import feedback_message, parse_d2d_filelist, resource_to_filename
 from docserv.repolock import RepoLock
@@ -28,6 +27,8 @@ class Deliverable:
 
     def __init__(self, parent, dc_file, dir_struct_paths, build_format, subdeliverables, xslt_params, build_container):
         self.title = None
+        self.subtitle = None
+        self.product_from_document = None
         self.dc_hash = None
         self.path = None
         self.status = "building"
@@ -416,47 +417,114 @@ These are the details:
 
         bigfile_path = parse_d2d_filelist(command['tmp_dir_docker'], 'bigfile')
 
+        try:
+            tree = etree.parse(bigfile_path)
+        except (OSError, lxml.etree.XMLSyntaxError):
+            logger.warning("Failed to find/parse bigfile at %s", bigfile_path)
+            return False
+
+        logger.debug("Extracting title, initially assuming no ROOTID for %s, using DC file name: %s", self.id, self.dc_file)
+        xpathstart="/*"
         if self.root_id:
             logger.debug("Found ROOTID for %s: %s", self.id, self.root_id)
-            xpath = ("(//*[@*[local-name(.)='id']='{ID}']/*[contains(local-name(.),'info')]/*[local-name(.)='title']|"
-                     "//*[@*[local-name(.)='id']='{ID}']/*[local-name(.)='title'])[1]"
-                     ).format(ID=self.root_id)
-            xmlstarlet['cmd'] = "xmlstarlet sel -t -v \"%s\" %s" % (
-                xpath, bigfile_path)
+            xpathstart="//*[@*[local-name(.)='id']='%s']" % self.root_id
+
+        xpath = ("({XPS}/*[contains(local-name(.),'info')]/*[local-name(.)='title'] |"
+                 " {XPS}/*[local-name(.)='title'])[1]"
+                 ).format(XPS=xpathstart)
+        if len(tree.xpath(xpath)) > 0:
+            self.title = tree.xpath('normalize-space(string(%s))' % xpath)
         else:
-            logger.debug(
-                "No ROOTID found for %s, using DC file name: %s", self.id, self.dc_file)
-            xpath = "(/*/*[contains(local-name(.),'info')]/*[local-name(.)='title']|/*/*[local-name(.)='title'])[1]"
-            xmlstarlet['cmd'] = "xmlstarlet sel -t -v \"%s\" %s" % (
-                xpath, bigfile_path)
-        result = self.execute(xmlstarlet, thread_id)
-        if not result:
+            logger.warning("Could not extract a title via xpath: %s", xpath)
             return False
-        self.title = self.out.decode('utf-8').replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+
+        xpath = ("({XPS}/*[contains(local-name(.),'info')]/*[local-name(.)='subtitle'] |"
+                 " {XPS}/*[local-name(.)='subtitle'])[1]"
+                 ).format(XPS=xpathstart)
+        if len(tree.xpath(xpath)) > 0:
+            self.subtitle = tree.xpath('normalize-space(string(%s))' % xpath)
+        else:
+            logger.debug("Could not extract a subtitle via xpath: %s", xpath)
+
+        productname = ''
+        productnumber = ''
+        xpath = ("({XPS}/*[contains(local-name(.),'info')]/*[local-name(.)='productnumber'] |"
+                 " {XPS}/ancestor::*/*[contains(local-name(.),'info')]/*[local-name(.)='productnumber'])[1]"
+                 ).format(XPS=xpathstart)
+        if len(tree.xpath(xpath)) > 0:
+            productnumber = tree.xpath('normalize-space(string(%s))' % xpath)
+        else:
+            logger.debug("Could not extract a productnumber via xpath: %s", xpath)
+        xpath = ("({XPS}/*[contains(local-name(.),'info')]/*[local-name(.)='productname'] |"
+                 " {XPS}/ancestor::*/*[contains(local-name(.),'info')]/*[local-name(.)='productname'])[1]"
+                 ).format(XPS=xpathstart)
+        if len(tree.xpath(xpath)) > 0:
+            productname = tree.xpath('normalize-space(string(%s))' % xpath)
+            # just a product number on its own is not usually useful, so don't
+            # update product_from_document if there's no productname
+            self.product_from_document = ("%s %s" % (productname, productnumber)).strip()
+        else:
+            logger.debug("Could not extract a productname via xpath: %s", xpath)
+
         dchash['cmd'] = "%s %s" % (os.path.join(BIN_DIR, 'docserv-dchash'), dc_path)
         result = self.execute(dchash, thread_id)
         if not result:
             return False
         self.dc_hash = self.out.decode('utf-8')
-        self.subdeliverable_titles = {}
-        self.subdeliverable_hashes = {}
+
+        self.subdeliverable_info = {}
         for subdeliverable in self.subdeliverables:
-            xpath = "(//*[@*[local-name(.)='id']='%s']/*[contains(local-name(.),'info')]/*[local-name(.)='title']|//*[@*[local-name(.)='id']='%s']/*[local-name(.)='title'])[1]" % (
-                subdeliverable, subdeliverable)
-            xmlstarlet['cmd'] = "xmlstarlet sel -t -v \"%s\" %s" % (
-                xpath, bigfile_path)
-            xmlstarlet['ret_val'] = 0
-            result = self.execute(xmlstarlet, thread_id)
-            if not result:
+            xpathstart="//*[@*[local-name(.)='id']='%s']" % subdeliverable
+
+            # FIXME: This is copypasta from above
+            xpath = ("({XPS}/*[contains(local-name(.),'info')]/*[local-name(.)='title']|"
+                     " {XPS}/*[local-name(.)='title'])[1]"
+                     ).format(XPS=xpathstart)
+            if len(tree.xpath(xpath)) > 0:
+                subdeliverable_title = tree.xpath('normalize-space(string(%s))' % xpath)
+            else:
+                logger.warning("Could not extract a subdeliverable title via xpath: %s", xpath)
                 return False
-            self.subdeliverable_titles[subdeliverable] = self.out.decode(
-                'utf-8')
+
+            xpath = ("({XPS}/*[contains(local-name(.),'info')]/*[local-name(.)='subtitle'] |"
+                     " {XPS}/*[local-name(.)='subtitle'])[1]"
+                     ).format(XPS=xpathstart)
+            if len(tree.xpath(xpath)) > 0:
+                subdeliverable_subtitle = tree.xpath('normalize-space(string(%s))' % xpath)
+            else:
+                subdeliverable_subtitle = None
+                logger.debug("Could not extract a subdeliverable subtitle via xpath: %s", xpath)
+
+            productname = ''
+            productnumber = ''
+            xpath = ("({XPS}/*[contains(local-name(.),'info')]/*[local-name(.)='productnumber'] |"
+                     " {XPS}/ancestor::*/*[contains(local-name(.),'info')]/*[local-name(.)='productnumber'])[1]"
+                     ).format(XPS=xpathstart)
+            if len(tree.xpath(xpath)) > 0:
+                subdeliverable_productnumber = tree.xpath('normalize-space(string(%s))' % xpath)
+            else:
+                logger.debug("Could not extract a productnumber via xpath: %s", xpath)
+            xpath = ("({XPS}/*[contains(local-name(.),'info')]/*[local-name(.)='productname'] |"
+                     " {XPS}/ancestor::*/*[contains(local-name(.),'info')]/*[local-name(.)='productname'])[1]"
+                     ).format(XPS=xpathstart)
+            if len(tree.xpath(xpath)) > 0:
+                subdeliverable_productname = tree.xpath('normalize-space(string(%s))' % xpath)
+                # just a product number on its own is not usually useful, so don't
+                # update product_from_document if there's no productname
+                subdeliverable_product_from_document = ("%s %s" % (subdeliverable_productname, subdeliverable_productnumber)).strip()
+            else:
+                subdeliverable_product_from_document = None
+                logger.debug("Could not extract a subdeliverable productname via xpath: %s", xpath)
+
             dchash['ret_val'] = 0
             dchash['cmd'] = "%s %s %s" % (os.path.join(BIN_DIR, 'docserv-dchash'), dc_path, subdeliverable)
             result = self.execute(dchash, thread_id)
             if not result:
                 return False
-            self.subdeliverable_hashes[subdeliverable] = self.out.decode('utf-8')
+            self.subdeliverable_info[subdeliverable] = {'hash': self.out.decode('utf-8'),
+                                                        'title': subdeliverable_title,
+                                                        'subtitle': subdeliverable_subtitle,
+                                                        'product_from_document': subdeliverable_product_from_document}
         with self.parent.deliverables_open_lock:
             self.parent.deliverables[self.id]['title'] = self.title
             self.parent.deliverables[self.id]['path'] = self.path
@@ -475,32 +543,36 @@ These are the details:
         if self.parent.lifecycle == "unsupported":
             return command
 
-        root = cElementTree.Element("document",
-                                    lang=self.parent.build_instruction['lang'],
-                                    productid=self.parent.build_instruction['product'],
-                                    setid=self.parent.build_instruction['docset'],
-                                    dc=self.dc_file,
-                                    cachedate=str(time.time()))
-        cElementTree.SubElement(
-            root, "commit").text = self.parent.deliverables[self.id]['last_build_attempt_commit']
-        cElementTree.SubElement(
-            root, "path", format=self.build_format).text = self.path
+        root = etree.Element('document',
+                              lang=self.parent.build_instruction['lang'],
+                              productid=self.parent.build_instruction['product'],
+                              setid=self.parent.build_instruction['docset'],
+                              dc=self.dc_file,
+                              cachedate=str(int(time.time())))
 
-        # If there are subdeliverables, we are probably in a set and we don't
-        # really need to bother linking to the set page.
-        if not self.subdeliverables:
-            if self.root_id is not None:
-                root_id = self.root_id
-            else:
-                root_id = ""
-            cElementTree.SubElement(
-                root, "title", rootid=root_id, hash=self.dc_hash).text = self.title
+        etree.SubElement(root, "commit").text = self.parent.deliverables[self.id]['last_build_attempt_commit']
+        etree.SubElement(root, "path", format=self.build_format).text = self.path
+
+        title = etree.SubElement(root, "title", hash=self.dc_hash)
+        title.text = self.title
+        if self.root_id is not None:
+            title.attrib['rootid'] = self.root_id
+        if self.subtitle is not None:
+            title.attrib['subtitle'] = self.subtitle
+        if self.product_from_document is not None:
+            title.attrib['product-from-document'] = self.product_from_document
 
         for subdeliverable in self.subdeliverables:
-            cElementTree.SubElement(
-                root, "title", rootid=subdeliverable,
-                hash=self.subdeliverable_hashes[subdeliverable]).text = self.subdeliverable_titles[subdeliverable]
-        tree = cElementTree.ElementTree(root)
-        tree.write(os.path.join(
-            self.deliverable_cache_dir, "%s.xml" % self.dc_file))
+            title = etree.SubElement(root, "title", hash=self.subdeliverable_info[subdeliverable]['hash'],
+                                      rootid=subdeliverable)
+            title.text = self.subdeliverable_info[subdeliverable]['title']
+            if self.subtitle is not None:
+                title.attrib['subtitle'] = self.subdeliverable_info[subdeliverable]['subtitle']
+            if self.product_from_document is not None:
+                title.attrib['product-from-document'] = self.subdeliverable_info[subdeliverable]['product_from_document']
+
+        tree = etree.ElementTree(root)
+        tree.write(os.path.join(self.deliverable_cache_dir, "%s.xml" % self.dc_file),
+                    pretty_print=True, xml_declaration=True, encoding='UTF-8')
+
         return command

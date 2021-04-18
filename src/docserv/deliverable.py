@@ -8,7 +8,7 @@ import time
 # FIXME: switch to LXML
 from xml.etree import ElementTree, cElementTree
 
-from docserv.functions import feedback_message, resource_to_filename
+from docserv.functions import feedback_message, parse_d2d_filelist, resource_to_filename
 from docserv.repolock import RepoLock
 
 logger = logging.getLogger('docserv')
@@ -34,7 +34,6 @@ class Deliverable:
         self.successful_build_commit = None
         self.last_build_attempt_commit = None
         self.root_id = None  # False if no root id exists
-        self.pdf_name = None # False if no PDFNAME value exists in DC file
         self.cleanup_done = False
 
         self.source_dir, self.tmp_dir_bi, self.docset_relative_path = dir_struct_paths
@@ -174,7 +173,7 @@ class Deliverable:
         if self.build_container:
             use_build_container = "--container=%s" % self.build_container
         commands[n] = {}
-        commands[n]['cmd'] = "d2d_runner --create-bigfile=1 --auto-validate=1 --container-update=1 %s --xslt-param-file=%s --daps-param-file=%s --out=%s --in=%s --formats=%s %s" % (
+        commands[n]['cmd'] = "d2d_runner --create-bigfile=1 --json-filelist=1 --auto-validate=1 --container-update=1 %s --xslt-param-file=%s --daps-param-file=%s --out=%s --in=%s --formats=%s %s" % (
             use_build_container,
             xslt_params_file[1],
             daps_params_file[1],
@@ -206,7 +205,7 @@ class Deliverable:
         n += 1
         commands[n] = {}
         commands[n]['cmd'] = "rsync -lr __FILELIST__  %s" % (tmp_build_full_path)
-        commands[n]['pre_cmd_hook'] = 'parse_d2d_filelist'
+        commands[n]['pre_cmd_hook'] = 'get_output_name_from_filelist'
         commands[n]['tmp_dir_docker'] = tmp_dir_docker
 
         # create directory for Deliverable cache file
@@ -367,30 +366,24 @@ These are the details:
             send_mail = True
         feedback_message(msg, subject, to, send_mail)
 
-    def parse_d2d_filelist(self, command, thread_id):
+
+    def get_output_name_from_filelist(self, command, thread_id):
         """
-        Parse the returned filelist from daps2docker. This file contains
-        a list of built documents.
+        Get file name of output document, transform it for copying to
+        intermittent output directory.
         """
-        # currently only read from file logic
-        try:
-            f = open(os.path.join(command['tmp_dir_docker'], 'filelist'), 'r')
-            for line in f:
-                line = line.strip()
-                if '_bigfile.xml' not in line and line != "":
-                    self.d2d_out_dir = line
-                    # If you build HTML, you get back a directory, d2d puts a /
-                    # at the end of the path in all cases (apparently)
-                    #   /path/to/directory/html/suse-openstack-cloud-all/
-                    # Running .split[-1] over that line gets you an empty string
-                    # and that is expected -- only for PDFs/EPUBs do we want to
-                    # keep the last part of the URL here.
-                    self.path = os.path.join(self.deliverable_relative_path,
-                                            line.split('/')[-1])
-        except FileNotFoundError:
-            return False
-        # Under some circumstances, we get empty file lists. In which case it's
-        # probably better to declare the build failed.
+
+        output_name = parse_d2d_filelist(command['tmp_dir_docker'], self.build_format)
+        self.d2d_out_dir = output_name
+        # If you build HTML, you get back a directory, d2d puts a /
+        # at the end of the path in all cases (apparently)
+        #   /path/to/directory/html/suse-openstack-cloud-all/
+        # Running .split[-1] over that line gets you an empty string
+        # and that is expected -- only for PDFs/EPUBs do we want to
+        # keep the last part of the URL here.
+        self.path = os.path.join(self.deliverable_relative_path,
+                                output_name.split('/')[-1])
+
         try:
             logger.debug("Deliverable build results: %s", self.d2d_out_dir)
             command['cmd'] = command['cmd'].replace(
@@ -406,10 +399,6 @@ These are the details:
         are defined, extract titles for them as well.
         """
         # extract root id from DC file and then title from bigfile
-
-        # FIXME: It seems unnecessary to guess the bigfile's name from the DC
-        # file itself -- daps2docker creates a filelist that already includes
-        # the correct bigfile name, no guessing involved.
         dc_path = os.path.join(self.source_dir, self.dc_file)
         with open(dc_path) as f:
             import re
@@ -420,27 +409,12 @@ These are the details:
                 if m:
                     self.root_id = m.group(1)
                     break
-            # PDFNAME parameter trumps ROOTID and DC file name
-            for line in f:
-                #pylint: disable=W1401
-                m = re.search(
-                    '^\s*PDFNAME\s*=\s*[\"\']?([^\"\']+)[\"\']?.*', line.strip())
-                if m:
-                    self.pdf_name = m.group(1)
-                    break
         xmlstarlet = {}
         xmlstarlet['ret_val'] = 0
         dchash = {}
         dchash['ret_val'] = 0
 
-        bigfile = self.dc_file.replace('DC-', '')
-        if self.pdf_name:
-            logger.debug("Found PDFNAME for %s", self.id)
-            bigfile = self.pdf_name
-        elif self.root_id:
-            bigfile = self.root_id
-        bigfile_path = (os.path.join(
-            command['tmp_dir_docker'], '.tmp', '%s_bigfile.xml' % bigfile))
+        bigfile_path = parse_d2d_filelist(command['tmp_dir_docker'], 'bigfile')
 
         if self.root_id:
             logger.debug("Found ROOTID for %s: %s", self.id, self.root_id)

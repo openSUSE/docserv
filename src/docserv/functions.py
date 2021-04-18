@@ -1,4 +1,5 @@
 import datetime
+import json
 import logging
 import os
 import subprocess
@@ -48,6 +49,38 @@ def feedback_message(text, subject, to, send_mail = False):
         msg = open(handle, 'w')
         msg.write('To:      %s\nSubject: %s\n\n%s' % (to, subject, text))
         msg.close()
+
+def parse_d2d_filelist(directory, format):
+    """
+    Parse the returned filelist.json from daps2docker which contains the
+    list of documents that were built.
+    """
+    try:
+        f = open(os.path.join(directory, 'filelist.json'), 'r')
+    except FileNotFoundError:
+        return False
+
+    try:
+        filelist = json.loads(f.read())
+    # Under some circumstances, we get empty/invalid file lists. In such
+    # cases, it's probably better to declare the build failed.
+    except json.decoder.JSONDecodeError:
+        return False
+
+    f.close()
+
+    try:
+        for deliverable in filelist.keys():
+            if (filelist[deliverable]['format'] == format and
+                filelist[deliverable]['status'] == 'succeeded' and
+                filelist[deliverable]['file'] != False):
+                # returning the first result is fine as long as we only build
+                # 1 document per D2D run, if we ever switched to building
+                # different documents in the same container, this would
+                # become an issue.
+                return filelist[deliverable]['file'].strip()
+    except KeyError:
+        return False
 
 def print_help():
     print("""This is a daemon. Invoke it with either of the following commands:

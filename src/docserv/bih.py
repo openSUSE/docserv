@@ -332,8 +332,8 @@ These are the details:
             xpath = "//product[@productid='%s']/maintainers/contact" % (
                 self.product)
             self.maintainers = []
-            stuff = self.tree.findall(xpath)
-            for contact in stuff:
+            contacts = self.tree.findall(xpath)
+            for contact in contacts:
                 self.maintainers.append(contact.text)
 
             xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/branch" % (

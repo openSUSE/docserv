@@ -13,8 +13,6 @@ out() {
 me=$(test -L $(realpath $0) && readlink $(realpath $0) || echo $(realpath $0))
 mydir=$(dirname $me)
 
-source $mydir/docserv-dirs
-
 dcfile=$(realpath $1)
 [[ ! -f "$dcfile" ]] && out "No input DC file given."
 

@@ -95,6 +95,19 @@ ds.type.hexdigest =
     pattern="""[a-f0-9]{7,}"""
   }
 
+# A basic title template that allows strings like "title subtitle product/docset",
+# in exactly that order, but everything except the title can be
+# left away. product and docset will in many cases just be the same, and thus
+# are set up to exclude each other.
+# There is no guarantee that the title string will be formatted
+# exactly this way or in this order, just that, if available, all of the
+# information requested will come out.
+ds.type.titleformat.build = "title" | "title docset" | "title product" | "title subtitle" | "title subtitle product" | "title subtitle docset"
+# For external links, some metadata is never available: product name and
+# subtitle cannot be generated in any way currently (but you're free to
+# create whatever title you want and that should make up for it).
+ds.type.titleformat.link = "title" | "title docset"
+
 ds.false.enum = "0" | "false"
 ds.true.enum = "1" | "true"
 
@@ -345,6 +358,7 @@ ds.deliverable =
     attribute draft { xsd:boolean }?,
     attribute meta { xsd:boolean }?,
     attribute category { ds.type.idmulti }?,
+    attribute titleformat { ds.type.titleformat.build }?,
     ds.subdir?,
     ds.dc,
     ds.format+,
@@ -384,9 +398,11 @@ ds.param =
     text
   }
 
+
 ds.subdeliverable =
   element subdeliverable {
     attribute category { ds.type.idmulti }?,
+    attribute titleformat { ds.type.titleformat.build }?,
     ds.type.id
   }
 
@@ -421,8 +437,10 @@ ds.ref =
       (attribute docset { ds.type.id },
         (
           (attribute dc { ds.type.id },
-           attribute subdeliverable { ds.type.id }?) |
-          attribute link { ds.type.id }
+           attribute subdeliverable { ds.type.id }?,
+           attribute titleformat { ds.type.titleformat.build }?) |
+          (attribute link { ds.type.id },
+           attribute titleformat { ds.type.titleformat.link }?)
         )
       )
     ),
@@ -439,6 +457,7 @@ ds.link =
   element link {
     attribute linkid { ds.type.id }?,
     attribute category { ds.type.idmulti }?,
+    attribute titleformat { ds.type.titleformat.link }?,
     ds.linklanguage_default,
     ds.linklanguage_translation*
   }

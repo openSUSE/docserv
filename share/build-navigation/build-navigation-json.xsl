@@ -35,6 +35,11 @@
   </xsl:param>
   <xsl:param name="internal_mode" select="'false'"/>
 
+  <xsl:param name="titleformat_deliverable">title subtitle</xsl:param>
+  <xsl:param name="titleformat_link">title</xsl:param>
+  <xsl:param name="titleformat_deliverable_reference">title subtitle docset</xsl:param>
+  <xsl:param name="titleformat_link_reference">title docset</xsl:param>
+
 
   <xsl:variable name="existing-sets-supported">
     <xsl:call-template name="list-existing-sets"/>
@@ -355,21 +360,60 @@
         <xsl:with-param name="node" select="ancestor::language"/>
       </xsl:call-template>
     </xsl:param>
-    <xsl:param name="docset-title-inject" select="0"/>
-
-    <xsl:variable name="injected-title">
-      <xsl:if test="$docset-title-inject = 1">
-        <xsl:call-template name="inject-docset-title"/>
-      </xsl:if>
+    <xsl:variable name="titleformat">
+      <xsl:text> </xsl:text>
+      <xsl:choose>
+        <xsl:when test="@titleformat"><xsl:value-of select="@titleformat"/></xsl:when>
+        <xsl:otherwise><xsl:value-of select="$titleformat_deliverable"/></xsl:otherwise>
+      </xsl:choose>
+      <xsl:text> </xsl:text>
     </xsl:variable>
-    <xsl:variable name="title">
-      <xsl:value-of select="$injected-title"/>
+
+    <xsl:variable name="title-title">
       <xsl:call-template name="cache-request">
         <xsl:with-param name="information" select="'title'"/>
       </xsl:call-template>
     </xsl:variable>
+    <xsl:variable name="title-subtitle">
+      <xsl:if test="contains($titleformat, ' subtitle ')">
+        <xsl:call-template name="cache-request">
+          <xsl:with-param name="information" select="'subtitle'"/>
+        </xsl:call-template>
+      </xsl:if>
+    </xsl:variable>
+    <xsl:variable name="title-docset">
+      <xsl:if test="contains($titleformat, ' docset ')">
+        <xsl:call-template name="docset-title"/>
+      </xsl:if>
+    </xsl:variable>
+    <xsl:variable name="title-product">
+      <xsl:if test="contains($titleformat, ' product ')">
+        <xsl:call-template name="cache-request">
+          <xsl:with-param name="information" select="'product-from-document'"/>
+        </xsl:call-template>
+      </xsl:if>
+    </xsl:variable>
+
+    <xsl:variable name="title-assembled">
+      <xsl:value-of select="$title-title"/>
+      <xsl:if test="string-length($title-subtitle) &gt; 0">
+        <xsl:text>: </xsl:text>
+        <xsl:value-of select="$title-subtitle"/>
+      </xsl:if>
+      <xsl:if test="string-length(concat($title-docset,$title-product)) &gt; 0">
+        <xsl:text> (</xsl:text>
+        <xsl:value-of select="$title-docset"/>
+        <!-- docset and product components are currently mutually exclusionary.
+        The following if only provisions for when that is ever not the case. -->
+        <xsl:if test="(string-length($title-docset) &gt; 0) and (string-length($title-product) &gt; 0)">
+          <xsl:text> / </xsl:text>
+        </xsl:if>
+        <xsl:value-of select="$title-product"/>
+        <xsl:text>)</xsl:text>
+      </xsl:if>
+    </xsl:variable>
     <xsl:variable name="title-escaped">
-      <xsl:apply-templates select="exsl:node-set($title)" mode="escape-html"/>
+      <xsl:apply-templates select="exsl:node-set($title-assembled)" mode="escape-html"/>
     </xsl:variable>
     <xsl:variable name="hash">
       <xsl:call-template name="cache-request">
@@ -514,21 +558,28 @@
     <xsl:variable name="dc" select="@dc"/>
     <xsl:variable name="subdeliverable" select="@subdeliverable"/>
     <xsl:variable name="link" select="@link"/>
+    <xsl:variable name="titleformat">
+      <xsl:choose>
+        <xsl:when test="@titleformat"><xsl:value-of select="@titleformat"/></xsl:when>
+        <xsl:when test="$dc != ''"><xsl:value-of select="$titleformat_deliverable_reference"/></xsl:when>
+        <xsl:otherwise><xsl:value-of select="$titleformat_link_reference"/></xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
 
     <xsl:choose>
       <xsl:when test="$link != ''">
         <xsl:apply-templates select="(//product[@productid = $product]/docset[@setid = $docset]/external/link[@linkid = $link])[1]" mode="generate-docset-json">
-          <xsl:with-param name="docset-title-inject" select="1"/>
+          <xsl:with-param name="titleformat" select="$titleformat"/>
         </xsl:apply-templates>
       </xsl:when>
       <xsl:when test="$subdeliverable != ''">
         <xsl:apply-templates select="(//product[@productid = $product]/docset[@setid = $docset]/builddocs/language[@default = 'true']/deliverable[dc = $dc]/subdeliverable[. = $subdeliverable])[1]" mode="generate-docset-json">
-          <xsl:with-param name="docset-title-inject" select="1"/>
+          <xsl:with-param name="titleformat" select="$titleformat"/>
         </xsl:apply-templates>
       </xsl:when>
       <xsl:when test="$dc != ''">
         <xsl:apply-templates select="(//product[@productid = $product]/docset[@setid = $docset]/builddocs/language[@default = 'true']/deliverable[dc = $dc])[1]" mode="generate-docset-json">
-          <xsl:with-param name="docset-title-inject" select="1"/>
+          <xsl:with-param name="titleformat" select="$titleformat"/>
         </xsl:apply-templates>
       </xsl:when>
       <xsl:when test="$docset != ''">
@@ -554,9 +605,8 @@
     docset. However, that would necessitate enabling localization here. Our UI
     localization story is currently dodgy (read: non-existent) anyhow, so... -->
     <xsl:variable name="title-default">
-      <xsl:call-template name="inject-docset-title">
+      <xsl:call-template name="docset-title">
         <xsl:with-param name="node" select="//product[@productid = $product]/docset[@setid = $docset]/*[1]"/>
-        <xsl:with-param name="postfix" select="0"/>
       </xsl:call-template>
     </xsl:variable>
     <xsl:variable name="title-escaped-default">
@@ -623,7 +673,7 @@
 
     <xsl:variable name="injected-title">
       <xsl:if test="$docset-title-inject = 1">
-        <xsl:call-template name="inject-docset-title"/>
+        <xsl:call-template name="docset-title"/>
       </xsl:if>
     </xsl:variable>
     <xsl:variable name="title-escaped-default">
@@ -668,9 +718,8 @@
     </xsl:choose>
   </xsl:template>
 
-  <xsl:template name="inject-docset-title">
+  <xsl:template name="docset-title">
     <xsl:param name="node" select="."/>
-    <xsl:param name="postfix" select="1"/>
     <!-- Finding out the correct product name is hard. FIXME: Is that logic
     quite right? It should be:
     docset/acronym > docset/name > product/acronym > product/name. -->
@@ -679,9 +728,6 @@
                ($node/ancestor::docset/name|$node/ancestor::docset/acronym)[last()])[last()]"/>
     <xsl:text> </xsl:text>
     <xsl:value-of select="$node/ancestor::docset/version"/>
-    <xsl:if test="$postfix = 1">
-      <xsl:text>: </xsl:text>
-    </xsl:if>
   </xsl:template>
 
 </xsl:stylesheet>

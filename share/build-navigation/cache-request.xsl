@@ -13,7 +13,7 @@
   <xsl:variable name="cache_content" select="document($cache_file)/docservcache"/>
 
   <xsl:template name="cache-request">
-    <!-- supported values: 'hash' & 'title' -->
+    <!-- supported values: 'hash', 'title', 'subtitle', 'product-from-document' -->
     <xsl:param name="information" select="''"/>
 
     <xsl:param name="productid" select="ancestor::product/@productid"/>
@@ -46,8 +46,10 @@
 
     <xsl:variable name="result">
       <xsl:choose>
-        <xsl:when test="$information = 'hash'">
-          <xsl:call-template name="get-hash">
+        <xsl:when test="$information = 'hash' or $information = 'subtitle' or
+                        $information = 'product-from-document'">
+          <xsl:call-template name="get-attribute">
+            <xsl:with-param name="attribute" select="$information"/>
             <xsl:with-param name="productid" select="$productid"/>
             <xsl:with-param name="setid" select="$setid"/>
             <xsl:with-param name="doc_language" select="$doc_language"/>
@@ -81,7 +83,9 @@
   </xsl:template>
 
 
-  <xsl:template name="get-hash">
+  <xsl:template name="get-attribute">
+    <xsl:param name="attribute" select="'hash'"/>
+
     <xsl:param name="productid" select="''"/>
     <xsl:param name="setid" select="''"/>
     <xsl:param name="doc_language" select="''"/>
@@ -91,14 +95,14 @@
     <xsl:choose>
       <xsl:when
         test="$rootid != '' and
-              ($cache_content/document[@productid = $productid][@setid = $setid][@dc = $dc][@lang = $doc_language]/title[@rootid = $rootid]/@hash)[1]">
-        <xsl:value-of select="($cache_content/document[@productid = $productid][@setid = $setid][@dc = $dc][@lang = $doc_language]/title[@rootid = $rootid]/@hash)[1]"/>
+              ($cache_content/document[@productid = $productid][@setid = $setid][@dc = $dc][@lang = $doc_language]/title[@rootid = $rootid]/@*[local-name(.) = $attribute])[1]">
+        <xsl:value-of select="($cache_content/document[@productid = $productid][@setid = $setid][@dc = $dc][@lang = $doc_language]/title[@rootid = $rootid]/@*[local-name(.) = $attribute])[1]"/>
       </xsl:when>
-      <xsl:when test="($cache_content/document[@productid = $productid][@setid = $setid][@dc = $dc][@lang = $doc_language]/title[not(@rootid) or @rootid='']/@hash)[1]">
-        <xsl:value-of select="($cache_content/document[@productid = $productid][@setid = $setid][@dc = $dc][@lang = $doc_language]/title[not(@rootid) or @rootid='']/@hash)[1]"/>
+      <xsl:when test="($cache_content/document[@productid = $productid][@setid = $setid][@dc = $dc][@lang = $doc_language]/title[not(@rootid) or @rootid='']/@*[local-name(.) = $attribute])[1]">
+        <xsl:value-of select="($cache_content/document[@productid = $productid][@setid = $setid][@dc = $dc][@lang = $doc_language]/title[not(@rootid) or @rootid='']/@*[local-name(.) = $attribute])[1]"/>
       </xsl:when>
-      <xsl:when test="($cache_content/document[@productid = $productid][@setid = $setid][@dc = $dc][@lang = $doc_language]/title/@hash)[1]">
-        <xsl:value-of select="($cache_content/document[@productid = $productid][@setid = $setid][@dc = $dc][@lang = $doc_language]/title/@hash)[1]"/>
+      <xsl:when test="($cache_content/document[@productid = $productid][@setid = $setid][@dc = $dc][@lang = $doc_language]/title/@*[local-name(.) = $attribute])[1]">
+        <xsl:value-of select="($cache_content/document[@productid = $productid][@setid = $setid][@dc = $dc][@lang = $doc_language]/title/@*[local-name(.) = $attribute])[1]"/>
       </xsl:when>
     </xsl:choose>
   </xsl:template>

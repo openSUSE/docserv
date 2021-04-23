@@ -217,7 +217,6 @@ cp -r $template_resources/* $output_dir/$res_path
 
 # FIXME: we're not actually copying the template for the navigational pages
 # that we build automatically (currently that'd be SUMA).
-# FIXME: generate a meta http-equiv redirect page to the default docset?
 for lang in $ui_languages; do
 
   mkdir -p $output_dir/$lang

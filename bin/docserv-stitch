@@ -225,12 +225,12 @@ fi
 # check for uniqueness of productid values (which we can't do before
 # stitching the file together)
 
-productids=$(echo -e "$outfile" | $starlet sel -t -v '//@productid|//urlredirect' | sort)
+productids=$(echo -e "$outfile" | $starlet sel -t -v '//@productid' | sort)
 uniqueproductids=$(echo -e "$productids" | sort -u)
 
 [[ ! "$productids" == "$uniqueproductids" ]] && \
     add_issue \
-      "(global check): Some productid/urlredirect values in $input_dir are not unique. Check for the following productid/urlredirect values: "$(comm -2 -3 <(echo -e "$productids") <(echo -e "$uniqueproductids") | tr '\n' ' ')"."
+      "(global check): Some productid values in $input_dir are not unique. Check for the following productid values: "$(comm -2 -3 <(echo -e "$productids") <(echo -e "$uniqueproductids") | tr '\n' ' ')"."
 
 referencecheck=$(echo -e "$outfile" | xsltproc $references_stylesheet -)
 [[ "$referencecheck" ]] && add_multiple_issues "(global check)" "$referencecheck"

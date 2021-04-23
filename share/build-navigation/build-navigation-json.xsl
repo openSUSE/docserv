@@ -138,7 +138,7 @@
     <xsl:param name="list" select="$existing-sets-supported"/>
     <xsl:variable name="visible">
       <xsl:choose>
-        <xsl:when test="@navigation-visible = 'hidden'">
+        <xsl:when test="@navigation = 'hidden' or @navigation = 'disabled'">
           <xsl:text>false</xsl:text>
         </xsl:when>
         <xsl:otherwise>

@@ -137,31 +137,32 @@ class BuildInstructionHandler:
                 self.lang)
             commands[n]['cmd'] = create_archive_cmd
 
-            # (re-)generate navigation page
-            tmp_dir_nav = tempfile.mkdtemp(prefix="docserv_navigation_")
-            n += 1
-            commands[n] = {}
-            commands[n]['cmd'] = "docserv-build-navigation %s --product=\"%s\" --docset=\"%s\" --stitched-config=\"%s\" --ui-languages=\"%s\" %s --cache-dir=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\" --base-path=\"%s\" --htaccess=\"%s\" --favicon=\"%s\"" % (
-                "--internal-mode" if self.config['targets'][self.build_instruction['target']
-                                                             ]['internal'] == "yes" else "",
-                self.build_instruction['product'],
-                self.build_instruction['docset'],
-                self.stitch_tmp_file,
-                self.config['targets'][self.build_instruction['target']]['languages'],
-                "--omit-lang-path=\"%s\"" % self.config['targets'][self.build_instruction['target']]['default_lang'] if
-                            self.config['targets'][self.build_instruction['target']]['omit_default_lang_path'] == "yes" else "",
-                os.path.join(self.deliverable_cache_base_dir, self.build_instruction['target']),
-                self.config['targets'][self.build_instruction['target']]['template_dir'],
-                tmp_dir_nav,
-                self.config['targets'][self.build_instruction['target']]['server_base_path'],
-                self.config['targets'][self.build_instruction['target']]['htaccess'],
-                self.config['targets'][self.build_instruction['target']]['favicon'],
-            )
-            # rsync navigational pages dir to backup path
-            n += 1
-            commands[n] = {}
-            commands[n]['cmd'] = "rsync -lr %s/ %s" % (
-                tmp_dir_nav, backup_path)
+            if self.navigation == 'linked' or self.navigation == 'hidden':
+                # (re-)generate navigation page
+                tmp_dir_nav = tempfile.mkdtemp(prefix="docserv_navigation_")
+                n += 1
+                commands[n] = {}
+                commands[n]['cmd'] = "docserv-build-navigation %s --product=\"%s\" --docset=\"%s\" --stitched-config=\"%s\" --ui-languages=\"%s\" %s --cache-dir=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\" --base-path=\"%s\" --htaccess=\"%s\" --favicon=\"%s\"" % (
+                    "--internal-mode" if self.config['targets'][self.build_instruction['target']
+                                                                 ]['internal'] == "yes" else "",
+                    self.build_instruction['product'],
+                    self.build_instruction['docset'],
+                    self.stitch_tmp_file,
+                    self.config['targets'][self.build_instruction['target']]['languages'],
+                    "--omit-lang-path=\"%s\"" % self.config['targets'][self.build_instruction['target']]['default_lang'] if
+                                self.config['targets'][self.build_instruction['target']]['omit_default_lang_path'] == "yes" else "",
+                    os.path.join(self.deliverable_cache_base_dir, self.build_instruction['target']),
+                    self.config['targets'][self.build_instruction['target']]['template_dir'],
+                    tmp_dir_nav,
+                    self.config['targets'][self.build_instruction['target']]['server_base_path'],
+                    self.config['targets'][self.build_instruction['target']]['htaccess'],
+                    self.config['targets'][self.build_instruction['target']]['favicon'],
+                )
+                # rsync navigational pages dir to backup path
+                n += 1
+                commands[n] = {}
+                commands[n]['cmd'] = "rsync -lr %s/ %s" % (
+                    tmp_dir_nav, backup_path)
 
             # rsync local backup path with web server target path
             if self.config['targets'][self.build_instruction['target']]['enable_target_sync'] == 'yes':
@@ -174,10 +175,11 @@ class BuildInstructionHandler:
                     target_path,
                 )
 
-            # remove temp directory for navigation page
-            n += 1
-            commands[n] = {}
-            commands[n]['cmd'] = "rm -rf %s" % tmp_dir_nav
+            if self.navigation == 'linked' or self.navigation == 'hidden':
+                # remove temp directory for navigation page
+                n += 1
+                commands[n] = {}
+                commands[n]['cmd'] = "rm -rf %s" % tmp_dir_nav
 
         if hasattr(self, 'tmp_bi_path'):
             # remove temp build instruction directory
@@ -350,6 +352,13 @@ These are the details:
         except AttributeError:
             logger.warning("Failed to parse xpath: %s", xpath)
             return False
+
+        try:
+            xpath = "//product[@productid='%s']/docset[@setid='%s']/@navigation" % (
+                self.product, self.docset)
+            self.navigation = str(self.tree.xpath(xpath)[0])
+        except (AttributeError, IndexError):
+            self.navigation = 'linked'
 
         try:
             xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/buildcontainer/@image" % (

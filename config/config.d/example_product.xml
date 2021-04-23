@@ -7,7 +7,7 @@
      only works within the docserv Git repository. -->
 <?xml-model href="../../share/validate-product-config/product-config-schema.rnc" type="application/relax-ng-compact-syntax"?>
 
-<product productid="example_product" schemaversion="3.0" navigation-visible="visible">
+<product productid="example_product" schemaversion="3.0" navigation="linked">
   <!-- ID can be used for build commands, HTML IDs, etc. -->
   <!-- lifecycle="unpublished"/"beta"/"supported"/"unsupported":
     + "unpublished": Don't build, don't mention on overview page

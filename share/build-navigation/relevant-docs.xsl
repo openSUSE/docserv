@@ -22,7 +22,7 @@
                $list = 'unsupported' and
                @lifecycle = 'unsupported'
               )) and
-              (not(@navigation-visible = 'hidden') or $internal_mode = 'true')
+              (not(@navigation = 'hidden' or @navigation = 'disabled') or $internal_mode = 'true')
               ">
           <xsl:choose>
             <xsl:when test="builddocs">

@@ -177,7 +177,6 @@ ds.product =
     # of these ID per productconfig file.
     attribute productid { ds.type.id },
     attribute schemaversion { ds.schema.version },
-    attribute navigation-visible { "visible" | "hidden" }?,
     attribute enabled { xsd:boolean }?,
     ds.name,
     ds.sortname?,
@@ -260,7 +259,7 @@ ds.docset =
   element docset {
     attribute setid { ds.type.id },
     attribute lifecycle { "unpublished" | "beta" | "supported" | "unsupported" },
-    attribute navigation-visible { "visible" | "hidden" }?,
+    attribute navigation { "linked" | "hidden" | "disabled" }?,
     # To allow for name changes between versions, as in the example of SUSE
     # Cloud -> SUSE OpenStack Cloud: optional ds.name here
     ds.name?,

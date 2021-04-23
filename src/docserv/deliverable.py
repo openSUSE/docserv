@@ -410,8 +410,6 @@ These are the details:
                 if m:
                     self.root_id = m.group(1)
                     break
-        xmlstarlet = {}
-        xmlstarlet['ret_val'] = 0
         dchash = {}
         dchash['ret_val'] = 0
 

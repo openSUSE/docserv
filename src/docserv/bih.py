@@ -66,10 +66,12 @@ class BuildInstructionHandler:
             if not self.read_conf_dir():
                 self.initialized = False
                 return
-            self.git_lock = RepoLock(resource_to_filename(
-                self.remote_repo), thread_id, gitLocks, gitLocksLock)
-            self.prepare_repo(thread_id)
-            self.get_commit_hash()
+            # only execute these if there is a <builddocs> section for the BI
+            if self.build_docs:
+                self.git_lock = RepoLock(resource_to_filename(
+                    self.remote_repo), thread_id, gitLocks, gitLocksLock)
+                self.prepare_repo(thread_id)
+                self.get_commit_hash()
             self.create_dir_structure()
         else:
             self.initialized = False
@@ -101,14 +103,15 @@ class BuildInstructionHandler:
 
         commands = {}
         n = 0
-        if hasattr(self, 'tmp_bi_path') and os.listdir(self.tmp_bi_path):
-            backup_path = self.config['targets'][self.build_instruction['target']]['backup_path']
-            backup_docset_relative_path = os.path.join(backup_path, self.docset_relative_path)
 
-            # remove contents of backup path for current build instruction
-            n += 1
-            commands[n] = {}
-            commands[n]['cmd'] = "rm -rf %s" % (backup_docset_relative_path)
+        backup_path = self.config['targets'][self.build_instruction['target']]['backup_path']
+        backup_docset_relative_path = os.path.join(backup_path, self.docset_relative_path)
+        # remove contents of backup path for current build instruction
+        n += 1
+        commands[n] = {}
+        commands[n]['cmd'] = "rm -rf %s" % (backup_docset_relative_path)
+
+        if hasattr(self, 'tmp_bi_path') and os.listdir(self.tmp_bi_path):
 
             # copy temp build instruction directory to backup path;
             # we only do that for products that are unpublished/beta/supported,
@@ -137,49 +140,37 @@ class BuildInstructionHandler:
                 self.lang)
             commands[n]['cmd'] = create_archive_cmd
 
-            if self.navigation == 'linked' or self.navigation == 'hidden':
-                # (re-)generate navigation page
-                tmp_dir_nav = tempfile.mkdtemp(prefix="docserv_navigation_")
-                n += 1
-                commands[n] = {}
-                commands[n]['cmd'] = "docserv-build-navigation %s --product=\"%s\" --docset=\"%s\" --stitched-config=\"%s\" --ui-languages=\"%s\" %s --cache-dir=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\" --base-path=\"%s\" --htaccess=\"%s\" --favicon=\"%s\"" % (
-                    "--internal-mode" if self.config['targets'][self.build_instruction['target']
-                                                                 ]['internal'] == "yes" else "",
-                    self.build_instruction['product'],
-                    self.build_instruction['docset'],
-                    self.stitch_tmp_file,
-                    self.config['targets'][self.build_instruction['target']]['languages'],
-                    "--omit-lang-path=\"%s\"" % self.config['targets'][self.build_instruction['target']]['default_lang'] if
-                                self.config['targets'][self.build_instruction['target']]['omit_default_lang_path'] == "yes" else "",
-                    os.path.join(self.deliverable_cache_base_dir, self.build_instruction['target']),
-                    self.config['targets'][self.build_instruction['target']]['template_dir'],
-                    tmp_dir_nav,
-                    self.config['targets'][self.build_instruction['target']]['server_base_path'],
-                    self.config['targets'][self.build_instruction['target']]['htaccess'],
-                    self.config['targets'][self.build_instruction['target']]['favicon'],
-                )
-                # rsync navigational pages dir to backup path
-                n += 1
-                commands[n] = {}
-                commands[n]['cmd'] = "rsync -lr %s/ %s" % (
-                    tmp_dir_nav, backup_path)
+        if self.navigation == 'linked' or self.navigation == 'hidden':
+            # (re-)generate navigation page
+            tmp_dir_nav = tempfile.mkdtemp(prefix="docserv_navigation_")
+            n += 1
+            commands[n] = {}
+            commands[n]['cmd'] = "docserv-build-navigation %s --product=\"%s\" --docset=\"%s\" --stitched-config=\"%s\" --ui-languages=\"%s\" %s --cache-dir=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\" --base-path=\"%s\" --htaccess=\"%s\" --favicon=\"%s\"" % (
+                "--internal-mode" if self.config['targets'][self.build_instruction['target']
+                                                             ]['internal'] == "yes" else "",
+                self.build_instruction['product'],
+                self.build_instruction['docset'],
+                self.stitch_tmp_file,
+                self.config['targets'][self.build_instruction['target']]['languages'],
+                "--omit-lang-path=\"%s\"" % self.config['targets'][self.build_instruction['target']]['default_lang'] if
+                            self.config['targets'][self.build_instruction['target']]['omit_default_lang_path'] == "yes" else "",
+                os.path.join(self.deliverable_cache_base_dir, self.build_instruction['target']),
+                self.config['targets'][self.build_instruction['target']]['template_dir'],
+                tmp_dir_nav,
+                self.config['targets'][self.build_instruction['target']]['server_base_path'],
+                self.config['targets'][self.build_instruction['target']]['htaccess'],
+                self.config['targets'][self.build_instruction['target']]['favicon'],
+            )
+            # rsync navigational pages dir to backup path
+            n += 1
+            commands[n] = {}
+            commands[n]['cmd'] = "rsync -lr %s/ %s" % (
+                tmp_dir_nav, backup_path)
 
-            # rsync local backup path with web server target path
-            if self.config['targets'][self.build_instruction['target']]['enable_target_sync'] == 'yes':
-                target_path = self.config['targets'][self.build_instruction['target']]['target_path']
-                n += 1
-                commands[n] = {}
-                commands[n]['cmd'] = "rsync --exclude-from '%s' --delete-after -lr %s/ %s" % (
-                    os.path.join(SHARE_DIR, 'rsync', 'rsync_excludes.txt'),
-                    backup_path,
-                    target_path,
-                )
-
-            if self.navigation == 'linked' or self.navigation == 'hidden':
-                # remove temp directory for navigation page
-                n += 1
-                commands[n] = {}
-                commands[n]['cmd'] = "rm -rf %s" % tmp_dir_nav
+            # remove temp directory for navigation page
+            n += 1
+            commands[n] = {}
+            commands[n]['cmd'] = "rm -rf %s" % tmp_dir_nav
 
         if hasattr(self, 'tmp_bi_path'):
             # remove temp build instruction directory
@@ -192,6 +183,17 @@ class BuildInstructionHandler:
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "rm -rf %s" % self.local_repo_build_dir
+
+        # rsync local backup path with web server target path
+        if self.config['targets'][self.build_instruction['target']]['enable_target_sync'] == 'yes':
+            target_path = self.config['targets'][self.build_instruction['target']]['target_path']
+            n += 1
+            commands[n] = {}
+            commands[n]['cmd'] = "rsync --exclude-from '%s' --delete-after -lr %s/ %s" % (
+                os.path.join(SHARE_DIR, 'rsync', 'rsync_excludes.txt'),
+                backup_path,
+                target_path,
+            )
 
 
         if not commands:
@@ -330,6 +332,7 @@ These are the details:
 
         # then read all files into an xml tree
         self.tree = etree.parse(self.stitch_tmp_file)
+
         try:
             xpath = "//product[@productid='%s']/maintainers/contact" % (
                 self.product)
@@ -337,21 +340,24 @@ These are the details:
             contacts = self.tree.findall(xpath)
             for contact in contacts:
                 self.maintainers.append(contact.text)
-
-            xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/branch" % (
-                self.product, self.docset, self.lang)
-            self.branch = self.tree.find(xpath).text
-
-            xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/git/@remote" % (
-                self.product, self.docset)
-            self.remote_repo = str(self.tree.xpath(xpath)[0])
-
             xpath = "//product[@productid='%s']/docset[@setid='%s']/@lifecycle" % (
                 self.product, self.docset)
             self.lifecycle = str(self.tree.xpath(xpath)[0])
         except AttributeError:
             logger.warning("Failed to parse xpath: %s", xpath)
             return False
+
+        # check if there is any buildable documentation in the language
+        # requested -- it's possible that there only are internal/external
+        # sections but there is no builddocs section (or none for the language
+        # in question).
+        self.build_docs = True
+        xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']" % (
+            self.product, self.docset, self.lang)
+        if len(self.tree.xpath(xpath)) == 0:
+            logger.debug("No buildable documentation for %s/%s/%s. Will update navigation only." % (
+                self.product, self.docset, self.lang))
+            self.build_docs = False
 
         try:
             xpath = "//product[@productid='%s']/docset[@setid='%s']/@navigation" % (
@@ -360,21 +366,35 @@ These are the details:
         except (AttributeError, IndexError):
             self.navigation = 'linked'
 
-        try:
-            xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/buildcontainer/@image" % (
-                self.product, self.docset)
-            self.build_container = str(self.tree.xpath(xpath)[0])
-        except (AttributeError, IndexError):
-            self.build_container = False
+        if self.build_docs:
+            try:
+                xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/branch" % (
+                    self.product, self.docset, self.lang)
+                self.branch = self.tree.find(xpath).text
 
-        try:
-            xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/subdir" % (
-                self.product, self.docset, self.lang)
-            self.build_source_dir = os.path.join(
-                self.local_repo_build_dir,
-                self.tree.find(xpath).text)
-        except AttributeError:
-            self.build_source_dir = self.local_repo_build_dir
+                xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/git/@remote" % (
+                    self.product, self.docset)
+                self.remote_repo = str(self.tree.xpath(xpath)[0])
+            except AttributeError:
+                logger.warning("Failed to parse xpath: %s", xpath)
+                return False
+
+            try:
+                xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/buildcontainer/@image" % (
+                    self.product, self.docset)
+                self.build_container = str(self.tree.xpath(xpath)[0])
+            except (AttributeError, IndexError):
+                self.build_container = False
+
+            try:
+                xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/subdir" % (
+                    self.product, self.docset, self.lang)
+                self.build_source_dir = os.path.join(
+                    self.local_repo_build_dir,
+                    self.tree.find(xpath).text)
+            except AttributeError:
+                self.build_source_dir = self.local_repo_build_dir
+
 
         if self.lifecycle == 'unpublished' and self.config['targets'][target]['internal'] != 'yes':
             logger.warning("Intentionally not building 'unpublished' docset '%s' of product '%s' for public target server '%s'.",

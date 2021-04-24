@@ -132,7 +132,6 @@ for dir in "$cache_dir" "$template_dir" "$output_dir"; do
 done
 
 allproducts=$($xsltproc $share_dir/build-navigation/list-all-products.xsl "$stitched_config")
-always_update_products=$($xsltproc $share_dir/build-navigation/list-always-updateable-products.xsl "$stitched_config")
 
 if [[ ! $(echo -e "$allproducts" | grep -oP "^${relevant_product}/${relevant_docset}\$") ]]; then
   out "Either product $relevant_product or docset $relevant_docset does not exist."
@@ -242,7 +241,7 @@ for lang in $ui_languages; do
     -e 's%@\{\{#omit_path_component#}}%'"$omit_lang_path"'%g' \
     > $output_dir/$lang/unsupported.$ext
 
-  for product_set in $relevant_product/$relevant_docset $always_update_products; do
+  for product_set in $relevant_product/$relevant_docset; do
 
     product=$(echo "$product_set" | grep -oP '^[^/]+')
     docset=$(echo "$product_set" | grep -oP '[^/]+$')

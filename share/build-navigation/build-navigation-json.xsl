@@ -181,10 +181,7 @@
       </xsl:choose>
     </xsl:variable>
 
-    <!-- Always generate navigation for docsets that have no documents that
-    would need to be built. -->
-    <xsl:if test="(ancestor::product/@productid = $product and @setid = $docset) or
-                  not(builddocs)">
+    <xsl:if test="(ancestor::product/@productid = $product and @setid = $docset)">
       <exsl:document
         href="{$output_root}{parent::product/@productid}/{@setid}/setdata.json"
         method="text"

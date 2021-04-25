@@ -99,78 +99,94 @@ class BuildInstructionHandler:
         if not self.cleanup_lock.acquire(False):
             return False
 
-        logger.debug("Cleaning up %s", json.dumps(self.build_instruction['id']))
+        # overall status:
+        # 1. initialization failed -> "fail"
+        # 2. initialization succeeded + product has no deliverables -> "success"
+        # 3. all deliverables succeeded -> "success"
+        # 4. one or more deliverables failed -> "fail"
+        bi_overall_status = 'success'
+        if not self.initialized:
+            bi_overall_status = 'fail'
+        else:
+            for deliverable in self.deliverables.keys():
+                if self.deliverables[deliverable]['status'] == 'fail':
+                    bi_overall_status = 'fail'
+                    break
+
+        logger.debug("Cleaning up after %s (%s)", json.dumps(self.build_instruction['id']), bi_overall_status)
 
         commands = {}
         n = 0
 
-        backup_path = self.config['targets'][self.build_instruction['target']]['backup_path']
-        backup_docset_relative_path = os.path.join(backup_path, self.docset_relative_path)
-        # remove contents of backup path for current build instruction
-        n += 1
-        commands[n] = {}
-        commands[n]['cmd'] = "rm -rf %s" % (backup_docset_relative_path)
+        if bi_overall_status == 'success':
+            backup_path = self.config['targets'][self.build_instruction['target']]['backup_path']
+            backup_docset_relative_path = os.path.join(backup_path, self.docset_relative_path)
 
-        if hasattr(self, 'tmp_bi_path') and os.listdir(self.tmp_bi_path):
-
-            # copy temp build instruction directory to backup path;
-            # we only do that for products that are unpublished/beta/supported,
-            # unsupported products only get an archive
+            # remove contents of backup path for current build instruction
             n += 1
             commands[n] = {}
-            if self.lifecycle != 'unsupported':
-                commands[n]['cmd'] = "rsync -lr %s/ %s" % (self.tmp_dir_bi, backup_path)
-            else:
-                commands[n]['cmd'] = "mkdir -p %s" % os.path.join(backup_path, self.docset_relative_path)
+            commands[n]['cmd'] = "rm -rf %s" % (backup_docset_relative_path)
 
-            # create zip archive
-            n += 1
-            commands[n] = {}
-            zip_name = "{}-{}-{}.zip".format(self.product, self.docset, self.lang)
-            zip_formats = self.config['targets'][self.build_instruction['target']]['zip_formats'].replace(" ",",")
-            create_archive_cmd = '%s --input-path %s --output-path %s --zip-formats %s --cache-path %s --relative-output-path %s --product %s --docset %s --language %s' % (
-                os.path.join(BIN_DIR, 'docserv-create-archive'),
-                self.tmp_bi_path,
-                os.path.join(backup_docset_relative_path, zip_name),
-                zip_formats,
-                os.path.join(self.deliverable_cache_base_dir, self.build_instruction['target']),
-                os.path.join(self.docset_relative_path, zip_name),
-                self.product,
-                self.docset,
-                self.lang)
-            commands[n]['cmd'] = create_archive_cmd
+            if hasattr(self, 'tmp_bi_path') and os.listdir(self.tmp_bi_path):
 
-        if self.navigation == 'linked' or self.navigation == 'hidden':
-            # (re-)generate navigation page
-            tmp_dir_nav = tempfile.mkdtemp(prefix="docserv_navigation_")
-            n += 1
-            commands[n] = {}
-            commands[n]['cmd'] = "docserv-build-navigation %s --product=\"%s\" --docset=\"%s\" --stitched-config=\"%s\" --ui-languages=\"%s\" %s --cache-dir=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\" --base-path=\"%s\" --htaccess=\"%s\" --favicon=\"%s\"" % (
-                "--internal-mode" if self.config['targets'][self.build_instruction['target']
-                                                             ]['internal'] == "yes" else "",
-                self.build_instruction['product'],
-                self.build_instruction['docset'],
-                self.stitch_tmp_file,
-                self.config['targets'][self.build_instruction['target']]['languages'],
-                "--omit-lang-path=\"%s\"" % self.config['targets'][self.build_instruction['target']]['default_lang'] if
-                            self.config['targets'][self.build_instruction['target']]['omit_default_lang_path'] == "yes" else "",
-                os.path.join(self.deliverable_cache_base_dir, self.build_instruction['target']),
-                self.config['targets'][self.build_instruction['target']]['template_dir'],
-                tmp_dir_nav,
-                self.config['targets'][self.build_instruction['target']]['server_base_path'],
-                self.config['targets'][self.build_instruction['target']]['htaccess'],
-                self.config['targets'][self.build_instruction['target']]['favicon'],
-            )
-            # rsync navigational pages dir to backup path
-            n += 1
-            commands[n] = {}
-            commands[n]['cmd'] = "rsync -lr %s/ %s" % (
-                tmp_dir_nav, backup_path)
+                # copy temp build instruction directory to backup path;
+                # we only do that for products that are unpublished/beta/supported,
+                # unsupported products only get an archive
+                n += 1
+                commands[n] = {}
+                if self.lifecycle != 'unsupported':
+                    commands[n]['cmd'] = "rsync -lr %s/ %s" % (self.tmp_dir_bi, backup_path)
+                else:
+                    commands[n]['cmd'] = "mkdir -p %s" % os.path.join(backup_path, self.docset_relative_path)
 
-            # remove temp directory for navigation page
-            n += 1
-            commands[n] = {}
-            commands[n]['cmd'] = "rm -rf %s" % tmp_dir_nav
+                # create zip archive
+                n += 1
+                commands[n] = {}
+                zip_name = "{}-{}-{}.zip".format(self.product, self.docset, self.lang)
+                zip_formats = self.config['targets'][self.build_instruction['target']]['zip_formats'].replace(" ",",")
+                create_archive_cmd = '%s --input-path %s --output-path %s --zip-formats %s --cache-path %s --relative-output-path %s --product %s --docset %s --language %s' % (
+                    os.path.join(BIN_DIR, 'docserv-create-archive'),
+                    self.tmp_bi_path,
+                    os.path.join(backup_docset_relative_path, zip_name),
+                    zip_formats,
+                    os.path.join(self.deliverable_cache_base_dir, self.build_instruction['target']),
+                    os.path.join(self.docset_relative_path, zip_name),
+                    self.product,
+                    self.docset,
+                    self.lang)
+                commands[n]['cmd'] = create_archive_cmd
+
+            if self.navigation == 'linked' or self.navigation == 'hidden':
+                # (re-)generate navigation page
+                tmp_dir_nav = tempfile.mkdtemp(prefix="docserv_navigation_")
+                n += 1
+                commands[n] = {}
+                commands[n]['cmd'] = "docserv-build-navigation %s --product=\"%s\" --docset=\"%s\" --stitched-config=\"%s\" --ui-languages=\"%s\" %s --cache-dir=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\" --base-path=\"%s\" --htaccess=\"%s\" --favicon=\"%s\"" % (
+                    "--internal-mode" if self.config['targets'][self.build_instruction['target']
+                                                                 ]['internal'] == "yes" else "",
+                    self.build_instruction['product'],
+                    self.build_instruction['docset'],
+                    self.stitch_tmp_file,
+                    self.config['targets'][self.build_instruction['target']]['languages'],
+                    "--omit-lang-path=\"%s\"" % self.config['targets'][self.build_instruction['target']]['default_lang'] if
+                                self.config['targets'][self.build_instruction['target']]['omit_default_lang_path'] == "yes" else "",
+                    os.path.join(self.deliverable_cache_base_dir, self.build_instruction['target']),
+                    self.config['targets'][self.build_instruction['target']]['template_dir'],
+                    tmp_dir_nav,
+                    self.config['targets'][self.build_instruction['target']]['server_base_path'],
+                    self.config['targets'][self.build_instruction['target']]['htaccess'],
+                    self.config['targets'][self.build_instruction['target']]['favicon'],
+                )
+                # rsync navigational pages dir to backup path
+                n += 1
+                commands[n] = {}
+                commands[n]['cmd'] = "rsync -lr %s/ %s" % (
+                    tmp_dir_nav, backup_path)
+
+                # remove temp directory for navigation page
+                n += 1
+                commands[n] = {}
+                commands[n]['cmd'] = "rm -rf %s" % tmp_dir_nav
 
         if hasattr(self, 'tmp_bi_path'):
             # remove temp build instruction directory
@@ -185,7 +201,8 @@ class BuildInstructionHandler:
             commands[n]['cmd'] = "rm -rf %s" % self.local_repo_build_dir
 
         # rsync local backup path with web server target path
-        if self.config['targets'][self.build_instruction['target']]['enable_target_sync'] == 'yes':
+        if (bi_overall_status == 'success' and
+            self.config['targets'][self.build_instruction['target']]['enable_target_sync'] == 'yes'):
             target_path = self.config['targets'][self.build_instruction['target']]['target_path']
             n += 1
             commands[n] = {}
@@ -334,6 +351,13 @@ These are the details:
         self.tree = etree.parse(self.stitch_tmp_file)
 
         try:
+            self.tree.xpath("//product[@productid='%s']/docset[@setid='%s']" % (self.product, self.docset))[0]
+        except (AttributeError, IndexError):
+            logger.warning("%s/%s is not configured. Cancelling build instruction." % (self.product, self.docset))
+            self.initialized = False
+            return False
+
+        try:
             xpath = "//product[@productid='%s']/maintainers/contact" % (
                 self.product)
             self.maintainers = []
@@ -343,8 +367,9 @@ These are the details:
             xpath = "//product[@productid='%s']/docset[@setid='%s']/@lifecycle" % (
                 self.product, self.docset)
             self.lifecycle = str(self.tree.xpath(xpath)[0])
-        except AttributeError:
+        except (AttributeError, IndexError):
             logger.warning("Failed to parse xpath: %s", xpath)
+            self.initialized = False
             return False
 
         # check if there is any buildable documentation in the language

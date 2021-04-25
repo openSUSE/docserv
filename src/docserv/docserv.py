@@ -298,8 +298,7 @@ class DocservConfig:
                 self.config['targets'][config[section]['name']]['zip_formats'] = config[section]['zip_formats']
                 self.config['targets'][config[section]['name']]['server_base_path'] = config[section]['server_base_path']
                 self.config['targets'][config[section]['name']]['canonical_url_domain'] = config[section]['canonical_url_domain']
-                self.config['targets'][config[section]['name']]['htaccess'] = config[section]['htaccess']
-                self.config['targets'][config[section]['name']]['favicon'] = config[section]['favicon']
+                self.config['targets'][config[section]['name']]['server_root_files'] = config[section]['server_root_files']
                 # FIXME: I guess this is not the prettiest way to handle
                 # optional values (but it works for now)
                 self.config['targets'][config[section]['name']]['build_container'] = False
@@ -307,7 +306,7 @@ class DocservConfig:
                     self.config['targets'][config[section]['name']]['build_container'] = config[section]['build_container']
         except KeyError as error:
             logger.warning(
-                "Invalid configuration file, missing configuration key '%s'. Exiting.", error)
+                "Invalid configuration file, missing configuration key %s. Exiting.", error)
             sys.exit(1)
 
 

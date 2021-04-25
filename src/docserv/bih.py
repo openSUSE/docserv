@@ -156,12 +156,12 @@ class BuildInstructionHandler:
                     self.lang)
                 commands[n]['cmd'] = create_archive_cmd
 
+            tmp_dir_nav = tempfile.mkdtemp(prefix="docserv_navigation_")
             if self.navigation == 'linked' or self.navigation == 'hidden':
                 # (re-)generate navigation page
-                tmp_dir_nav = tempfile.mkdtemp(prefix="docserv_navigation_")
                 n += 1
                 commands[n] = {}
-                commands[n]['cmd'] = "docserv-build-navigation %s --product=\"%s\" --docset=\"%s\" --stitched-config=\"%s\" --ui-languages=\"%s\" %s --cache-dir=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\" --base-path=\"%s\" --htaccess=\"%s\" --favicon=\"%s\"" % (
+                commands[n]['cmd'] = "docserv-build-navigation %s --product=\"%s\" --docset=\"%s\" --stitched-config=\"%s\" --ui-languages=\"%s\" %s --cache-dir=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\" --base-path=\"%s\"" % (
                     "--internal-mode" if self.config['targets'][self.build_instruction['target']
                                                                  ]['internal'] == "yes" else "",
                     self.build_instruction['product'],
@@ -174,19 +174,23 @@ class BuildInstructionHandler:
                     self.config['targets'][self.build_instruction['target']]['template_dir'],
                     tmp_dir_nav,
                     self.config['targets'][self.build_instruction['target']]['server_base_path'],
-                    self.config['targets'][self.build_instruction['target']]['htaccess'],
-                    self.config['targets'][self.build_instruction['target']]['favicon'],
                 )
-                # rsync navigational pages dir to backup path
-                n += 1
-                commands[n] = {}
-                commands[n]['cmd'] = "rsync -lr %s/ %s" % (
-                    tmp_dir_nav, backup_path)
 
-                # remove temp directory for navigation page
-                n += 1
-                commands[n] = {}
-                commands[n]['cmd'] = "rm -rf %s" % tmp_dir_nav
+            n += 1
+            commands[n] = {}
+            commands[n]['cmd'] = "rsync -r %s/ %s" % (
+              self.config['targets'][self.build_instruction['target']]['server_root_files'], tmp_dir_nav)
+
+            # rsync navigational pages dir to backup path
+            n += 1
+            commands[n] = {}
+            commands[n]['cmd'] = "rsync -lr %s/ %s" % (
+                tmp_dir_nav, backup_path)
+
+            # remove temp directory for navigation page
+            n += 1
+            commands[n] = {}
+            commands[n]['cmd'] = "rm -rf %s" % tmp_dir_nav
 
         if hasattr(self, 'tmp_bi_path'):
             # remove temp build instruction directory

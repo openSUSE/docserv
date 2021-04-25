@@ -19,12 +19,6 @@
 #   --docset                                 # Docset to build UI for
 #   --base_path                              # Relative path to the root of the
 #                                              docserv2 directory on the host
-#   --htaccess                               # Absolute path to .htaccess file
-#                                              to copy into the root of the
-#                                              output directory
-#   --favicon                                # Absolute path to favicon file
-#                                              to copy into the root of the
-#                                              output directory
 #
 # Optional parameters:
 #   --help                                   # Show this help screen
@@ -64,8 +58,6 @@ relevant_docset=
 template_dir=
 cache_dir=
 output_dir=
-htaccess=
-favicon=
 internal_mode='false'
 
 for i in "$@"
@@ -104,12 +96,6 @@ for i in "$@"
       --base-path=*)
         base_path="${i#*=}"
       ;;
-      --htaccess=*)
-        htaccess="${i#*=}"
-      ;;
-      --favicon=*)
-        favicon="${i#*=}"
-      ;;
       *)
         unknown+="  $i\n"
       ;;
@@ -123,7 +109,7 @@ for lang in "$ui_languages"; do
   [[ $(echo -e " $lang" | sed -r 's/( [a-z]{2}(-[a-z]{2,5})?)+//') ]] && out "Language parameter ($lang) is not in the right format."
 done
 
-for file in "$stitched_config" "$htaccess" "$favicon"; do
+for file in "$stitched_config"; do
   [[ ! -f "$file" ]] && out "File $file does not exist."
 done
 
@@ -261,9 +247,6 @@ for lang in $ui_languages; do
   done
 
 done
-
-cp "$htaccess" "$output_dir/.htaccess"
-cp "$favicon" "$output_dir/favicon.ico"
 
 echo "-> $output_dir"
 

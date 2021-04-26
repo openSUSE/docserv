@@ -299,6 +299,10 @@ class DocservConfig:
                 self.config['targets'][config[section]['name']]['server_base_path'] = config[section]['server_base_path']
                 self.config['targets'][config[section]['name']]['canonical_url_domain'] = config[section]['canonical_url_domain']
                 self.config['targets'][config[section]['name']]['server_root_files'] = config[section]['server_root_files']
+                self.config['targets'][config[section]['name']]['enable_ssi_fragments'] = config[section]['enable_ssi_fragments']
+                if config[section]['enable_ssi_fragments'] == 'yes':
+                    self.config['targets'][config[section]['name']]['fragment_dir'] = config[section]['fragment_dir']
+                    self.config['targets'][config[section]['name']]['fragment_l10n_dir'] = config[section]['fragment_l10n_dir']
                 # FIXME: I guess this is not the prettiest way to handle
                 # optional values (but it works for now)
                 self.config['targets'][config[section]['name']]['build_container'] = False

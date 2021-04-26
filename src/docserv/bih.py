@@ -161,19 +161,24 @@ class BuildInstructionHandler:
                 # (re-)generate navigation page
                 n += 1
                 commands[n] = {}
-                commands[n]['cmd'] = "docserv-build-navigation %s --product=\"%s\" --docset=\"%s\" --stitched-config=\"%s\" --ui-languages=\"%s\" %s --cache-dir=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\" --base-path=\"%s\"" % (
+                commands[n]['cmd'] = "docserv-build-navigation %s --product=\"%s\" --docset=\"%s\" --stitched-config=\"%s\" --ui-languages=\"%s\" --default-ui-language=\"%s\" %s --cache-dir=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\" --base-path=\"%s\" %s" % (
                     "--internal-mode" if self.config['targets'][self.build_instruction['target']
                                                                  ]['internal'] == "yes" else "",
                     self.build_instruction['product'],
                     self.build_instruction['docset'],
                     self.stitch_tmp_file,
                     self.config['targets'][self.build_instruction['target']]['languages'],
+                    self.config['targets'][self.build_instruction['target']]['default_lang'],
                     "--omit-lang-path=\"%s\"" % self.config['targets'][self.build_instruction['target']]['default_lang'] if
                                 self.config['targets'][self.build_instruction['target']]['omit_default_lang_path'] == "yes" else "",
                     os.path.join(self.deliverable_cache_base_dir, self.build_instruction['target']),
                     self.config['targets'][self.build_instruction['target']]['template_dir'],
                     tmp_dir_nav,
                     self.config['targets'][self.build_instruction['target']]['server_base_path'],
+                    "--fragment-dir=\"%s\" --fragment-l10n-dir=\"%s\"" % (
+                            self.config['targets'][self.build_instruction['target']]['fragment_dir'],
+                            self.config['targets'][self.build_instruction['target']]['fragment_l10n_dir']) if
+                        self.config['targets'][self.build_instruction['target']]['enable_ssi_fragments'] == "yes" else "",
                 )
 
             n += 1

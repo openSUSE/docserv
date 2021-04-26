@@ -10,6 +10,9 @@
 #   --output-dir="/path/to/output"           # Where to output HTML files
 #   --ui-languages="en-us de-de"             # Languages that are supported
 #                                              by the UI templates
+#   --default-ui-language="en-us"            # Default language of UI
+#                                              translations, used to find
+#                                              fallback translations.
 #   --omit-lang-path="en-us"                 # Allows omitting the path
 #                                              component to the default page
 #                                              language
@@ -21,7 +24,13 @@
 #                                              docserv2 directory on the host
 #
 # Optional parameters:
+#   --fragment-dir                           # Directory for translatable SSI
+#                                              fragments
+#   --fragment-l10n-dir                      # Directory path for fragment
+#                                              translations (mandatory if
+#                                              previous parameter is set)
 #   --help                                   # Show this help screen
+
 
 out() {
   >&2 echo -e "$1"
@@ -40,9 +49,17 @@ app_help() {
 }
 
 xsltproc='xsltproc'
+
 xmllint='xmllint'
+
 jing='jing'
+stacksize=${stacksize:-"-Xss4096K"}
+java_flags="-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=org.apache.xerces.parsers.XIncludeParserConfiguration"
+
 starlet='xmlstarlet'
+
+fragment_l10n_schema=$share_dir/build-navigation/fragment-l10n-schema.rnc
+fragment_stylesheet=$share_dir/build-navigation/generate-localized-fragments.xsl
 
 stylesheet=$share_dir/build-navigation/build-navigation-json.xsl
 docserv_js=$share_dir/build-navigation/web-resources/docservui.js
@@ -60,6 +77,10 @@ cache_dir=
 output_dir=
 internal_mode='false'
 
+enable_ssi_fragments=0
+fragment_dir=
+fragment_l10n_dir=
+
 for i in "$@"
   do
     case $i in
@@ -74,6 +95,9 @@ for i in "$@"
       ;;
       --docset=*)
         relevant_docset="${i#*=}"
+      ;;
+      --default-ui-language=*)
+        default_ui_language="${i#*=}"
       ;;
       --ui-languages=*)
         ui_languages="${i#*=}"
@@ -96,6 +120,13 @@ for i in "$@"
       --base-path=*)
         base_path="${i#*=}"
       ;;
+      --fragment-dir=*)
+        enable_ssi_fragments=1
+        fragment_dir="${i#*=}"
+      ;;
+      --fragment-l10n-dir=*)
+        fragment_l10n_dir="${i#*=}"
+      ;;
       *)
         unknown+="  $i\n"
       ;;
@@ -109,6 +140,8 @@ for lang in "$ui_languages"; do
   [[ $(echo -e " $lang" | sed -r 's/( [a-z]{2}(-[a-z]{2,5})?)+//') ]] && out "Language parameter ($lang) is not in the right format."
 done
 
+[[ $(echo -e "$default_ui_language" | sed -r 's/[a-z]{2}(-[a-z]{2,5})?//') ]] && out "Default language parameter ($lang) is not in the right format."
+
 for file in "$stitched_config"; do
   [[ ! -f "$file" ]] && out "File $file does not exist."
 done
@@ -116,6 +149,41 @@ done
 for dir in "$cache_dir" "$template_dir" "$output_dir"; do
   [[ ! -d "$dir" ]] && out "Directory $dir does not exist."
 done
+
+# FIXME: This kind of validation is interesting for CI too, but nestled in here,
+# it's not very accessible to that sort of tooling. It would also be good to
+# validate our templates _before_ starting to build anything, like we do with
+# stitch for the product configuration.
+if [[ "$enable_ssi_fragments" -eq 1 ]]; then
+  for dir in "$fragment_dir" "$fragment_l10n_dir"; do
+    [[ ! -d "$dir" ]] && out "Directory $dir does not exist."
+  done
+  # FIXME: there is no proper error mode here for when there are no fragments
+  # but the option is enabled nonetheless.
+  for file in "$fragment_dir/"*.fragment.html; do
+    # Writing a schema that can take into account all possible XHTML 5
+    # constructs, including possibly embedded SVGs etc. would be hard.
+    # Leave that as an exercise for a later date.
+    wellformedcheck=$(xmllint --noout "$file")
+    [[ $? -gt 0 ]] && out "Fragment file $file is not well-formed XML:\n$validate"
+  done
+  fragment_l10n_fallback="$fragment_l10n_dir/$default_ui_language.xml"
+  [[ ! -f "$fragment_l10n_fallback" ]] && out "File $fragment_l10n_fallback does not exist."
+  for ui_language in $ui_languages; do
+    l10n_file="$fragment_l10n_dir/$ui_language.xml"
+    # If the file does not exist, we just use the fallback language file
+    [[ ! -f "$l10n_file" ]] && continue
+    validate=$(2>&1 ADDITIONAL_FLAGS="$java_flags" ADDITIONAL_OPTIONS="$java_flags" \
+        $jing -ci "$fragment_l10n_schema" "$l10n_file")
+    [[ $? -gt 0 ]] && out "Fragment localization file $l10n_file is not valid:\n$validate"
+    l10n_keys=$($starlet sel -t -v '//*[local-name(.) = "content"]/@key' $l10n_file | sort)
+    unique_l10n_keys=$(echo -e "$l10n_keys" | sort -u)
+    if [[ "$l10n_keys" != "$unique_l10n_keys" ]]; then
+      duplicated_keys=$(comm -2 -3 <(echo -e "$l10n_keys") <(echo -e "$unique_l10n_keys") | tr '\n' ' ')
+      out "Some fragment localization keys in $l10n_file are not unique: ${duplicated_keys}."
+    fi
+  done
+fi
 
 allproducts=$($xsltproc $share_dir/build-navigation/list-all-products.xsl "$stitched_config")
 
@@ -137,8 +205,6 @@ template_product=$template_dir/template-product.html
 template_unsupported=$template_dir/template-unsupported.html
 [[ ! -f $template_unsupported ]] && template_unsupported=$template_dir/template-unsupported.php
 
-# FIXME: put translation to use!
-#template_translation=$template_dir/translation.xml
 template_resources=$template_dir/res
 
 for file in $template_main $template_product $template_resources; do
@@ -152,6 +218,48 @@ temp_dir=$(mktemp -d /tmp/docserv-build-navigation-XXXXXXXX)
 data_path='docserv/data'
 # Where to place the template's resource files (JS, CSS, images)
 res_path='docserv/res/'
+# Where to place fragment files
+fragment_path='docserv/fragments'
+
+
+if [[ $enable_ssi_fragments -eq 1 ]]; then
+
+  for ui_language in $ui_languages; do
+    fragment_l10n_file="$fragment_l10n_dir/$ui_language.xml"
+    if [[ ! -f "$fragment_l10n_file" ]]; then
+      fragment_l10n_file="$fragment_l10n_fallback"
+    fi
+    mkdir -p "$output_dir/$fragment_path/$ui_language"
+    for fragment in $fragment_dir/*.fragment.html; do
+      localized_fragment="$output_dir/$fragment_path/$ui_language/"$(basename "$fragment")
+      xsltproc \
+        --stringparam "l10n-file" "$fragment_l10n_file" \
+        --stringparam "fallback-l10n-file" "$fragment_l10n_fallback" \
+        "$fragment_stylesheet" \
+        "$fragment" \
+        > "$localized_fragment"
+      sed -ri \
+        -e 's/\s*$//' \
+        -e 's/@(\{\{|%7B%7B)#year#(}}|%7D%7D)/'"$(date '+%Y')"'/g' \
+        -e 's/@(\{\{|%7B%7B)#ui_language#(}}|%7D%7D)/'"$ui_language"'/g' \
+          "$localized_fragment"
+      if [[ "$ui_language" != "$default_ui_language" ]]; then
+        sed -ri \
+          -e 's/@(\{\{|%7B%7B)#ui_language_omissible#(}}|%7D%7D)/'"$ui_language"'/g' \
+          -e 's/@(\{\{|%7B%7B)#ui_language_omissible_slash#(}}|%7D%7D)/'"$ui_language"'\//g' \
+           "$localized_fragment"
+      else
+        sed -ri \
+          -e 's/@(\{\{|%7B%7B)#ui_language_omissible#(}}|%7D%7D)//g' \
+          -e 's/@(\{\{|%7B%7B)#ui_language_omissible_slash#(}}|%7D%7D)//g' \
+            "$localized_fragment"
+      fi
+      sed -ni '/^$/ !p' "$localized_fragment"
+    done
+  done
+fi
+
+
 for product in $allproducts; do
   mkdir -p $output_dir/$data_path/$product
   for lang in $ui_languages; do
@@ -200,8 +308,6 @@ mkdir -p $output_dir/$res_path
 cp $docserv_js $output_dir/$res_path
 cp -r $template_resources/* $output_dir/$res_path
 
-# FIXME: we're not actually copying the template for the navigational pages
-# that we build automatically (currently that'd be SUMA).
 for lang in $ui_languages; do
 
   mkdir -p $output_dir/$lang
@@ -227,24 +333,20 @@ for lang in $ui_languages; do
     -e 's%@\{\{#omit_path_component#}}%'"$omit_lang_path"'%g' \
     > $output_dir/$lang/unsupported.$ext
 
-  for product_set in $relevant_product/$relevant_docset; do
+  product="$relevant_product"
+  docset="$relevant_docset"
 
-    product=$(echo "$product_set" | grep -oP '^[^/]+')
-    docset=$(echo "$product_set" | grep -oP '[^/]+$')
+  mkdir -p $output_dir/$lang/$product/$docset
 
-    mkdir -p $output_dir/$lang/$product_set
-
-    cat $template_product | sed -r \
-      -e 's%@\{\{#base_path#}}%'"${base_path}"'%g' \
-      -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
-      -e 's%@\{\{#template_extension#}}%'"$ext"'%g' \
-      -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
-      -e 's%@\{\{#omit_path_component#}}%'"$omit_lang_path"'%g' \
-      -e 's%@\{\{#product#}}%'"$product"'%g' \
-      -e 's%@\{\{#docset#}}%'"$docset"'%g' \
-      > $output_dir/$lang/$product_set/index.$ext
-
-  done
+  cat $template_product | sed -r \
+    -e 's%@\{\{#base_path#}}%'"${base_path}"'%g' \
+    -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
+    -e 's%@\{\{#template_extension#}}%'"$ext"'%g' \
+    -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
+    -e 's%@\{\{#omit_path_component#}}%'"$omit_lang_path"'%g' \
+    -e 's%@\{\{#product#}}%'"$product"'%g' \
+    -e 's%@\{\{#docset#}}%'"$docset"'%g' \
+    > $output_dir/$lang/$product/$docset/index.$ext
 
 done
 

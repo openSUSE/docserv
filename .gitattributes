@@ -9,6 +9,4 @@
 /.gitignore export-ignore
 /.versionrc export-ignore
 /cache export-ignore
-/sendbuildinstruction.sh export-ignore
-/server.conf export-ignore
 /versionbump export-ignore

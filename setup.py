@@ -52,14 +52,17 @@ setup(
         # will likely contain .css and .js and perhaps imagery of some sort
         ('/usr/share/docserv/example/template/res/', glob('config/templates/res/*')),
         ('/usr/share/docserv/validate-product-config/', ['share/validate-product-config/product-config-schema.rnc']),
-        # there are bound to be more checks over time in here and they may include XSLT-based ones
+        # validation check, Bash-based or XSLT-based
         ('/usr/share/docserv/validate-product-config/', glob('share/validate-product-config/global-check-*')),
         ('/usr/share/docserv/validate-product-config/checks/', glob('share/validate-product-config/checks/check-*.sh')),
         ('/usr/share/docserv/validate-product-config/checks/', glob('share/validate-product-config/checks/check-*.xsl')),
-        # both of these currently contain a single .xsl file but there may be more in the future
+        # contains a single .xsl file
         ('/usr/share/docserv/simplify-product-config/', glob('share/simplify-product-config/*.xsl')),
-        ('/usr/share/docserv/build-navigation/', glob('share/build-navigation/*.xsl')),
+        # contains a couple .xsl files and a single .rnc
+        ('/usr/share/docserv/build-navigation/', glob('share/build-navigation/*')),
+        # contains a single .js file currently
         ('/usr/share/docserv/build-navigation/web-resources/', glob('share/build-navigation/web-resources/*')),
+        # contains a single .txt file currently
         ('/usr/share/docserv/rsync/', glob('share/rsync/*')),
         ('/usr/lib/systemd/system/', ['systemd/docserv@.service']),
     ],

@@ -1,5 +1,11 @@
 # Release History
 
+## v5.1, 2021-04-26, sknorr
+
+- Included forgotten files that broke fragments support in 5.0
+- Fixed build-navigation conditional that meant we'd add links to
+  docsets with disabled navigation on internal homepages
+
 ## v5.0, 2021-04-26, sknorr
 
 - Docserv² core:

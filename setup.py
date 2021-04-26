@@ -59,7 +59,8 @@ setup(
         # contains a single .xsl file
         ('/usr/share/docserv/simplify-product-config/', glob('share/simplify-product-config/*.xsl')),
         # contains a couple .xsl files and a single .rnc
-        ('/usr/share/docserv/build-navigation/', glob('share/build-navigation/*')),
+        ('/usr/share/docserv/build-navigation/', glob('share/build-navigation/*.xsl')),
+        ('/usr/share/docserv/build-navigation/', glob('share/build-navigation/*.rnc')),
         # contains a single .js file currently
         ('/usr/share/docserv/build-navigation/web-resources/', glob('share/build-navigation/web-resources/*')),
         # contains a single .txt file currently

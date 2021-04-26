@@ -12,7 +12,7 @@ start = ds.product
 # version to the version of the software itself that this schema is shipped
 # with. If the schema remains backward-compatible and there are only minor
 # changes, leave the version as is.
-ds.schema.version = "4.0"
+ds.schema.version = "5.0"
 
 
 # TYPES

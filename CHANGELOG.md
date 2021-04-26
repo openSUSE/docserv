@@ -1,5 +1,47 @@
 # Release History
 
+## v5.0, 2021-04-26, sknorr
+
+- Docserv² core:
+  - Improved reliability of Git updates
+  - Made use of daps2docker's new `filelist.json` option to more
+    reliably find out about build successes
+  - Fixed errors when submitting invalid JSON as a BI
+  - Updated metadata cache scripts to also find product names and
+    subtitles within documents
+  - Allow running build instructions for products that do not have a
+    `<builddocs/>` section
+  - Do not copy build results when any of the builds was broken
+- Navigation builder:
+  - Added localizable SSI fragments code
+- Docserv² INI config:
+  - Added option to choose container image per target with
+    `build_container = reference`
+  - Added parameter `server_root_files` for files that need to be
+    copied to the root directory of the server as-is
+  - Allowed scaling number of threads automatically with
+    `max_threads = max` in the INI
+- Product configuration schema:
+  - Updated version to 5.0
+  - Added option to choose a specific build container image within a
+    docset using `builddocs/buildcontainer/@image=reference`
+  - Update supported subset of HTML to include `<br/>` and `<hr/>`
+  - Added `@titleformat` attribute to `<deliverable/>`, `<ref/>`, and
+    `<link/>` to allow selecting display of title/subtitle/docset/
+    product name in the navigation UI
+  - Added `docset/@navigation` as a replacement for
+    `docset/@navigation-visible` and support the new value `disabled`
+    which disabled building navigation for a docset altogether
+  - Removed support for `<urlredirect/>` which was never supported in
+    code
+  - Removed support for `product/@navigation-visible` which was never
+    supported in code
+- docservui.js
+  - Added variable dsUiLoaded, so dependant scripts can detect UI load
+    state
+  - Improved path normalization to avoid `//` in the output
+  - Added support for basic localization
+
 ## v4.0, 2021-02-22, sknorr
 
 - Docserv² core:

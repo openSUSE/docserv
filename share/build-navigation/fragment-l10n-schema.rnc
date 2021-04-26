@@ -1,0 +1,269 @@
+# RELAX NG Schema for Docserv² localizable page fragments
+
+# BASICS
+
+default namespace = "https://github.com/openSUSE/docserv/l10n"
+start = fl.locale
+
+
+# CONSTANTS
+
+# Docserv2 major versions are defined by introducing breaking changes, mostly in
+# the form of schema changes. To keep this somewhat simple, let's make sure all
+# schemas used by Docserv2 have the same version, even if just one of them
+# changes in a specific new version
+# Bump this together with the Docserv2 major version, as all we do with all
+# schemas.
+fl.schema.version = "5.0"
+
+
+# TYPES
+
+fl.type.class =
+  ## A space-separated list of HTML classes
+  xsd:token { pattern = "[\-_\+\.a-zA-Z0-9]+( [\-_\+\.a-zA-Z0-9]+)*" }
+
+# the uniqueness requirement for xsd:IDs would be unhelpful here, & we're saving
+# that for content@key
+fl.type.htmlid =
+  ## A space-separated list of HTML classes
+  xsd:token { pattern = "[\-_\+\.a-zA-Z][\-_\+\.a-zA-Z0-9]*" }
+
+fl.type.lang =
+  ## A language code
+  xsd:token { pattern="""[a-z]{2}(-[a-z]{2,8})?""" }
+
+
+# TAG/ATTRIBUTE SETS
+
+div
+{
+fl.htmlblock =
+  fl.p
+  | fl.div
+  | fl.pre
+  | fl.ul
+  | fl.ol
+  | fl.dl
+  | fl.h1
+  | fl.h2
+  | fl.h3
+  | fl.h4
+  | fl.h5
+  | fl.h6
+}
+
+div
+{
+fl.htmlinline =
+    fl.sup
+  | fl.u
+  | fl.cite
+  | fl.span
+  | fl.s
+  | fl.a
+  | fl.sub
+  | fl.strong
+  | fl.em
+  | fl.q
+  | fl.code
+  | fl.br
+  | fl.hr
+}
+
+div
+{
+fl.htmlattr =
+  attribute id { fl.type.class }?,
+  attribute class { fl.type.class }?
+}
+
+div
+{
+fl.htmlinlinecontent =
+  fl.htmlattr,
+  (fl.htmlinline |
+  text)*
+}
+
+
+
+# ROOT
+
+fl.locale =
+  element locale {
+    attribute lang { fl.type.lang },
+    fl.content+
+  }
+
+
+fl.content =
+  element content {
+    attribute key { xsd:ID },
+    (fl.htmlblock |
+    fl.htmlinline |
+    text)*
+  }
+
+
+
+# SUPPORTED HTML SUBSET
+
+fl.p =
+  element p {
+    fl.htmlinlinecontent
+  }
+
+fl.div =
+  element div {
+    fl.htmlattr,
+    (
+      fl.htmlinline |
+      fl.htmlblock |
+      text
+    )*
+  }
+
+fl.pre =
+  element pre {
+    fl.htmlattr,
+    text*
+  }
+
+fl.ul =
+  element ul {
+    fl.htmlattr,
+    fl.li+
+  }
+
+fl.ol =
+  element ol {
+    fl.htmlattr,
+    fl.li+
+  }
+
+fl.dl =
+  element dl {
+    fl.htmlattr,
+    (fl.dt, fl.dd)+
+  }
+
+fl.dt =
+  element dt {
+    fl.htmlattr,
+    fl.htmlblock*
+  }
+
+fl.dd =
+  element dd {
+    fl.htmlattr,
+    fl.htmlblock*
+  }
+
+fl.li =
+  element li {
+    fl.htmlattr,
+    fl.htmlblock*
+  }
+
+fl.h1 =
+  element h1 {
+    fl.htmlinlinecontent
+  }
+
+fl.h2 =
+  element h2 {
+    fl.htmlinlinecontent
+  }
+
+fl.h3 =
+  element h3 {
+    fl.htmlinlinecontent
+  }
+
+fl.h4 =
+  element h4 {
+    fl.htmlinlinecontent
+  }
+
+fl.h5 =
+  element h5 {
+    fl.htmlinlinecontent
+  }
+
+fl.h6 =
+  element h6 {
+    fl.htmlinlinecontent
+  }
+
+
+fl.sup =
+  element sup {
+    fl.htmlinlinecontent
+  }
+
+fl.sub =
+  element sub {
+    fl.htmlinlinecontent
+  }
+
+fl.s =
+  element s {
+    fl.htmlinlinecontent
+  }
+
+fl.u =
+  element u {
+    fl.htmlinlinecontent
+  }
+
+fl.q =
+  element q {
+    fl.htmlinlinecontent
+  }
+
+fl.em =
+  element em {
+    fl.htmlinlinecontent
+  }
+
+fl.a =
+  element a {
+    # don't use xsd:anyURI -- we need to be able to use our custom @{{#placeholders#}}
+    attribute href { text },
+    attribute target { "_blank" }?,
+    attribute rel { "nofollow" | "prev" | "next" | "license" | "alternate" }?,
+    fl.htmlinlinecontent
+  }
+
+fl.strong =
+  element strong {
+    fl.htmlinlinecontent
+  }
+
+fl.code =
+  element code {
+    fl.htmlinlinecontent
+  }
+
+fl.cite =
+  element cite {
+    fl.htmlinlinecontent
+  }
+
+fl.span =
+  element span {
+    fl.htmlinlinecontent
+  }
+
+fl.br =
+  element br {
+    fl.htmlattr,
+    empty
+  }
+
+fl.hr =
+  element hr {
+    fl.htmlattr,
+    empty
+  }

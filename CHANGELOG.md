@@ -1,5 +1,11 @@
 # Release History
 
+## v5.2, 2021-04-27, sknorr
+
+- Fixed `@titleformat` functionality on internal references
+- Updated output titles to adhere to style "Product: Title - Subtitle"
+- Fixed date display on output pages
+
 ## v5.1, 2021-04-26, sknorr
 
 - Included forgotten files that broke fragments support in 5.0

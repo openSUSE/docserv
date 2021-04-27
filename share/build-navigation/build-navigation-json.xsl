@@ -391,23 +391,23 @@
     </xsl:variable>
 
     <xsl:variable name="title-assembled">
-      <xsl:value-of select="$title-title"/>
-      <xsl:if test="string-length($title-subtitle) &gt; 0">
-        <xsl:text>: </xsl:text>
-        <xsl:value-of select="$title-subtitle"/>
-      </xsl:if>
       <xsl:if test="string-length(concat($title-docset,$title-product)) &gt; 0">
-        <xsl:text> (</xsl:text>
         <xsl:value-of select="$title-docset"/>
-        <!-- docset and product components are currently mutually exclusionary.
+        <!-- docset and product components are currently mutually exclusive.
         The following if only provisions for when that is ever not the case. -->
         <xsl:if test="(string-length($title-docset) &gt; 0) and (string-length($title-product) &gt; 0)">
           <xsl:text> / </xsl:text>
         </xsl:if>
         <xsl:value-of select="$title-product"/>
-        <xsl:text>)</xsl:text>
+        <xsl:text>: </xsl:text>
+      </xsl:if>
+      <xsl:value-of select="$title-title"/>
+      <xsl:if test="string-length($title-subtitle) &gt; 0">
+        <xsl:text> - </xsl:text>
+        <xsl:value-of select="$title-subtitle"/>
       </xsl:if>
     </xsl:variable>
+
     <xsl:variable name="title-escaped">
       <xsl:apply-templates select="exsl:node-set($title-assembled)" mode="escape-html"/>
     </xsl:variable>

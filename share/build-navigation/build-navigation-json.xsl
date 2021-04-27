@@ -357,14 +357,13 @@
         <xsl:with-param name="node" select="ancestor::language"/>
       </xsl:call-template>
     </xsl:param>
-    <xsl:variable name="titleformat">
-      <xsl:text> </xsl:text>
+    <xsl:param name="titleformat">
       <xsl:choose>
         <xsl:when test="@titleformat"><xsl:value-of select="@titleformat"/></xsl:when>
         <xsl:otherwise><xsl:value-of select="$titleformat_deliverable"/></xsl:otherwise>
       </xsl:choose>
-      <xsl:text> </xsl:text>
-    </xsl:variable>
+    </xsl:param>
+    <xsl:variable name="titleformat-spaced" select="concat(' ', $titleformat,' ')"/>
 
     <xsl:variable name="title-title">
       <xsl:call-template name="cache-request">
@@ -372,19 +371,19 @@
       </xsl:call-template>
     </xsl:variable>
     <xsl:variable name="title-subtitle">
-      <xsl:if test="contains($titleformat, ' subtitle ')">
+      <xsl:if test="contains($titleformat-spaced, ' subtitle ')">
         <xsl:call-template name="cache-request">
           <xsl:with-param name="information" select="'subtitle'"/>
         </xsl:call-template>
       </xsl:if>
     </xsl:variable>
     <xsl:variable name="title-docset">
-      <xsl:if test="contains($titleformat, ' docset ')">
+      <xsl:if test="contains($titleformat-spaced, ' docset ')">
         <xsl:call-template name="docset-title"/>
       </xsl:if>
     </xsl:variable>
     <xsl:variable name="title-product">
-      <xsl:if test="contains($titleformat, ' product ')">
+      <xsl:if test="contains($titleformat-spaced, ' product ')">
         <xsl:call-template name="cache-request">
           <xsl:with-param name="information" select="'product-from-document'"/>
         </xsl:call-template>

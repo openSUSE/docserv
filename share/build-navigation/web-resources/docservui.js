@@ -445,7 +445,7 @@ function dsInit() {
       populateDocSet();
     }
   };
-  var dsUiLoaded = true;
+  dsUiLoaded = true;
 }
 
 if (pageRole == 'main' | pageRole == 'unsupported') {

@@ -159,6 +159,21 @@
           </xsl:otherwise>
         </xsl:choose>
       </xsl:variable>
+      <!-- Docserv2 0.9 to 4.0 used the nanosecond precision dates from
+      Python's time.time(). Docserv 5.0 and up shorten the date to standard
+      Unix time, with second precision and nothing behind the floating point,
+      via int(time.time()). Cope with both. -->
+      <xsl:variable name="cachedate">
+        <xsl:choose>
+          <xsl:when test="contains(ancestor::document/@cachedate, '.')">
+            <xsl:value-of select="substring-before(ancestor::document/@cachedate, '.')"/>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:value-of select="substring-before(ancestor::document/@cachedate, '.')"/>
+            <xsl:value-of select="ancestor::document/@cachedate"/>
+          </xsl:otherwise>
+        </xsl:choose>
+      </xsl:variable>
 
       <dscr:result
         dc="{ancestor::document/@dc}"
@@ -168,7 +183,7 @@
         lang="{ancestor::document/@lang}"
         productid="{ancestor::document/@productid}"
         setid="{ancestor::document/@setid}"
-        date="{substring-before(ancestor::document/@cachedate, '.')}"
+        date="{$cachedate}"
         title="{.}"/>
     </xsl:for-each>
   </xsl:template>

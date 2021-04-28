@@ -1,5 +1,9 @@
 # Release History
 
+## v5.3, 2021-04-28, sknorr
+
+- Fixed `dsUiLoaded` variable state
+
 ## v5.2, 2021-04-27, sknorr
 
 - Fixed `@titleformat` functionality on internal references

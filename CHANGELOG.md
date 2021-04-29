@@ -2,6 +2,11 @@
 
 ## v5.3, 2021-04-28, sknorr
 
+- Further improved `dsUiLoaded` variable state
+- Improved IE 11 compatibility of docservui.js
+
+## v5.3, 2021-04-28, sknorr
+
 - Fixed `dsUiLoaded` variable state
 
 ## v5.2, 2021-04-27, sknorr

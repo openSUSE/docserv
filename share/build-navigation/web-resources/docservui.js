@@ -90,7 +90,7 @@ function populateProductSelect() {
 function populateVersionSelect(productid) {
   var instruction = versionSelect.getElementsByClassName( 'ds-select-instruction' )
   if ( instruction[0] ){
-    instruction[0].remove();
+    versionSelect.removeChild( instruction[0] );
   }
   existingLinks = versionSelect.getElementsByTagName( 'a' );
   if ( existingLinks[0] ) {

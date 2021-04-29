@@ -454,4 +454,7 @@ if (pageRole == 'main' | pageRole == 'unsupported') {
 else if (pageRole == 'product') {
   setid = pageProduct + '/' + pageDocSet;
   loadDocSet(setid);
+}
+else {
+  dsUiLoaded = true;
 };

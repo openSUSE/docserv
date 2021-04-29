@@ -1,19 +1,23 @@
 # Release History
 
+## v5.4, 2021-04-29, sknorr
+
+- docservui.js:
+  - Further improved `dsUiLoaded` variable state
+  - Improved IE 11 compatibility of docservui.js
+
 ## v5.3, 2021-04-28, sknorr
 
-- Further improved `dsUiLoaded` variable state
-- Improved IE 11 compatibility of docservui.js
-
-## v5.3, 2021-04-28, sknorr
-
-- Fixed `dsUiLoaded` variable state
+- docservui.js
+  - Fixed `dsUiLoaded` variable state
 
 ## v5.2, 2021-04-27, sknorr
 
-- Fixed `@titleformat` functionality on internal references
-- Updated output titles to adhere to style "Product: Title - Subtitle"
-- Fixed date display on output pages
+- build-navigation:
+  - Fixed `@titleformat` functionality on internal references
+  - Updated output titles to adhere to the style
+    "Product: Title - Subtitle"
+  - Fixed date display on output pages
 
 ## v5.1, 2021-04-26, sknorr
 

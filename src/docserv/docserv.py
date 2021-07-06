@@ -250,6 +250,13 @@ class DocservConfig:
     """
 
     def parse_config(self, argv):
+
+        def join_conf_dir(path):
+            # Turn relative paths to absolute paths, depending on the
+            # location of the INI (or rather CONF_DIR which by its definition
+            # is the location of the INI).
+            return path if os.path.isabs(path) else os.path.join(CONF_DIR, path)
+
         config = configparser()
         if len(argv) == 1:
             config_file = "docserv"
@@ -267,8 +274,8 @@ class DocservConfig:
             self.config['server']['host'] = config['server']['host']
             self.config['server']['port'] = int(config['server']['port'])
             self.config['server']['enable_mail'] = config['server']['enable_mail']
-            self.config['server']['repo_dir'] = config['server']['repo_dir']
-            self.config['server']['temp_repo_dir'] = config['server']['temp_repo_dir']
+            self.config['server']['repo_dir'] = join_conf_dir(config['server']['repo_dir'])
+            self.config['server']['temp_repo_dir'] = join_conf_dir(config['server']['temp_repo_dir'])
             self.config['server']['valid_languages'] = config['server']['valid_languages']
             if config['server']['max_threads'] == 'max':
                 self.config['server']['max_threads'] = multiprocessing.cpu_count()
@@ -280,29 +287,30 @@ class DocservConfig:
                     continue
                 self.config['targets'][config[section]['name']] = {}
                 self.config['targets'][config[section]['name']]['name'] = config[section]['name']
-                self.config['targets'][config[section]['name']]['template_dir'] = config[section]['template_dir']
+                self.config['targets'][config[section]['name']]['template_dir'] = join_conf_dir(config[section]['template_dir'])
                 self.config['targets'][config[section]['name']]['active'] = config[section]['active']
                 self.config['targets'][config[section]['name']]['draft'] = config[section]['draft']
                 self.config['targets'][config[section]['name']]['remarks'] = config[section]['remarks']
                 self.config['targets'][config[section]['name']]['meta'] = config[section]['meta']
-                self.config['targets'][config[section]['name']]['default_xslt_params'] = config[section]['default_xslt_params']
+                self.config['targets'][config[section]['name']]['default_xslt_params'] = join_conf_dir(config[section]['default_xslt_params'])
                 self.config['targets'][config[section]['name']]['enable_target_sync'] = config[section]['enable_target_sync']
                 if config[section]['enable_target_sync'] == 'yes':
                     self.config['targets'][config[section]['name']]['target_path'] = config[section]['target_path']
-                self.config['targets'][config[section]['name']]['backup_path'] = config[section]['backup_path']
-                self.config['targets'][config[section]['name']]['config_dir'] = config[section]['config_dir']
+                self.config['targets'][config[section]['name']]['backup_path'] = join_conf_dir(config[section]['backup_path'])
+                self.config['targets'][config[section]['name']]['config_dir'] = join_conf_dir(config[section]['config_dir'])
                 self.config['targets'][config[section]['name']]['languages'] = config[section]['languages']
                 self.config['targets'][config[section]['name']]['default_lang'] = config[section]['default_lang']
                 self.config['targets'][config[section]['name']]['omit_default_lang_path'] = config[section]['omit_default_lang_path']
                 self.config['targets'][config[section]['name']]['internal'] = config[section]['internal']
                 self.config['targets'][config[section]['name']]['zip_formats'] = config[section]['zip_formats']
-                self.config['targets'][config[section]['name']]['server_base_path'] = config[section]['server_base_path']
+                self.config['targets'][config[section]['name']]['server_base_path'] = join_conf_dir(config[section]['server_base_path'])
                 self.config['targets'][config[section]['name']]['canonical_url_domain'] = config[section]['canonical_url_domain']
-                self.config['targets'][config[section]['name']]['server_root_files'] = config[section]['server_root_files']
+                self.config['targets'][config[section]['name']]['server_root_files'] = join_conf_dir(config[section]['server_root_files'])
+
                 self.config['targets'][config[section]['name']]['enable_ssi_fragments'] = config[section]['enable_ssi_fragments']
                 if config[section]['enable_ssi_fragments'] == 'yes':
-                    self.config['targets'][config[section]['name']]['fragment_dir'] = config[section]['fragment_dir']
-                    self.config['targets'][config[section]['name']]['fragment_l10n_dir'] = config[section]['fragment_l10n_dir']
+                    self.config['targets'][config[section]['name']]['fragment_dir'] = join_conf_dir(config[section]['fragment_dir'])
+                    self.config['targets'][config[section]['name']]['fragment_l10n_dir'] = join_conf_dir(config[section]['fragment_l10n_dir'])
                 # FIXME: I guess this is not the prettiest way to handle
                 # optional values (but it works for now)
                 self.config['targets'][config[section]['name']]['build_container'] = False

@@ -316,6 +316,10 @@ class DocservConfig:
                 self.config['targets'][config[section]['name']]['build_container'] = False
                 if 'build_container' in list(config[section].keys()):
                     self.config['targets'][config[section]['name']]['build_container'] = config[section]['build_container']
+
+                self.config['targets'][config[section]['name']]['site_sections'] = config[section]['site_sections']
+                self.config['targets'][config[section]['name']]['default_site_section'] = config[section]['default_site_section']
+
         except KeyError as error:
             logger.warning(
                 "Invalid configuration file, missing configuration key %s. Exiting.", error)
@@ -364,10 +368,14 @@ class Docserv(DocservState, DocservConfig):
                              stitch_tmp_file)
                 # Don't use --revalidate-only parameter: after starting we
                 # really want to make sure that the config is alright.
-                cmd = '%s --simplify --valid-languages="%s" %s %s' % (
+                cmd = ('%s --simplify '
+                       '--valid-languages="%s" '
+                       '--site-sections="%s" '
+                       '%s %s') % (
                     os.path.join(BIN_DIR, 'docserv-stitch'),
                     self.config['server']['valid_languages'],
-                    self.config['targets'][target]['config_dir'],
+                    self.config['targets'][target]['site_sections'],
+                    self.config["targets"][target]['config_dir'],
                     stitch_tmp_file)
                 logger.debug("Stitching command: %s", cmd)
                 cmd = shlex.split(cmd)

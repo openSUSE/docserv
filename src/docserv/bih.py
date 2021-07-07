@@ -330,11 +330,17 @@ These are the details:
             ('productconfig_simplified_%s.xml' % target))
         logger.debug("Stitching XML config directory to %s",
                      self.stitch_tmp_file)
-        cmd = '%s --simplify --revalidate-only --valid-languages="%s" %s %s' % (
+        cmd = ('%s --simplify --revalidate-only '
+               '--valid-languages="%s" '
+               '--site-sections="%s" '
+               '%s %s'
+               ) % (
             os.path.join(BIN_DIR, 'docserv-stitch'),
             self.config['server']['valid_languages'],
+            self.config['targets'][target]['site_sections'],
             self.config['targets'][target]['config_dir'],
-            self.stitch_tmp_file)
+            self.stitch_tmp_file,
+            )
         logger.debug("Stitching command: %s", cmd)
         cmd = shlex.split(cmd)
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE,

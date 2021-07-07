@@ -5,6 +5,8 @@
 # Arguments (in order of appearance):
 # --valid-languages="en-us ..."   # Space-separated list of valid language codes
 #                                 # (optional)
+# --site-sections="..."           # Space-separated list of valid sections
+#                                 # (optional)
 # --simplify                      # Simplify user-generated productconfig so the
 #                                 # docserv daemon can use it (optional)
 # --revalidate-only               # If a file named of the same name as the
@@ -98,6 +100,7 @@ simplify_config=0
 enable_spinner=0
 revalidate=0
 valid_languages=""
+site_sections=""
 unknown=""
 input_dir=""
 output_file=""
@@ -119,6 +122,9 @@ for i in "$@"
       ;;
       --valid-languages=*)
         valid_languages=" ${i#*=}"
+      ;;
+      --site-sections=*)
+        site_sections="${i#*=}"
       ;;
       *)
         if [[ -d $(readlink -f $i) ]] && [[ ! $input_dir ]]; then
@@ -202,6 +208,7 @@ for file in *.xml; do
     result=$( \
       xmllint="$xmllint" jing="$jing" starlet="$starlet" \
       valid_languages="$valid_languages_sorted" \
+      valid_site_sections="$site_sections" \
       $command $check_file $file)
     [[ $? -eq 0 ]] || out "Validation check file $check_file is misbehaving."
     [[ "$result" ]] && add_multiple_issues "$input_dir/$file" "$result"

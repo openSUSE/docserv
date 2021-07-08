@@ -303,7 +303,7 @@ class DocservConfig:
                 self.config['targets'][config[section]['name']]['omit_default_lang_path'] = config[section]['omit_default_lang_path']
                 self.config['targets'][config[section]['name']]['internal'] = config[section]['internal']
                 self.config['targets'][config[section]['name']]['zip_formats'] = config[section]['zip_formats']
-                self.config['targets'][config[section]['name']]['server_base_path'] = join_conf_dir(config[section]['server_base_path'])
+                self.config['targets'][config[section]['name']]['server_base_path'] = config[section]['server_base_path']
                 self.config['targets'][config[section]['name']]['canonical_url_domain'] = config[section]['canonical_url_domain']
                 self.config['targets'][config[section]['name']]['server_root_files'] = join_conf_dir(config[section]['server_root_files'])
 

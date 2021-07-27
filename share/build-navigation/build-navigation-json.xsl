@@ -26,6 +26,12 @@
   <xsl:param name="ui_languages">
     <xsl:message terminate="yes">UI languages XSLT parameter missing.</xsl:message>
   </xsl:param>
+  <xsl:param name="site_sections">
+    <xsl:message terminate="yes">Site sections XSLT parameter missing.</xsl:message>
+  </xsl:param>
+  <xsl:param name="default_site_section">
+    <xsl:message terminate="yes">Default section XSLT parameter missing.</xsl:message>
+  </xsl:param>
 
   <xsl:param name="product">
     <xsl:message terminate="yes">Product parameter missing.</xsl:message>
@@ -80,37 +86,158 @@
 }
     </exsl:document>
 
+    <!-- Create individual JSON files for each docset -->
+    <xsl:apply-templates select="//docset" mode="generate-docset-json"/>
+
+    <!-- Create site sections for supported/unsupported lifecycles -->
+    <xsl:apply-templates select="/*" mode="create-sites-in-json"/>
+
+  </xsl:template>
+
+
+  <!--
+    Currently, this will match positivedocservconfig. But "*" makes element
+    changes more easily later.
+  -->
+  <xsl:template match="*" mode="create-sites-in-json">
+    <xsl:call-template name="single-site-sections">
+      <!-- we need to pass a space to make our algorithm work -->
+      <xsl:with-param name="sites" select="concat($site_sections, ' ')"/>
+    </xsl:call-template>
+  </xsl:template>
+
+
+  <xsl:template name="single-site-sections">
+    <xsl:param name="sites" select="''"/>
+    <xsl:variable name="single_site" select="substring-before($sites, ' ')"/>
+
+    <xsl:message>single-site-section="<xsl:value-of select="$sites"/>"/"<xsl:value-of select="$single_site"/>"</xsl:message>
+
+    <xsl:choose>
+      <xsl:when test="contains($sites, ' ')">
+
+<!--        <xsl:message>=> site contains space: <xsl:value-of select="$single_site"/></xsl:message>-->
+        <!-- create a single site-section -->
+        <xsl:call-template name="create-single-site-section">
+          <xsl:with-param name="single_site" select="$single_site"/>
+        </xsl:call-template>
+
+<!--        <xsl:message>=> Pass sites: "<xsl:value-of select="normalize-space(substring-after($sites, ' '))"/>"</xsl:message>-->
+        <!-- Look for the next site-section -->
+        <xsl:call-template name="single-site-sections">
+          <xsl:with-param name="sites" select="normalize-space(substring-after($sites, ' '))"/>
+        </xsl:call-template>
+      </xsl:when>
+      <xsl:when test="$sites != ''">
+<!--        <xsl:message>=> site contains NO space: "<xsl:value-of select="$sites"/>"</xsl:message>-->
+        <xsl:call-template name="create-single-site-section">
+          <xsl:with-param name="single_site" select="$sites"/>
+        </xsl:call-template>
+      </xsl:when>
+    </xsl:choose>
+  </xsl:template>
+
+
+  <xsl:template name="create-single-site-section">
+    <xsl:param name="single_site"/>
+
+    <!--
+      We take care of a product element with no @site-section attribute.
+      Use these product elements and treat them as they have been marked
+      with default_section
+    -->
+    <xsl:message>create-single-site-section: <xsl:value-of select="$single_site"/></xsl:message>
+    <xsl:choose>
+      <xsl:when test="$single_site = $default_site_section">
+        <xsl:message>default site section detected</xsl:message>
+        <xsl:call-template name="lifecycle-json">
+          <!-- Include also <product>s which don't have a site-section attribute
+               Such <product> elements are considered the same as
+               <product site-section="$default_site_section">
+          -->
+          <xsl:with-param name="nodes" select="product[@site-section=$single_site]
+                                               |product[not(@site-section)]"/>
+          <xsl:with-param name="lifecycle">supported</xsl:with-param>
+          <xsl:with-param name="site" select="$single_site"/>
+        </xsl:call-template>
+
+        <xsl:call-template name="lifecycle-json">
+          <xsl:with-param name="nodes" select="product[@site-section=$single_site]
+                                               |product[not(@site-section)]"/>
+          <xsl:with-param name="lifecycle">unsupported</xsl:with-param>
+          <xsl:with-param name="site" select="$single_site"/>
+        </xsl:call-template>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:call-template name="lifecycle-json">
+          <xsl:with-param name="nodes" select="product[@site-section=$single_site]"/>
+          <xsl:with-param name="lifecycle">supported</xsl:with-param>
+          <xsl:with-param name="site" select="$single_site"/>
+        </xsl:call-template>
+
+        <xsl:call-template name="lifecycle-json">
+          <xsl:with-param name="nodes" select="product[@site-section=$single_site]"/>
+          <xsl:with-param name="lifecycle">unsupported</xsl:with-param>
+          <xsl:with-param name="site" select="$single_site"/>
+        </xsl:call-template>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
+
+  <xsl:template name="lifecycle-json">
+    <xsl:param name="nodes"/>
+    <xsl:param name="lifecycle"/>
+    <xsl:param name="site"/>
+    <xsl:variable name="filename" select="concat($output_root, $site, '-', $lifecycle, '.json')"/>
+    <xsl:variable name="list">
+      <xsl:choose>
+        <xsl:when test="$lifecycle='supported'">
+          <xsl:value-of select="$existing-sets-supported"/>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:value-of select="$existing-sets-unsupported"/>
+        </xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
+
+   <xsl:message>lifecycle-json:
+     JSON file="<xsl:value-of select="$filename"/>"
+     nodes=<xsl:value-of select="count($nodes)"/>
+     all product nodes=<xsl:value-of select="count(//product)"/>
+     current node=<xsl:value-of select="local-name(.)"/>
+     list=<xsl:value-of select="$list"/>
+   </xsl:message>
+
     <exsl:document
-      href="{$output_root}unsupported.json"
+      href="{$filename}"
       method="text"
       encoding="UTF-8"
       indent="no"
       media-type="application/x-json">
 {
+  "site-section": "<xsl:value-of select="$site"/>",
   "productline": {
-     <xsl:apply-templates select="//product" mode="generate-productline-list">
+     <xsl:apply-templates select="$nodes" mode="generate-productline-list">
        <xsl:sort
          lang="en"
          select="normalize-space(translate((name|sortname)[last()], '&sortlower;', '&sortupper;'))"/>
-       <xsl:with-param name="list" select="$existing-sets-unsupported"/>
+       <xsl:with-param name="list" select="$list"/>
      </xsl:apply-templates>
   },
   "product": {
-     <xsl:apply-templates select="//product" mode="generate-product-list">
+     <xsl:apply-templates select="$nodes" mode="generate-product-list">
        <xsl:sort
          lang="en"
          select="normalize-space(translate((name|sortname)[last()],'&sortlower;', '&sortupper;'))"/>
-       <xsl:with-param name="list" select="$existing-sets-unsupported"/>
+       <xsl:with-param name="list" select="$list"/>
      </xsl:apply-templates>
   }
 }
-    </exsl:document>
-
-    <!-- Create individual JSON files for each docset -->
-    <xsl:apply-templates select="//docset" mode="generate-docset-json"/>
+</exsl:document>
   </xsl:template>
 
-  <!-- FIXME: Make sure to handle SBP differently. -->
+
   <xsl:template match="product" mode="generate-productline-list">
     <xsl:param name="list" select="$existing-sets-supported"/>
     <xsl:if test="contains($list, concat(' ',@productid,'/'))">
@@ -133,7 +260,7 @@
     },</xsl:if>
   </xsl:template>
 
-  <!-- FIXME: Make sure to handle SBP differently. -->
+
   <xsl:template match="docset" mode="generate-product-list">
     <xsl:param name="list" select="$existing-sets-supported"/>
     <xsl:variable name="visible">

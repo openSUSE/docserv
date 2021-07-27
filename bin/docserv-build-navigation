@@ -13,6 +13,9 @@
 #   --default-ui-language="en-us"            # Default language of UI
 #                                              translations, used to find
 #                                              fallback translations.
+#   --site-sections="main sbp"               # Site sections that are supported
+#   --default-site-section="main"            # Default site section as
+#                                              a fallback
 #   --omit-lang-path="en-us"                 # Allows omitting the path
 #                                              component to the default page
 #                                              language
@@ -68,6 +71,8 @@ docserv_js=$share_dir/build-navigation/web-resources/docservui.js
 stitched_config=
 
 ui_languages=
+site_sections=
+default_site_section=
 omit_lang_path=
 relevant_product=
 relevant_docset=
@@ -101,6 +106,12 @@ for i in "$@"
       ;;
       --ui-languages=*)
         ui_languages="${i#*=}"
+      ;;
+      --site-sections=*)
+        site_sections="${i#*=}"
+      ;;
+      --default-site-section=*)
+        default_site_section="${i#*=}"
       ;;
       --omit-lang-path=*)
         omit_lang_path="${i#*=}"
@@ -282,6 +293,8 @@ xsltproc \
   --stringparam "cache_file" "$cache_file" \
   --stringparam "internal_mode" "$internal_mode" \
   --stringparam "ui_languages" "$ui_languages" \
+  --stringparam "site_sections" "$site_sections" \
+  --stringparam "default_site_section" "$default_site_section" \
   --stringparam "product" "$relevant_product" \
   --stringparam "docset" "$relevant_docset" \
   "$stylesheet" \

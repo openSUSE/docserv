@@ -161,13 +161,29 @@ class BuildInstructionHandler:
                 # (re-)generate navigation page
                 n += 1
                 commands[n] = {}
-                commands[n]['cmd'] = "docserv-build-navigation %s --product=\"%s\" --docset=\"%s\" --stitched-config=\"%s\" --ui-languages=\"%s\" --default-ui-language=\"%s\" %s --cache-dir=\"%s\" --template-dir=\"%s\" --output-dir=\"%s\" --base-path=\"%s\" %s" % (
-                    "--internal-mode" if self.config['targets'][self.build_instruction['target']
-                                                                 ]['internal'] == "yes" else "",
+                commands[n]['cmd'] = (# The space after each line is important:
+                                      "docserv-build-navigation "
+                                      "%s "
+                                      "--product=\"%s\" "
+                                      "--docset=\"%s\" "
+                                      "--stitched-config=\"%s\" "
+                                      "--ui-languages=\"%s\" "
+                                      "--site-sections=\"%s\" "
+                                      "--default-site-section=\"%s\" "
+                                      "--default-ui-language=\"%s\" "
+                                      "%s "
+                                      "--cache-dir=\"%s\" "
+                                      "--template-dir=\"%s\" "
+                                      "--output-dir=\"%s\" "
+                                      "--base-path=\"%s\" %s"
+                                      ) % (
+                    "--internal-mode" if self.config['targets'][self.build_instruction['target']]['internal'] == "yes" else "",
                     self.build_instruction['product'],
                     self.build_instruction['docset'],
                     self.stitch_tmp_file,
                     self.config['targets'][self.build_instruction['target']]['languages'],
+                    self.config['targets'][self.build_instruction['target']]['site_sections'],
+                    self.config['targets'][self.build_instruction['target']]['default_site_section'],
                     self.config['targets'][self.build_instruction['target']]['default_lang'],
                     "--omit-lang-path=\"%s\"" % self.config['targets'][self.build_instruction['target']]['default_lang'] if
                                 self.config['targets'][self.build_instruction['target']]['omit_default_lang_path'] == "yes" else "",

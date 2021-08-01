@@ -388,6 +388,16 @@ These are the details:
             self.initialized = False
             return False
 
+        valid_languages_split = self.config['server']['valid_languages'].split(' ')
+        if not self.lang in valid_languages_split:
+            logger.warning( "Language %s is not valid. "
+                            "This configuration allows the following language codes: %s. "
+                            "Cancelling build instruction." %
+                            (self.lang,
+                             self.config['server']['valid_languages']))
+            self.initialized = False
+            return False
+
         try:
             xpath = "//product[@productid='%s']/maintainers/contact" % (
                 self.product)

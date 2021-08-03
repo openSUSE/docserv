@@ -90,8 +90,10 @@
     <xsl:apply-templates select="//docset" mode="generate-docset-json"/>
 
     <!-- Create site sections for supported/unsupported lifecycles -->
-    <xsl:apply-templates select="/*" mode="create-sites-in-json"/>
+    <xsl:apply-templates select="*" mode="create-sites-in-json"/>
 
+    <!-- Create single JSON file site-section.json -->
+    <xsl:apply-templates select="*" mode="create-site-section-json"/>
   </xsl:template>
 
 
@@ -238,8 +240,85 @@
   </xsl:template>
 
 
+  <xsl:template match="*" mode="create-site-section-json">
+    <xsl:variable name="filename" select="concat($output_root, 'site-section.json')"/>
+
+    <xsl:message>*** create-site-section-json: "<xsl:value-of select="$site_sections"/>"</xsl:message>
+    <exsl:document
+      href="{$filename}"
+      method="text"
+      encoding="UTF-8"
+      indent="no"
+      media-type="application/x-json">
+      <xsl:text>{&#10;</xsl:text>
+
+      <xsl:call-template name="find-all-json-files">
+        <xsl:with-param name="sites" select="concat($site_sections, ' ')"/>
+        <!-- Remove double entries -->
+        <!--<xsl:with-param name="lifecycle"
+          select="//*[@lifecycle][not(@lifecycle=preceding::*/@lifecycle)]"/>-->
+      </xsl:call-template>
+      <xsl:text>
+}</xsl:text>
+    </exsl:document>
+  </xsl:template>
+
+
+  <xsl:template name="find-all-json-files">
+    <xsl:param name="sites" select="''"/>
+<!--    <xsl:param name="lifecycle"/>-->
+    <xsl:variable name="single_site" select="substring-before(normalize-space($sites), ' ')"/>
+
+    <xsl:choose>
+      <xsl:when test="contains($sites, ' ')">
+        <!--<xsl:for-each select="$lifecycle">
+          <xsl:value-of select="concat('  &quot;', $single_site, '-', @lifecycle, '.json&quot;')"/>
+          <xsl:if test="following-sibling::*">
+            <xsl:text>,</xsl:text>
+          </xsl:if>
+          <xsl:text>&#10;</xsl:text>
+        </xsl:for-each>-->
+        <xsl:call-template name="single-json-entry">
+          <xsl:with-param name="site" select="$single_site"/>
+        </xsl:call-template>
+        <xsl:text>,&#10;</xsl:text>
+        <xsl:call-template name="find-all-json-files">
+          <xsl:with-param name="sites" select="normalize-space(substring-after($sites, ' '))"/>
+<!--          <xsl:with-param name="lifecycle" select="$lifecycle"/>-->
+        </xsl:call-template>
+      </xsl:when>
+      <xsl:when test="$sites != ''">
+        <xsl:call-template name="single-json-entry">
+          <xsl:with-param name="site" select="$sites"/>
+        </xsl:call-template>
+        <!--
+        <xsl:for-each select="$lifecycle">
+          <xsl:value-of select="concat('  &quot;', $sites, '-', @lifecycle, '.json&quot;')"/>
+          <xsl:if test="following-sibling::*">
+            <xsl:text>,</xsl:text>
+          </xsl:if>
+          <xsl:text>&#10;</xsl:text>
+        </xsl:for-each>
+        -->
+      </xsl:when>
+    </xsl:choose>
+  </xsl:template>
+
+  <xsl:template name="single-json-entry">
+    <xsl:param name="site"/>
+
+    <xsl:value-of select="concat('&quot;', $site, '&quot;: ')"/>
+    <xsl:text>{"default": </xsl:text>
+    <xsl:choose>
+      <xsl:when test="$site = $default_site_section">true</xsl:when>
+      <xsl:otherwise>false</xsl:otherwise>
+    </xsl:choose>
+    <xsl:text>}</xsl:text>
+  </xsl:template>
+
   <xsl:template match="product" mode="generate-productline-list">
     <xsl:param name="list" select="$existing-sets-supported"/>
+
     <xsl:if test="contains($list, concat(' ',@productid,'/'))">
     "<xsl:value-of select="@productid"/>": "<xsl:value-of select="name"/>",</xsl:if>
   </xsl:template>

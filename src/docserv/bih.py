@@ -332,7 +332,7 @@ These are the details:
                      self.stitch_tmp_file)
         cmd = ('%s --simplify --revalidate-only '
                '--valid-languages="%s" '
-               '--site-sections="%s" '
+               '--valid-site-sections="%s" '
                '%s %s'
                ) % (
             os.path.join(BIN_DIR, 'docserv-stitch'),

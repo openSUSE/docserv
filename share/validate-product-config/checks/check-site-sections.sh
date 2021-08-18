@@ -12,7 +12,7 @@ if [[ "$valid_site_sections" ]]; then
 
   [[ "$unrecognized_site_section" ]] && \
     echo -e \
-      "Got value \"${unrecognized_site_section//$'\n'/ }\", but expected \"${valid_site_sections//$'\n'/ }\". Check your files."
+      "The site-section value \"${unrecognized_site_section//$'\n'/ }\" is not supported by your configuration INI. Supported values are: ${valid_site_sections//$'\n'/ }."
 fi
 
 exit 0

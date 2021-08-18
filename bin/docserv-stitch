@@ -100,7 +100,7 @@ simplify_config=0
 enable_spinner=0
 revalidate=0
 valid_languages=""
-site_sections=""
+valid_site_sections=""
 unknown=""
 input_dir=""
 output_file=""
@@ -123,8 +123,8 @@ for i in "$@"
       --valid-languages=*)
         valid_languages=" ${i#*=}"
       ;;
-      --site-sections=*)
-        site_sections="${i#*=}"
+      --valid-site-sections=*)
+        valid_site_sections="${i#*=}"
       ;;
       *)
         if [[ -d $(readlink -f $i) ]] && [[ ! $input_dir ]]; then
@@ -144,6 +144,10 @@ done
 [[ $(echo "$valid_languages" | sed -r 's/( +[a-z]{2}(-[a-z]{2,8})?)*//') ]] && \
   out "Language codes parameter string does not conform to scheme (must be la-ng scheme, with entries space-separated)."
 
+# matches ds.type.alphanumeric in product-config-schema.rnc
+[[ ! $(echo " $valid_site_sections" | grep -oP '^( +[-_a-zA-Z0-9]+)+$') ]] && \
+  out "Site sections parameter string does not conform to scheme (must be alphanumeric-_, space-separated)."
+
 ([[ "$simplify_config" -eq 1 ]] && [[ -z "$output_file" ]]) && \
   out "--simplify can only be used together with an OUTPUT_FILE parameter."
 
@@ -158,6 +162,8 @@ cd $input_dir
 
 valid_languages_sorted=''
 [[ "$valid_languages" ]] && valid_languages_sorted=$(echo -e "$valid_languages" | tr ' ' '\n' | sort -u)
+valid_site_sections_sorted=''
+[[ "$valid_site_sections" ]] && valid_site_sections_sorted=$(echo -e "$valid_site_sections" | tr ' ' '\n' | sort -u)
 
 issuelist=''
 
@@ -208,7 +214,7 @@ for file in *.xml; do
     result=$( \
       xmllint="$xmllint" jing="$jing" starlet="$starlet" \
       valid_languages="$valid_languages_sorted" \
-      valid_site_sections="$site_sections" \
+      valid_site_sections="$valid_site_sections_sorted" \
       $command $check_file $file)
     [[ $? -eq 0 ]] || out "Validation check file $check_file is misbehaving."
     [[ "$result" ]] && add_multiple_issues "$input_dir/$file" "$result"

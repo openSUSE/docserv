@@ -370,7 +370,7 @@ class Docserv(DocservState, DocservConfig):
                 # really want to make sure that the config is alright.
                 cmd = ('%s --simplify '
                        '--valid-languages="%s" '
-                       '--site-sections="%s" '
+                       '--valid-site-sections="%s" '
                        '%s %s') % (
                     os.path.join(BIN_DIR, 'docserv-stitch'),
                     self.config['server']['valid_languages'],

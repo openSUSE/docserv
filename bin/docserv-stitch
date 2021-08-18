@@ -40,7 +40,7 @@ add_issue() {
   # we apply "fold" only to the first line, under the assumption that that is
   # the prose issue description while all the rest is assumed to not be foldable
   # (xml errors and such)
-  issuelist+="\n\n- "$(echo -e "$1" | head -1 | fold -s -w 78 | sed '2,${s/^/  /}')
+  issuelist+="\n\n- "$(echo -e "$1" | head -1 | fold -s -w 78 | sed '2,${s/^ */  /}')
   [[ $(echo -e "$1" | wc -l) -gt 1 ]] && issuelist+='\n'$(echo -e "$1" | tail -n +2 | sed 's/^/  /')
 }
 

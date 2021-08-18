@@ -121,7 +121,7 @@ for i in "$@"
         enable_spinner=1
       ;;
       --valid-languages=*)
-        valid_languages=" ${i#*=}"
+        valid_languages="${i#*=}"
       ;;
       --valid-site-sections=*)
         valid_site_sections="${i#*=}"
@@ -141,8 +141,13 @@ done
 [[ "$unknown" ]] && \
   out "There are unknown parameters:\n$unknown\n(Note that input and output directories must exist before running this script.)"
 
-[[ $(echo "$valid_languages" | sed -r 's/( +[a-z]{2}(-[a-z]{2,8})?)*//') ]] && \
-  out "Language codes parameter string does not conform to scheme (must be la-ng scheme, with entries space-separated)."
+# FIXME: For --valid-languages and --valid-site-sections, we allow duplicated
+# entries. This is benign, because we deduplicate them, but since it hints at a
+# slightly b0rk config, we may not want to accept that.
+
+# matches ds.type.lang in product-config-schema.rnc
+[[ ! $(echo " $valid_languages" | grep -oP '^( +[a-z]{2}(-[a-z]{2,8})?)+$') ]] && \
+  out "Language codes parameter string does not conform to scheme (must be la-ng scheme, space-separated)."
 
 # matches ds.type.alphanumeric in product-config-schema.rnc
 [[ ! $(echo " $valid_site_sections" | grep -oP '^( +[-_a-zA-Z0-9]+)+$') ]] && \

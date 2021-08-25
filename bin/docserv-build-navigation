@@ -330,21 +330,30 @@ for lang in $ui_languages; do
   ext=html
   [[ $(echo "$template_main" | grep -oP '[^.]+$') ]] && ext=$(echo "$template_main" | grep -oP '[^.]+$')
 
-  cat $template_main | sed -r \
-    -e 's%@\{\{#base_path#}}%'"${base_path}"'%g' \
-    -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
-    -e 's%@\{\{#template_extension#}}%'"$ext"'%g' \
-    -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
-    -e 's%@\{\{#omit_path_component#}}%'"$omit_lang_path"'%g' \
-    > $output_dir/$lang/index.$ext
+  for site_section in $site_sections; do
 
-  cat $template_unsupported | sed -r \
-    -e 's%@\{\{#base_path#}}%'"${base_path}"'%g' \
-    -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
-    -e 's%@\{\{#template_extension#}}%'"$ext"'%g' \
-    -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
-    -e 's%@\{\{#omit_path_component#}}%'"$omit_lang_path"'%g' \
-    > $output_dir/$lang/unsupported.$ext
+    template_out="$site_section"
+    [[ "$section" == "$default_site_section" ]] && template_out='index'
+
+    cat $template_main | sed -r \
+      -e 's%@\{\{#base_path#}}%'"${base_path}"'%g' \
+      -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
+      -e 's%@\{\{#template_extension#}}%'"$ext"'%g' \
+      -e 's%@\{\{#site_section#}}%'"$site_section"'%g' \
+      -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
+      -e 's%@\{\{#omit_path_component#}}%'"$omit_lang_path"'%g' \
+      > "$output_dir/$lang/${template_out}.$ext"
+
+    cat $template_unsupported | sed -r \
+      -e 's%@\{\{#base_path#}}%'"${base_path}"'%g' \
+      -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
+      -e 's%@\{\{#template_extension#}}%'"$ext"'%g' \
+      -e 's%@\{\{#site_section#}}%'"$site_section"'%g' \
+      -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
+      -e 's%@\{\{#omit_path_component#}}%'"$omit_lang_path"'%g' \
+      > $output_dir/$lang/${template_out}-unsupported.$ext
+
+  done
 
   product="$relevant_product"
   docset="$relevant_docset"

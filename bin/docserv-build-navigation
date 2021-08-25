@@ -13,9 +13,9 @@
 #   --default-ui-language="en-us"            # Default language of UI
 #                                              translations, used to find
 #                                              fallback translations.
-#   --site-sections="main sbp"               # Site sections that are supported
-#   --default-site-section="main"            # Default site section as
-#                                              a fallback
+#   --site-sections="site1 site2"            # Site sections that are supported
+#   --default-site-section="site1"           # Default site section, also used
+#                                              as the fallback
 #   --omit-lang-path="en-us"                 # Allows omitting the path
 #                                              component to the default page
 #                                              language

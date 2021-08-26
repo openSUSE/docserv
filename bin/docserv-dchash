@@ -29,7 +29,7 @@ minimaldc=$( \
     sed -r \
       -e 's/(\r+|\s+|"|'"'"')//g' \
       | \
-    sed -r -n '/^(ROOTID|MAIN|PROF[A-Z]+)=/ p' \
+    sed -r -n '/^(ROOTID|MAIN|PROF[A-Z]+|ADOC_ATTRIBUTES)\+?=/ p' \
   )
 
 if [[ "$2" ]]; then

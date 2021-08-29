@@ -498,7 +498,7 @@
               <xsl:value-of select="$content"/>
               <!-- for each non-default lang call, run this template but with a
               parameter that prevents dscr + outer json thing -->
-              <xsl:apply-templates select="ancestor::builddocs/language[not(@default = 'true')]" mode="fatedtopretend">
+              <xsl:apply-templates select="ancestor::builddocs/language[not(@default = 'true')]" mode="get-translated-versions">
                 <xsl:sort lang="en" select="normalize-space(translate(@lang, '&sortlower;', '&sortupper;'))"/>
                 <xsl:with-param name="node" select="$node"/>
                 <xsl:with-param name="equivalent-dcs" select="$equivalent-dcs"/>
@@ -512,7 +512,7 @@
     </xsl:choose>
   </xsl:template>
 
-  <xsl:template match="language[not(@default = 'true')]" mode="fatedtopretend">
+  <xsl:template match="language[not(@default = 'true')]" mode="get-translated-versions">
     <xsl:param name="node" select="."/>
     <xsl:param name="equivalent-dcs" select="$equivalent-dcs"/>
 

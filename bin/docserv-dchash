@@ -16,9 +16,19 @@ mydir=$(dirname $me)
 dcfile=$(realpath $1)
 [[ ! -f "$dcfile" ]] && out "No input DC file given."
 
+# DAPS ...
+# * uses the value of the last occurrence of an attribute
+# * strictly uses line breaks (\n), there is no way to combine multiple
+#   attributes on a single source line
+# * allows continuing on `+=` lines; doing so automatically adds a space in
+#   the middle, using `MAIN=book_ \n MAIN+=admin.xml` = `MAIN=book_ admin.xml`
+# * in most cases quotes are irrelevant for the content (MAIN, ROOTID, PDFNAME,
+#   OUTPUTNAME, PROF...), in other cases (ADOC_ATTRIBUTES, and potentially
+#   XSLTPARAM), they may be extremely relevant
+#
 # Unfortunately, including profiling data (PROF[A-Z]+) in the
 # minimized DC files is both necessary and a source of errors. e.g.
-# DC-SLES-admin has slightly different profiling than DC-SLES-all:
+# DC-SLES-admin used to have slightly different profiling than DC-SLES-all:
 # DC-SLES-all includes a profiling attribute that is only relevant for
 # virtualization documentation which is not included in DC-SLES-admin
 # because it does not touch on virtualization.

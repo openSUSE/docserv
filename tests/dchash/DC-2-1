@@ -1,0 +1,14 @@
+## ---------------------------------
+##
+## Basics
+MAIN+=
+MAIN+=
+MAIN +=  "MAIN.opensuse.xml"
+ROOTID=book-security
+
+## Profiling
+PROFOS="osuse"
+ PROFARCH="x86_64"
+ 
+## stylesheet location
+STYLEROOT="/usr/share/xml/docbook/stylesheet/suse2021-ns"

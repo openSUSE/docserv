@@ -1,0 +1,6 @@
+# e2bd5dc5a4e0ef7a56f1a584f5c215d2de74b54d
+
+MAIN=   MAIN.opensuse.xml
+PROFARCH=x86_64;
+PROFOS=osuse;
+ROOTID=book-security

@@ -1,0 +1,6 @@
+# 3fb8baa1a5d2d391ab7ab7c1a3ca466e697c6b9f
+
+ADOC_ATTRIBUTES=--attribute Appendix=2 --attribute env-daps=1 --attribute Glossary=1 --attribute References=1
+MAIN=testy test .xml
+PROFROLE=sbp;
+ROOTID=foo

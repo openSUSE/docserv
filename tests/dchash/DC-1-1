@@ -1,0 +1,26 @@
+# toggle draft off when completed
+DRAFT=yes
+ROLE="sbp"
+PROFROLE="sbp"
+
+# Main Document 
+MAIN="testy" 
+MAIN+='test' 
+MAIN+=.xml
+# Stylesheet Root
+STYLEROOT="/usr/share/xml/docbook/stylesheet/suse2013-sbp-ns"
+# Format Type
+ADOC_TYPE="book"
+# Turn on postprocessing
+ADOC_POST="yes"
+# Leverage SUSE Best Practices
+XSLTPARAM="--stringparam publishing.series=sbp"
+DOCBOOK5_RNG_URI="http://docbook.org/xml/5.1/rng/docbookxi.rnc"
+# Enable attributes
+ADOC_ATTRIBUTES=" --attribute env-daps=1"
+#ADOC_ATTRIBUTES+=" --attribute Colophon=1"
+ADOC_ATTRIBUTES+=" --attribute References=1"
+ADOC_ATTRIBUTES+=" --attribute Glossary=1"
+ADOC_ATTRIBUTES+=" --attribute Appendix=1"
+ADOC_ATTRIBUTES+=--attribute Appendix=2
+ROOTID = "foo"

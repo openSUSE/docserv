@@ -208,13 +208,8 @@ template_dir=$(readlink -f $template_dir)
 cache_dir=$(readlink -f $cache_dir)
 output_dir=$(readlink -f $output_dir)
 
-# FIXME: the template might also have a different file extension than html/php
-template_main=$template_dir/template-main.html
-[[ ! -f $template_main ]] && template_main=$template_dir/template-main.php
-template_product=$template_dir/template-product.html
-[[ ! -f $template_product ]] && template_product=$template_dir/template-product.php
-template_unsupported=$template_dir/template-unsupported.html
-[[ ! -f $template_unsupported ]] && template_unsupported=$template_dir/template-unsupported.php
+template_default=$(ls "$template_dir/template-section-DEFAULT."* 2>/dev/null | head -1)
+template_product=$(ls "$template_dir/template-product."* 2>/dev/null | head -1)
 
 template_resources=$template_dir/res
 
@@ -325,33 +320,29 @@ for lang in $ui_languages; do
 
   mkdir -p $output_dir/$lang
 
-  # FIXME: can we really assume that all files of the template have the same
-  # file extension?
-  ext=html
-  [[ $(echo "$template_main" | grep -oP '[^.]+$') ]] && ext=$(echo "$template_main" | grep -oP '[^.]+$')
 
   for site_section in $site_sections; do
 
-    template_out="$site_section"
-    [[ "$section" == "$default_site_section" ]] && template_out='index'
+    for lifecycle in supported unsupported; do
 
-    cat $template_main | sed -r \
-      -e 's%@\{\{#base_path#}}%'"${base_path}"'%g' \
-      -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
-      -e 's%@\{\{#template_extension#}}%'"$ext"'%g' \
-      -e 's%@\{\{#site_section#}}%'"$site_section"'%g' \
-      -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
-      -e 's%@\{\{#omit_path_component#}}%'"$omit_lang_path"'%g' \
-      > "$output_dir/$lang/${template_out}.$ext"
+      template_current=$(ls "$template_dir/template-section-$site_section."* 2>/dev/null | head -1)
+      [[ ! -f "$template_current" ]] && template_current="$template_default"
+      ext=html
+      [[ $(echo "$template_current" | grep -oP '[^.]+$') ]] && ext=$(echo "$template_current" | grep -oP '[^.]+$')
 
-    cat $template_unsupported | sed -r \
-      -e 's%@\{\{#base_path#}}%'"${base_path}"'%g' \
-      -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
-      -e 's%@\{\{#template_extension#}}%'"$ext"'%g' \
-      -e 's%@\{\{#site_section#}}%'"$site_section"'%g' \
-      -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
-      -e 's%@\{\{#omit_path_component#}}%'"$omit_lang_path"'%g' \
-      > $output_dir/$lang/${template_out}-unsupported.$ext
+      template_out="${site_section}-${lifecycle}.${ext}"
+      [[ "$site_section" == "$default_site_section" && "$lifecycle" == 'supported' ]] && template_out="index.${ext}";
+      cat "$template_current" | sed -r \
+        -e 's%@\{\{#base_path#}}%'"${base_path}"'%g' \
+        -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
+        -e 's%@\{\{#page_role#}}%'"section"'%g' \
+        -e 's%@\{\{#section_name#}}%'"${site_section}.${lifecycle}"'%g' \
+        -e 's%@\{\{#template_extension#}}%'"$ext"'%g' \
+        -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
+        -e 's%@\{\{#omit_path_component#}}%'"$omit_lang_path"'%g' \
+        > "$output_dir/$lang/${template_out}"
+
+    done
 
   done
 
@@ -360,9 +351,10 @@ for lang in $ui_languages; do
 
   mkdir -p $output_dir/$lang/$product/$docset
 
-  cat $template_product | sed -r \
+  cat "$template_product" | sed -r \
     -e 's%@\{\{#base_path#}}%'"${base_path}"'%g' \
     -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
+    -e 's%@\{\{#page_role#}}%'"product"'%g' \
     -e 's%@\{\{#template_extension#}}%'"$ext"'%g' \
     -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
     -e 's%@\{\{#omit_path_component#}}%'"$omit_lang_path"'%g' \

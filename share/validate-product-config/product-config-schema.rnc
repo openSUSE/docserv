@@ -286,6 +286,7 @@ ds.docset =
 
 ds.version =
   element version {
+    attribute includes-productname { xsd:boolean }?,
     text
   }
 

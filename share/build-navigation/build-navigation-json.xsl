@@ -262,6 +262,16 @@
         </xsl:otherwise>
       </xsl:choose>
     </xsl:variable>
+    <xsl:variable name="hide-productname">
+      <xsl:choose>
+        <xsl:when test="version/@includes-productname = 'true'">
+          <xsl:text>true</xsl:text>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:text>false</xsl:text>
+        </xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
 
     <xsl:variable name="name">
       <xsl:choose>
@@ -280,6 +290,7 @@
         "name": "<xsl:value-of select="$name"/>",
         "acronym": "<xsl:value-of select="ancestor::product/acronym"/>",
         "version": "<xsl:value-of select="version"/>",
+        "hide-productname": <xsl:value-of select="$hide-productname"/>,
         "lifecycle": "<xsl:value-of select="@lifecycle"/>"
       },
     </xsl:if>
@@ -296,6 +307,16 @@
         </xsl:otherwise>
       </xsl:choose>
     </xsl:variable>
+    <xsl:variable name="hide-productname">
+      <xsl:choose>
+        <xsl:when test="version/@includes-productname = 'true'">
+          <xsl:text>true</xsl:text>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:text>false</xsl:text>
+        </xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
 
     <xsl:if test="(ancestor::product/@productid = $product and @setid = $docset)">
       <exsl:document
@@ -308,6 +329,7 @@
   "productname": "<xsl:value-of select="$name"/>",
   "acronym": "<xsl:value-of select="ancestor::product/acronym"/>",
   "version": "<xsl:value-of select="version"/>",
+  "hide-productname": <xsl:value-of select="$hide-productname"/>,
   "lifecycle": "<xsl:value-of select="@lifecycle"/>",
   "description": [
     <xsl:apply-templates select="ancestor::product/desc" mode="generate-docset-json"/>
@@ -832,13 +854,15 @@
 
   <xsl:template name="docset-title">
     <xsl:param name="node" select="."/>
-    <!-- Finding out the correct product name is hard. FIXME: Is that logic
-    quite right? It should be:
-    docset/acronym > docset/name > product/acronym > product/name. -->
-    <xsl:value-of
-      select="(($node/ancestor::product/name|$node/ancestor::product/acronym)[last()]|
-               ($node/ancestor::docset/name|$node/ancestor::docset/acronym)[last()])[last()]"/>
-    <xsl:text> </xsl:text>
+    <xsl:if test="$node/ancestor::docset/version/@includes-productname != 'true'">
+      <!-- Finding out the correct product name is hard. FIXME: Is that logic
+      quite right? It should be:
+      docset/acronym > docset/name > product/acronym > product/name. -->
+      <xsl:value-of
+        select="(($node/ancestor::product/name|$node/ancestor::product/acronym)[last()]|
+                 ($node/ancestor::docset/name|$node/ancestor::docset/acronym)[last()])[last()]"/>
+      <xsl:text> </xsl:text>
+    </xsl:if>
     <xsl:value-of select="$node/ancestor::docset/version"/>
   </xsl:template>
 

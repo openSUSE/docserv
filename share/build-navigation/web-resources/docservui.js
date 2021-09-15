@@ -138,6 +138,9 @@ function populateVersionSelect(productid) {
     link.setAttribute( 'href', normalizePath(pageLanguage + '/' + versionlist[ i ] + '/'));
     var selectedProduct = productData.product[ productid ][ Object.keys( productData.product[productid] )[ i ] ]
     s_linkText = selectedProduct['name'] + ' ' + selectedProduct["version"];
+    if ( selectedProduct['hide-productname'] === true ) {
+      s_linkText = selectedProduct["version"];
+    };
     if (selectedProduct.lifecycle == 'beta' || selectedProduct.lifecycle == 'unpublished') {
       s_linkText = s_linkText + ' ' + dsLocalize('labels', selectedProduct.lifecycle);
     };
@@ -173,6 +176,9 @@ function populateDocSet() {
     body.classList.add('ds-unpublished-documentation');
   };
   var s_product = docSetData.productname + ' ' + docSetData.version;
+  if ( docSetData['hide-productname'] === true ) {
+    s_product = docSetData.version;
+  };
   if (docSetData.lifecycle == 'beta' || docSetData.lifecycle == 'unpublished' || docSetData.lifecycle == 'unsupported') {
     s_product = s_product + ' ' + dsLocalize('labels', docSetData.lifecycle);
   };

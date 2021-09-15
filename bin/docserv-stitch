@@ -4,9 +4,7 @@
 #
 # Arguments (in order of appearance):
 # --valid-languages="en-us ..."   # Space-separated list of valid language codes
-#                                 # (optional)
-# --site-sections="..."           # Space-separated list of valid sections
-#                                 # (optional)
+# --valid-site-sections="..."     # Space-separated list of valid sections
 # --simplify                      # Simplify user-generated productconfig so the
 #                                 # docserv daemon can use it (optional)
 # --revalidate-only               # If a file named of the same name as the
@@ -127,10 +125,10 @@ for i in "$@"
         valid_site_sections="${i#*=}"
       ;;
       *)
-        if [[ -d $(readlink -f $i) ]] && [[ ! $input_dir ]]; then
-          input_dir=$(readlink -f $i)
-        elif [[ -d $(readlink -f $(dirname $i)) ]] && [[ ! $output_file ]]; then
-          output_file=$(readlink -f $i)
+        if [[ -d $(readlink -f -- $i) ]] && [[ ! $input_dir ]]; then
+          input_dir=$(readlink -f -- $i)
+        elif [[ -d $(readlink -f -- $(dirname $i)) ]] && [[ ! $output_file ]]; then
+          output_file=$(readlink -f -- $i)
         else
           unknown+="  $i\n"
         fi

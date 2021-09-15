@@ -219,16 +219,34 @@
   <xsl:template match="product" mode="generate-product-list">
     <xsl:param name="list" select="$existing-sets-supported"/>
     <xsl:if test="contains($list, concat(' ',@productid,'/'))">
-    "<xsl:value-of select="@productid"/>": {<xsl:apply-templates select="docset" mode="generate-product-list">
-      <!-- FIXME: sort translate() lists need to be expanded for other langs. -->
-      <xsl:sort
-        lang="en"
-        order="descending"
-        select="normalize-space(translate(version,
-          '&sortlower;', '&sortupper;'))"/>
-      <xsl:with-param name="list" select="$list"/>
-    </xsl:apply-templates>
-    },</xsl:if>
+    <xsl:text>    "</xsl:text>
+    <xsl:value-of select="@productid"/>
+    <xsl:text>": {</xsl:text>
+    <xsl:choose>
+      <xsl:when test="@docset-sort = 'ascending'">
+        <xsl:apply-templates select="docset" mode="generate-product-list">
+          <!-- FIXME: sort translate() lists need to be expanded for other langs. -->
+          <xsl:sort
+            lang="en"
+            order="ascending"
+            select="normalize-space(translate(version,
+              '&sortlower;', '&sortupper;'))"/>
+          <xsl:with-param name="list" select="$list"/>
+        </xsl:apply-templates>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:apply-templates select="docset" mode="generate-product-list">
+          <xsl:sort
+            lang="en"
+            order="descending"
+            select="normalize-space(translate(version,
+              '&sortlower;', '&sortupper;'))"/>
+          <xsl:with-param name="list" select="$list"/>
+        </xsl:apply-templates>
+        </xsl:otherwise>
+      </xsl:choose>
+    <xsl:text>},</xsl:text>
+    </xsl:if>
   </xsl:template>
 
 

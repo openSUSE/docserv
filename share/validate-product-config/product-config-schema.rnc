@@ -185,6 +185,7 @@ ds.product =
     attribute schemaversion { ds.schema.version },
     attribute enabled { xsd:boolean }?,
     attribute site-section { ds.type.alphanumeric }?,
+    attribute docset-sort { "ascending" | "descending" }?,
     ds.name,
     ds.sortname?,
     ds.acronym?,

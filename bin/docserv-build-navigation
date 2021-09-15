@@ -338,7 +338,7 @@ for lang in $ui_languages; do
 
     for lifecycle in supported unsupported; do
 
-      template_current=$(ls "$template_dir/template-section-$site_section."* 2>/dev/null | head -1)
+      template_current=$(ls "$template_dir/template-section-$site_section.$lifecycle."* 2>/dev/null | head -1)
       [[ ! -f "$template_current" ]] && template_current="$template_default"
       ext=html
       [[ $(echo "$template_current" | grep -oP '[^.]+$') ]] && ext=$(echo "$template_current" | grep -oP '[^.]+$')

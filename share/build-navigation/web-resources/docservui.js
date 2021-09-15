@@ -114,6 +114,10 @@ function populateProductSelect() {
         populateVersionSelect(this.hash.substr(1));
     });
   }
+  if (productlinelist.length === 1) {
+    body.classList.add('ds-version-select-only');
+    populateVersionSelect(productlinelist[0]);
+  };
 }
 
 function populateVersionSelect(productid) {

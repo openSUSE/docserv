@@ -5,7 +5,7 @@
 
 file=$1
 
-langcodes=$($starlet sel -t -v "//product/desc/@lang" $file | sort)
+langcodes=$($starlet sel -t -v "//docset/overridedesc/desc/@lang" $file | sort)
 uniquelangcodes=$(echo -e "$langcodes" | sort -u)
 [[ ! "$langcodes" == "$uniquelangcodes" ]] && \
 echo -e \

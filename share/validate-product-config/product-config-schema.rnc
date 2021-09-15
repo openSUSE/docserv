@@ -274,6 +274,7 @@ ds.docset =
     ds.sortname?,
     ds.acronym?,
     ds.version,
+    ds.overridedesc?,
     (
       (ds.builddocs,
        ds.internal?,
@@ -288,6 +289,13 @@ ds.version =
   element version {
     attribute includes-productname { xsd:boolean }?,
     text
+  }
+
+ds.overridedesc =
+  element overridedesc {
+    attribute treatment { 'append' | 'prepend' | 'replace' },
+    ds.desc_default,
+    ds.desc_translation*
   }
 
 ds.builddocs =

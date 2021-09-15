@@ -23,6 +23,20 @@ function dsLocalize(category, string) {
   };
 }
 
+function dsSectionLocalize(category, string) {
+  if (typeof(dsSectionL10n) === 'object') {
+     if (dsSectionL10n[category][string]) {
+       return dsSectionL10n[category][string];
+     }
+     else {
+       return string;
+     };
+  }
+  else {
+    return string;
+  };
+}
+
 function loadJSON(path, success, error) {
   var xhr = new XMLHttpRequest();
   xhr.onreadystatechange = function() {
@@ -44,11 +58,27 @@ function loadJSON(path, success, error) {
   xhr.send();
 }
 
+function getSections() {
+  var jsonFile = 'site-sections.json';
+  loadJSON(path + jsonFile,
+    function (data) {
+        sectionData = data;
+        if (document.readyState === 'complete') {
+          sectionInit();
+        }
+        else {
+          window.addEventListener("load", sectionInit, false);
+        };
+    },
+    function (xhr) {
+      console.error(xhr);
+      // do something to tell the user.
+    }
+  );
+}
+
 function getProductData() {
-  var jsonFile = 'product.json';
-  if (pageRole == 'unsupported') {
-    jsonFile = 'unsupported.json';
-  };
+  var jsonFile = 'site-section.' + sectionName + '.json';
   loadJSON(path + jsonFile,
     function (data) {
         productData = data;
@@ -65,7 +95,6 @@ function getProductData() {
     }
   );
 }
-
 
 function populateProductSelect() {
   productSelect.removeChild( productSelect.getElementsByClassName( 'ds-select-instruction' )[0] );
@@ -307,7 +336,7 @@ function buildArchiveTable(e_docSetWrap) {
     // Start at l=1, we have already set correct values for l=0
     for (var l = 1; l < docSetData.archive.length; l++) {
       if (docSetData.archive[l].lang == pageLanguage) {
-        doc_title_text = dsLocalize('auto-categories', 'archive-title-translated') + ' (' + docSetData.archive[l].lang + ')';;
+        doc_title_text = dsLocalize('auto-categories', 'archive-title-translated') + ' (' + docSetData.archive[l].lang + ')';
         use_lang = l;
       };
     };
@@ -426,10 +455,35 @@ function setProductFromHash() {
   };
 }
 
+function sectionInit() {
+  if (pageRole == 'section') {
+    var sectionSelect = document.getElementById( 'ds-section-select' );
+
+    if ( typeof(sectionData) === 'object' ) {
+      for (var s = 0; s < Object.keys(sectionData).length; s++) {
+        thisSection = Object.keys(sectionData)[s];
+        var e_sectionTab = document.createElement('a');
+        e_sectionTab.classList.add('ds-docset-section-tab');
+        if (sectionName.indexOf(thisSection + '.') === 0) {
+          e_sectionTab.classList.add('ds-active');
+        };
+        e_sectionTab.textContent = dsLocalize('site-sections', thisSection );
+        // FIXME: literal lifecycle mention bad
+        var sectionPageName = thisSection + '-supported';
+        if (sectionData[thisSection].default === true) {
+          sectionPageName = 'index';
+        };
+        // FIXME: file extension bad
+        e_sectionTab.setAttribute( 'href', normalizePath(pageLanguage + '/' + sectionPageName + '.html') );
+        sectionSelect.appendChild(e_sectionTab);
+      };
+    }
+  }
+}
 
 function dsInit() {
   body = document.getElementsByTagName( 'body' )[0];
-  if (pageRole == 'main' | pageRole == 'unsupported') {
+  if (pageRole == 'section') {
     productSelect = document.getElementById( 'ds-product-select' );
     versionSelect = document.getElementById( 'ds-version-select' );
 
@@ -448,7 +502,8 @@ function dsInit() {
   dsUiLoaded = true;
 }
 
-if (pageRole == 'main' | pageRole == 'unsupported') {
+if (pageRole == 'section' && typeof( sectionName ) === 'string') {
+  getSections();
   getProductData();
 }
 else if (pageRole == 'product') {

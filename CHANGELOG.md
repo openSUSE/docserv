@@ -1,15 +1,50 @@
 # Release History
 
+## v6.0, 2021-09-15, sknorr
+
+- Docserv² core:
+  - Added support for site sections; site sections allow for multiple
+    high-level entry pages (#39)
+- Docserv² INI config:
+  - The INI now allows using relative paths to find Docserv² resources
+  - The new target-based options `site_sections` and `default_site_section`
+    allow configuring site sections
+- Product configuration schema:
+  - `<product/>` gained an optional `@site-section` attribute to allow
+    associating products with one of these sections
+  - `<product/>` gained an optional `@docset-sort` attribute to allow switching
+    an individual product's versions from Z-A (descending) to A-Z (default)
+    sorting in the version selector
+  - `<docset/>`'s `<version/>` gained an optional `@includes-productname`
+    attribute to indicate that the version text already includes the name of the
+    product and is enough to uniquely identify this product
+  - `<docset/>`s gained the optional `<overridedesc/>` element which allows to
+    set up per-docset product descriptions.
+- DC-Hash:
+  - DC-Hash now supports `OUTPUTNAME` and `ADOC_ATTRIBUTES`, and is much better
+    at deciding which content is duplicated and which is not (#260)
+- Stitch:
+  - Stitch now requires rather than permits the `--valid-languages` parameter
+  - Stitch now requires the new `--site-sections` and `--default-site-sections`
+    parameters
+- docservui.js:
+  - If there's only a single product displayed on the page, docservui.js will
+    preselect that product and give hints about the situation to the page
+    template
+
+
 ## v5.4, 2021-04-29, sknorr
 
 - docservui.js:
   - Further improved `dsUiLoaded` variable state
   - Improved IE 11 compatibility of docservui.js
 
+
 ## v5.3, 2021-04-28, sknorr
 
 - docservui.js
   - Fixed `dsUiLoaded` variable state
+
 
 ## v5.2, 2021-04-27, sknorr
 
@@ -19,11 +54,13 @@
     "Product: Title - Subtitle"
   - Fixed date display on output pages
 
+
 ## v5.1, 2021-04-26, sknorr
 
 - Included forgotten files that broke fragments support in 5.0
 - Fixed build-navigation conditional that meant we'd add links to
   docsets with disabled navigation on internal homepages
+
 
 ## v5.0, 2021-04-26, sknorr
 
@@ -66,6 +103,7 @@
     state
   - Improved path normalization to avoid `//` in the output
   - Added support for basic localization
+
 
 ## v4.0, 2021-02-22, sknorr
 

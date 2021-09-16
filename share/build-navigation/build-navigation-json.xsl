@@ -264,7 +264,8 @@
     </xsl:variable>
     <xsl:variable name="hide-productname">
       <xsl:choose>
-        <xsl:when test="version/@includes-productname = 'true'">
+        <xsl:when test="listingversion/@includes-productname = 'true' or
+                        (not(listingversion) and version/@includes-productname = 'true')">
           <xsl:text>true</xsl:text>
         </xsl:when>
         <xsl:otherwise>
@@ -289,7 +290,7 @@
         "visible": <xsl:value-of select="$visible"/>,
         "name": "<xsl:value-of select="$name"/>",
         "acronym": "<xsl:value-of select="ancestor::product/acronym"/>",
-        "version": "<xsl:value-of select="version"/>",
+        "version": "<xsl:value-of select="(version|listingversion)[last()]"/>",
         "hide-productname": <xsl:value-of select="$hide-productname"/>,
         "lifecycle": "<xsl:value-of select="@lifecycle"/>"
       },

@@ -274,6 +274,7 @@ ds.docset =
     ds.sortname?,
     ds.acronym?,
     ds.version,
+    ds.listingversion?,
     ds.overridedesc?,
     (
       (ds.builddocs,
@@ -285,8 +286,24 @@ ds.docset =
     )
   }
 
+# * <version/> is a normal version (number) that is normally combined with a
+#   product name and shown in all situations. When @includes-productname=true is
+#   set for <version/>, we will always only display the <version/> text rather
+#   than displaying the product name alongside it.
+# * <listingversion/> is also a version (number), also normally combined with a
+#   product name. However, it is only ever shown on the home page's selection
+#   boxes, but not used within internal references or for product pages.
+#
+# FIXME: version v/ listingversion v/ @includes-productname is a bit of a mess,
+# clean up eventually when use cases are clearer
+
 ds.version =
   element version {
+    attribute includes-productname { xsd:boolean }?,
+    text
+  }
+ds.listingversion =
+  element listingversion {
     attribute includes-productname { xsd:boolean }?,
     text
   }

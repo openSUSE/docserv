@@ -39,7 +39,7 @@
   </xsl:template>
 
 
-  <xsl:template match="format/@*|@default|version/@includes-productname">
+  <xsl:template match="format/@*|@default|version/@includes-productname|listingversion/@includes-productname">
     <xsl:attribute name="{local-name(.)}">
       <xsl:choose>
         <xsl:when test=". = 1 or . = 'true'">true</xsl:when>

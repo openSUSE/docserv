@@ -1,5 +1,19 @@
 # Release History
 
+## v6.1, 2021-09-16, sknorr
+
+- Docserv² core:
+  - Do not include DocBook remarks and meta information in "beta"
+    builds
+- Build-navigation:
+  - Correctly pick HTML templates based on the lifecycle value
+    again 
+- Product configuration schema:
+  - `<docset/>` now allows the additional element
+    `<listingversion/>` which can be used to override the
+    `<version/>` value on homepage product listings
+
+
 ## v6.0, 2021-09-15, sknorr
 
 - Docserv² core:

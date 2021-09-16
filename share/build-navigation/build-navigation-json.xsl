@@ -891,7 +891,14 @@
 
   <xsl:template name="docset-title">
     <xsl:param name="node" select="."/>
-    <xsl:if test="$node/ancestor::docset/version/@includes-productname != 'true'">
+    <xsl:variable name="hide-productname">
+      <xsl:choose>
+        <xsl:when test="$node/ancestor::docset/version/@includes-productname = 'true'">true</xsl:when>
+        <xsl:otherwise>false</xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
+
+    <xsl:if test="$hide-productname = 'false'">
       <!-- Finding out the correct product name is hard. FIXME: Is that logic
       quite right? It should be:
       docset/acronym > docset/name > product/acronym > product/name. -->

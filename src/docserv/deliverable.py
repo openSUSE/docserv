@@ -156,7 +156,6 @@ class Deliverable:
         daps_params = "\n".join([
             "--remarks" if remarks == "yes" else "",
             "--draft" if (draft == "yes" or
-                          self.parent.lifecycle == "beta" or
                           self.parent.lifecycle == "unpublished") else "",
             "--meta" if meta == "yes" else ""
         ])

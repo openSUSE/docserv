@@ -288,6 +288,11 @@ class BuildInstructionHandler:
         return self.build_instruction
 
     def mail(self, command, out, err):
+        if not hasattr(self, 'remote_repo'):
+            self.remote_repo = "(none)"
+        if not hasattr(self, 'branch'):
+            self.branch = "(none)"
+
         msg = """Cheerio!
 
 Docserv² failed to execute a command during the following build instruction:

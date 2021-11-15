@@ -221,7 +221,7 @@ template_dir=$(readlink -f $template_dir)
 cache_dir=$(readlink -f $cache_dir)
 output_dir=$(readlink -f $output_dir)
 
-template_default=$(ls "$template_dir/template-section-DEFAULT."* 2>/dev/null | head -1)
+template_default=$(ls "$template_dir/template-section-default."* 2>/dev/null | head -1)
 template_product=$(ls "$template_dir/template-product."* 2>/dev/null | head -1)
 
 template_resources=$template_dir/res
@@ -338,13 +338,13 @@ for lang in $ui_languages; do
 
     for lifecycle in supported unsupported; do
 
-      template_current=$(ls "$template_dir/template-section-$site_section.$lifecycle."* 2>/dev/null | head -1)
+      template_current=$(ls "$template_dir/template-section.$site_section.$lifecycle."* 2>/dev/null | head -1)
       [[ ! -f "$template_current" ]] && template_current="$template_default"
       ext=html
       [[ $(echo "$template_current" | grep -oP '[^.]+$') ]] && ext=$(echo "$template_current" | grep -oP '[^.]+$')
 
       template_out="${site_section}-${lifecycle}.${ext}"
-      [[ "$site_section" == "$default_site_section" && "$lifecycle" == 'supported' ]] && template_out="index.${ext}";
+      [[ "$site_section" == "$default_site_section" && "$lifecycle" == 'supported' ]] && template_out="index.${ext}"
       cat "$template_current" | sed -r \
         -e 's%@\{\{#base_path#}}%'"${base_path}"'%g' \
         -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \

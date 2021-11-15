@@ -155,16 +155,22 @@ done
 
 [[ ! $(echo " $site_sections" | grep -oP '^( +[-_a-zA-Z0-9]+)+$') ]] && \
   out "Site sections parameter does not conform to scheme (must be alphanumeric-_, space-separated)."
-site_sections_sorted=$(echo -e "$site_sections" | tr ' ' '\n' | sort -u)
 
 [[ ! $(echo "$default_site_section" | grep -oP '^[-_a-zA-Z0-9]+$') ]] && \
   out "Default site section parameter does not conform to scheme (must be a single alphanumeric-_ value)."
 default_site_section_valid=0
-for site_section in $site_sections_sorted; do
+
+site_sections_deduped=' '
+for site_section in $site_sections; do
+  [[ ! $(echo "$site_sections_deduped" | grep -- " $site_section ") ]] && site_sections_deduped+="$site_section "
+done
+site_sections_deduped=$(echo -e "$site_sections_deduped" | tr ' ' '\n' | sed -n '/^$/!p')
+
+for site_section in $site_sections_deduped; do
   [[ "$site_section" == "$default_site_section" ]] && { default_site_section_valid=1; break; }
 done
-site_sections_sorted_one_line=$(echo -e "$site_sections_sorted" | tr '\n' ' ' | sed -r 's/\s*$//')
-[[ "$default_site_section_valid" -eq 1 ]] || out "Default site section parameter contains invalid site section reference ($default_site_section). (Valid site sections: $site_sections_sorted_one_line)"
+site_sections_one_line=$(echo -e "$site_sections_deduped" | tr '\n' ' ' | sed -r 's/\s*$//')
+[[ "$default_site_section_valid" -eq 1 ]] || out "Default site section parameter contains invalid site section reference ($default_site_section). (Valid site sections: $site_sections_one_line)"
 
 for file in "$stitched_config"; do
   [[ ! -f "$file" ]] && out "File $file does not exist."
@@ -301,7 +307,7 @@ xsltproc \
   --stringparam "cache_file" "$cache_file" \
   --stringparam "internal_mode" "$internal_mode" \
   --stringparam "ui_languages" "$ui_languages" \
-  --stringparam "site_sections" "$site_sections_sorted" \
+  --stringparam "site_sections" "$site_sections_deduped" \
   --stringparam "default_site_section" "$default_site_section" \
   --stringparam "product" "$relevant_product" \
   --stringparam "docset" "$relevant_docset" \
@@ -334,7 +340,7 @@ for lang in $ui_languages; do
   mkdir -p $output_dir/$lang
 
 
-  for site_section in $site_sections_sorted; do
+  for site_section in $site_sections_deduped; do
 
     for lifecycle in supported unsupported; do
 

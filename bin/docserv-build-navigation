@@ -176,9 +176,14 @@ for file in "$stitched_config"; do
   [[ ! -f "$file" ]] && out "File $file does not exist."
 done
 
-for dir in "$cache_dir" "$template_dir" "$output_dir"; do
+for dir in "$template_dir" "$output_dir"; do
   [[ ! -d "$dir" ]] && out "Directory $dir does not exist."
 done
+
+# If this is the first build on a new instance and the first product built does
+# not have a `<builddocs/>` section, we need to create the cache dir here.
+# In essentially any other case, the cache dir should already exist.
+[[ ! -d "$cache_dir" ]] && mkdir -p "$cache_dir"
 
 # FIXME: This kind of validation is interesting for CI too, but nestled in here,
 # it's not very accessible to that sort of tooling. It would also be good to

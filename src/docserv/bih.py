@@ -122,22 +122,7 @@ class BuildInstructionHandler:
             backup_path = self.config['targets'][self.build_instruction['target']]['backup_path']
             backup_docset_relative_path = os.path.join(backup_path, self.docset_relative_path)
 
-            # remove contents of backup path for current build instruction
-            n += 1
-            commands[n] = {}
-            commands[n]['cmd'] = "rm -rf %s" % (backup_docset_relative_path)
-
             if hasattr(self, 'tmp_bi_path') and os.listdir(self.tmp_bi_path):
-
-                # copy temp build instruction directory to backup path;
-                # we only do that for products that are unpublished/beta/supported,
-                # unsupported products only get an archive
-                n += 1
-                commands[n] = {}
-                if self.lifecycle != 'unsupported':
-                    commands[n]['cmd'] = "rsync -lr %s/ %s" % (self.tmp_dir_bi, backup_path)
-                else:
-                    commands[n]['cmd'] = "mkdir -p %s" % os.path.join(backup_path, self.docset_relative_path)
 
                 # create zip archive
                 n += 1
@@ -147,7 +132,7 @@ class BuildInstructionHandler:
                 create_archive_cmd = '%s --input-path %s --output-path %s --zip-formats %s --cache-path %s --relative-output-path %s --product %s --docset %s --language %s' % (
                     os.path.join(BIN_DIR, 'docserv-create-archive'),
                     self.tmp_bi_path,
-                    os.path.join(backup_docset_relative_path, zip_name),
+                    os.path.join(self.tmp_bi_path, zip_name),
                     zip_formats,
                     os.path.join(self.deliverable_cache_base_dir, self.build_instruction['target']),
                     os.path.join(self.docset_relative_path, zip_name),
@@ -201,6 +186,25 @@ class BuildInstructionHandler:
             commands[n] = {}
             commands[n]['cmd'] = "rsync -r %s/ %s" % (
               self.config['targets'][self.build_instruction['target']]['server_root_files'], tmp_dir_nav)
+
+            # remove contents of backup path for current build instruction
+            n += 1
+            commands[n] = {}
+            commands[n]['cmd'] = "rm -rf %s" % (backup_docset_relative_path)
+
+            # ideally, we'd copy in one fell swoop, but I guess two separate
+            # commands do work too..?
+            if hasattr(self, 'tmp_bi_path') and os.listdir(self.tmp_bi_path):
+
+                # copy temp build instruction directory to backup path;
+                # we only do that for products that are unpublished/beta/supported,
+                # unsupported products only get an archive
+                n += 1
+                commands[n] = {}
+                if self.lifecycle != 'unsupported':
+                    commands[n]['cmd'] = "rsync -lr %s/ %s" % (self.tmp_dir_bi, backup_path)
+                else:
+                    commands[n]['cmd'] = "mkdir -p %s" % os.path.join(backup_path, self.docset_relative_path)
 
             # rsync navigational pages dir to backup path
             n += 1

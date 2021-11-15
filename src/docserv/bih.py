@@ -212,18 +212,21 @@ class BuildInstructionHandler:
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "rm -rf %s" % tmp_dir_nav
+            commands[n]['execute_after_error'] = True
 
         if hasattr(self, 'tmp_bi_path'):
             # remove temp build instruction directory
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "rm -rf %s" % self.tmp_dir_bi
+            commands[n]['execute_after_error'] = True
 
         if hasattr(self, 'local_repo_build_dir'):
             # build target directory
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "rm -rf %s" % self.local_repo_build_dir
+            commands[n]['execute_after_error'] = True
 
         # rsync local backup path with web server target path
         if (bi_overall_status == 'success' and
@@ -243,17 +246,24 @@ class BuildInstructionHandler:
             self.cleanup_lock.release()
             return
 
+        previous_error = False
         for i in range(1, n + 1):
             cmd = shlex.split(commands[i]['cmd'])
-            logger.debug("Cleaning up %s, %s",
-                self.build_instruction['id'], commands[i]['cmd'])
-            s = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            out, err = s.communicate()
-            if int(s.returncode) != 0:
-                logger.warning("Clean up failed! Unexpected return value %i for '%s'",
-                    s.returncode, commands[i]['cmd'])
-                self.mail(commands[i]['cmd'], out, err)
+            try:
+                execute_after_error = commands[i]['execute_after_error']
+            except KeyError:
+                execute_after_error = False
+            if execute_after_error or not previous_error:
+                logger.debug("Cleaning up %s, %s",
+                    self.build_instruction['id'], commands[i]['cmd'])
+                s = subprocess.Popen(
+                    cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                out, err = s.communicate()
+                if int(s.returncode) != 0:
+                    logger.warning("Cleanup failed! Unexpected return value %i for '%s'",
+                        s.returncode, commands[i]['cmd'])
+                    self.mail(commands[i]['cmd'], out, err)
+                    previous_error = True
         self.cleanup_done = True
         self.cleanup_lock.release()
 

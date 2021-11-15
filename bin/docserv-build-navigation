@@ -338,13 +338,18 @@ for lang in $ui_languages; do
 
     for lifecycle in supported unsupported; do
 
+      fallback_template=0
       template_current=$(ls "$template_dir/template-section.$site_section.$lifecycle."* 2>/dev/null | head -1)
-      [[ ! -f "$template_current" ]] && template_current="$template_default"
+      [[ ! -f "$template_current" ]] && { template_current="$template_default"; fallback_template=1; }
       ext=html
       [[ $(echo "$template_current" | grep -oP '[^.]+$') ]] && ext=$(echo "$template_current" | grep -oP '[^.]+$')
 
       template_out="${site_section}-${lifecycle}.${ext}"
-      [[ "$site_section" == "$default_site_section" && "$lifecycle" == 'supported' ]] && template_out="index.${ext}"
+      if [[ "$site_section" == "$default_site_section" && "$lifecycle" == 'supported' ]]; then
+        template_out="index.${ext}"
+        echo "Setting $site_section/$lifecycle as default ($lang/${template_out})."
+      fi
+      [[ "$fallback_template" -eq 1 ]] && echo "Using fallback template $(basename ${template_current}) for ${lang}/${template_out}."
       cat "$template_current" | sed -r \
         -e 's%@\{\{#base_path#}}%'"${base_path}"'%g' \
         -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \

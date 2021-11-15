@@ -1,5 +1,16 @@
 # Release History
 
+## v6.2, 2021-11-15, sknorr
+
+- Build-navigation:
+  - Slightly update the name of HTML templates:
+     - `template-section-DEFAULT` ->
+       `template-section-default`
+     - `template-section-$NAME.$CYCLE` ->
+        `template-section.$NAME.$CYCLE`
+  - Do not resort site sections, keep order as defined in the INI
+
+
 ## v6.1, 2021-09-16, sknorr
 
 - Docserv² core:

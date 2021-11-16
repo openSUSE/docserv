@@ -9,10 +9,15 @@ var productData = 'no_data';
 var productHashes = [];
 
 
-function dsLocalize(category, string) {
+function dsLocalize(category, string, optionalText) {
+  // IE compat ... https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Default_parameters
+  optionalText = (typeof optionalText !== 'undefined') ?  optionalText : false;
   if (typeof(dsL10n) === 'object') {
      if (dsL10n[category][string]) {
        return dsL10n[category][string];
+     }
+     else if (optionalText = true) {
+       return "";
      }
      else {
        return string;
@@ -478,6 +483,10 @@ function sectionInit() {
           e_sectionTab.classList.add('ds-active');
         };
         e_sectionTab.textContent = dsLocalize('site-sections', thisSection );
+        a_sectionTabTitle = dsLocalize('site-section-descs', thisSection, true);
+        if (a_sectionTabTitle.length > 0) {
+          e_sectionTab.setAttribute('title', a_sectionTabTitle);
+        };
         // FIXME: literal lifecycle mention bad
         var sectionPageName = thisSection + '-supported';
         if (sectionData[thisSection].default === true) {

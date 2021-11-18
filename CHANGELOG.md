@@ -1,5 +1,14 @@
 # Release History
 
+## v6.3, 2021-11-18, sknorr
+
+- Docserv² core/build-navigation:
+  - Fix a number of errors/tracebacks resulting from problematic
+    build instructions
+- docservui.js:
+  - Support descriptions for site section tabs
+
+
 ## v6.2, 2021-11-15, sknorr
 
 - Build-navigation:

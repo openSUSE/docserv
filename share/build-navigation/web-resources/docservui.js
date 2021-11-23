@@ -187,7 +187,7 @@ function populateDocSet() {
   if (docSetData.lifecycle == 'beta' || docSetData.lifecycle == 'unpublished' || docSetData.lifecycle == 'unsupported') {
     s_product = s_product + ' ' + dsLocalize('labels', docSetData.lifecycle);
   };
-  var e_title = document.createElement('h2');
+  var e_title = document.createElement('h1');
   e_title.classList.add('ds-docset-title');
   e_title.textContent = s_product;
   e_docSetWrap.appendChild(e_title);
@@ -212,7 +212,7 @@ function populateDocSet() {
     e_cat.classList.add('ds-docset-category');
     e_docSetWrap.appendChild(e_cat);
     if (docSetData.category[i].category != false) {
-      var e_catTitle = document.createElement('h3');
+      var e_catTitle = document.createElement('h2');
       e_catTitle.classList.add('ds-docset-category-title');
       var e_catDesc = document.createElement('div');
       e_catTitle.classList.add('ds-docset-category-desc');
@@ -321,7 +321,7 @@ function buildArchiveTable(e_docSetWrap) {
     e_cat.id = 'archive-auto';
     e_cat.classList.add('ds-docset-category');
     e_docSetWrap.appendChild(e_cat);
-    var e_catTitle = document.createElement('h3');
+    var e_catTitle = document.createElement('h2');
     e_catTitle.classList.add('ds-docset-category-title');
     e_catTitle.textContent = dsLocalize('auto-categories','archive');
     e_cat.appendChild(e_catTitle);

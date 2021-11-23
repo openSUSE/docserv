@@ -1,5 +1,13 @@
 # Release History
 
+## v6.4, 2021-11-23, sknorr
+
+- Stitch:
+  - Fix check for `<overridedesc/>`
+- docservui.js:
+  - Fix headline levels to improve SEO (a little)
+
+
 ## v6.3, 2021-11-18, sknorr
 
 - Docserv² core/build-navigation:

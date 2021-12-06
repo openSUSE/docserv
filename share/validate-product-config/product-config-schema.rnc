@@ -47,7 +47,7 @@ ds.type.gitremote =
 ds.type.dirname =
   # A relative directory name
   xsd:anyURI {
-    pattern="""[^/\\]+(/[^/\\]+)*"""
+    pattern="""[^/\\]*[^/\\:](/[^/\\]+)*"""
   }
 
 ds.type.branch =

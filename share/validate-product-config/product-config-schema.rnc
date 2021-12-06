@@ -12,7 +12,9 @@ start = ds.product
 # version to the version of the software itself that this schema is shipped
 # with. If the schema remains backward-compatible and there are only minor
 # changes, leave the version as is.
-ds.schema.version = "6.0"
+ds.schema.version =
+  ## Schema version
+  "6.0"
 
 
 # TYPES
@@ -22,6 +24,7 @@ ds.type.class =
   xsd:token { pattern = "[\-_\+\.a-zA-Z0-9]+( [\-_\+\.a-zA-Z0-9]+)*" }
 
 ds.type.email =
+  ## An email address
   # http://www.dpawson.co.uk/relaxng/schema/datatypes/datatypes.html#d1034e184
   # Works for both normal addresses and forms like
   # "David Tolpin"@[Obscure Place]
@@ -32,71 +35,71 @@ ds.type.email =
   }
 
 ds.type.lang =
-  # A language code
+  ## A language code
   xsd:token {
     pattern="""[a-z]{2}(-[a-z]{2,8})?"""
   }
 
 ds.type.gitremote =
-  # URL to a Git remote
+  ## URL to a Git remote ("http[s]" URLs only)
   # (Let's not support SSH URLs for the moment since that needs authentication)
   xsd:anyURI {
     pattern="""https?://.*"""
   }
 
 ds.type.dirname =
-  # A relative directory name
+  ## A relative directory name
   xsd:anyURI {
     pattern="""[^/\\]*[^/\\:](/[^/\\]+)*"""
   }
 
 ds.type.branch =
-  # A Git branch name
+  ## A Git branch name
   xsd:token {
     pattern="""[^\s\\]+"""
   }
 
 ds.type.dcfile =
-  # A DC file name
+  ## A DC file name
   xsd:anyURI {
     pattern="""DC-[\-_\.\+a-zA-Z0-9]+"""
   }
 
 ds.type.xsltparam =
-  # An XSLT parameter name
+  ## An XSLT parameter name
   xsd:token {
     pattern="""[\-_\.\+a-zA-Z0-9]+"""
   }
 
 ds.type.alphanumeric =
-  # An alphanumeric value + "-" + "_"
+  ## An alphanumeric value + "-" + "_"
   xsd:token {
     pattern="""[\-_a-zA-Z0-9]+"""
   }
 
 ds.type.id =
-  # An ID (however, we do not check for uniqueness via RNC -- we check in
-  # docserv-stitch)
+  ## An ID (unlike xml:ids, this allows initial digits)
+  # (however, we do not check for uniqueness via RNC -- we check in docserv-stitch)
   xsd:token {
     pattern="""[\-_\.\+a-zA-Z0-9]+"""
   }
 
 ds.type.idmulti =
-  # A space-separated list of IDs (we do not check via RNC -- we check in
-  # docserv-stitch)
+  ## A space-separated list of IDs
+  # (we do not check via RNC -- we check in docserv-stitch)
   xsd:token {
     pattern="""([\-_\.\+a-zA-Z0-9]+ )*[\-_\.\+a-zA-Z0-9]+"""
   }
 
 ds.type.containerref =
-  # A reference to a remote container image, matches the expression used by
-  # daps2docker
+  ## A reference to a remote container image
+  # matches the expression used by daps2docker
   xsd:token {
     pattern="""[\-_\.a-zA-Z0-9]+(/[\-_\.a-zA-Z0-9]+)*(:[\-_\.a-zA-Z0-9]+)?"""
   }
 
 ds.type.hexdigest =
-  # A hash/hex digest
+  ## A hash/hex digest (such as a Docker or Git SHA reference)
   xsd:token {
     pattern="""[a-f0-9]{7,}"""
   }
@@ -108,14 +111,22 @@ ds.type.hexdigest =
 # There is no guarantee that the title string will be formatted
 # exactly this way or in this order, just that, if available, all of the
 # information requested will come out.
-ds.type.titleformat.build = "title" | "title docset" | "title product" | "title subtitle" | "title subtitle product" | "title subtitle docset"
+ds.type.titleformat.build =
+  ## Elements of titles displayed on navigational pages for documents built within Docserv²
+  "title" | "title docset" | "title product" | "title subtitle" | "title subtitle product" | "title subtitle docset"
 # For external links, some metadata is never available: product name and
 # subtitle cannot be generated in any way currently (but you're free to
 # create whatever title you want and that should make up for it).
-ds.type.titleformat.link = "title" | "title docset"
+ds.type.titleformat.link =
+  ## Elements of titles displayed on navigational pages for externally-hosted documents
+  "title" | "title docset"
 
-ds.false.enum = "0" | "false"
-ds.true.enum = "1" | "true"
+ds.false.enum =
+  ## Boolean false value
+  "0" | "false"
+ds.true.enum =
+  ## Boolean true value
+  "1" | "true"
 
 # TAG/ATTRIBUTE SETS
 
@@ -124,6 +135,7 @@ div
 # FIXME: add img? (It is a bit unclear whether our script would need to take
 # care of copying stuff then.)
 ds.htmlblock =
+  ## HTML block elements
   ds.p
   | ds.div
   | ds.pre
@@ -141,25 +153,28 @@ ds.htmlblock =
 div
 {
 ds.htmlinline =
-    ds.sup
-  | ds.u
-  | ds.cite
-  | ds.span
-  | ds.s
-  | ds.a
-  | ds.sub
-  | ds.strong
-  | ds.em
-  | ds.q
-  | ds.code
+  ## HTML inline elements
+    ds.a
   | ds.br
+  | ds.cite
+  | ds.code
+  | ds.em
   | ds.hr
+  | ds.q
+  | ds.s
+  | ds.span
+  | ds.strong
+  | ds.sub
+  | ds.sup
+  | ds.u
 }
 
 div
 {
 ds.htmlattr =
+  ## ID attribute (HTML, not checked for uniqueness within Docserv²)
   attribute id { xsd:ID }?,
+  ## Class attribute (HTML)
   attribute class { ds.type.class }?
 }
 
@@ -176,15 +191,21 @@ ds.htmlinlinecontent =
 # ROOT
 
 ds.product =
+  ## Product (or top-level category, root element)
   element product {
     # This ID value can only be checked when we take all of the productconfig
     # files together (i.e. after we have run stitch.sh). In any case, it does
     # not make sense to use xsd:id here because there can only ever be one
     # of these ID per productconfig file.
+    ## Product ID, must be unique across entire site config, used as first-level path element
     attribute productid { ds.type.id },
+    ## Version of the schema, verifies that Docserv² major version and version of product configuration match
     attribute schemaversion { ds.schema.version },
+    ## Whether to enable this configuration file (`true` by default)
     attribute enabled { xsd:boolean }?,
+    ## Site section this configuration belongs to
     attribute site-section { ds.type.alphanumeric }?,
+    ## Whether to sort docsets of this product Z-A9-0 (`descending`, default) or 0-9A-Z (`ascending`)
     attribute docset-sort { "ascending" | "descending" }?,
     ds.name,
     ds.sortname?,
@@ -200,62 +221,83 @@ ds.product =
 # PRODUCT DESCRIPTION
 
 ds.name =
+  ## Name of product or top-level category
   element name {
     text
   }
 
 ds.sortname =
+  ## Sort name of product or top-level category
   element sortname {
     text
   }
 
 ds.acronym =
+  ## Acronym of name of product or top-level category
   element acronym {
     text
   }
 
 ds.maintainers =
+  ## Collection of email addresses to send mail about buld failures to
   element maintainers {
     ds.contact+
   }
 
 ds.contact =
+  ## Email address to send mail about build failures to
   element contact {
     ds.type.email
   }
 
 ds.desc_default =
+  ## Description of product or top-level category (default language)
   element desc {
+    ## Language code (`la-ng` style) of this description
     attribute lang { ds.type.lang },
+    ## Whether this is the default language (must be true for initial `<desc/>` element)
     attribute default { ds.true.enum },
     ds.htmlblock+
   }
 
 ds.desc_translation =
+  ## Description of product or top-level category (dependent languages)
   element desc {
+    ## Language code (`la-ng` style) of this description
     attribute lang { ds.type.lang },
+    ## Whether this is the default language (must be false for subsequent `<desc/>` elements)
     attribute default { ds.false.enum }?,
     ds.htmlblock*
   }
 
 ds.category =
+  ## Definition of category displayed on product detail navigational page (third-level category)
   element category {
+    ## Category ID, must be unique across the configuration for a single product
     attribute categoryid { ds.type.id }?,
     ds.categorylanguage_default,
     ds.categorylanguage_translation*
   }
 
 ds.categorylanguage_default =
+  ## Metadata for category displayed on product detail navigational page (default language, third-level category)
   element language {
+    ## Language code (`la-ng` style) of category metadata
     attribute lang { ds.type.lang },
+    ## Whether this is the default language (must be true for initial `<language/>` element)
     attribute default { ds.true.enum },
+    ## Localized title of description
     attribute title { text },
     ds.htmlblock*
   }
 ds.categorylanguage_translation =
+  ## Metadata for category displayed on product detail navigational page (dependent languages, third-level category)
   element language {
+    ## Language code (`la-ng` style) of category metadata
     attribute lang { ds.type.lang },
+    ## Whether this is the default language (must be false for subsequent `<language/>` elements)
     attribute default { ds.false.enum }?,
+    ## Localized title of description
     attribute title { text },
     ds.htmlblock*
   }
@@ -264,9 +306,20 @@ ds.categorylanguage_translation =
 # DOCSETS
 
 ds.docset =
+  ## Product version or second-level category
   element docset {
+    ## Set ID, must be unique across the configuration for a single product
     attribute setid { ds.type.id },
+    ## Lifecycle value of this product version:
+    ## * `unpublished` product versions can only be built for instances defined as internal in the INI configuration
+    ## * `beta` product versions can be built without restriction but contain a draft watermark
+    ## * `supported` product versions can be built without restriction
+    ## * `unsupported` product versions can be built without restriction but are only published as Zip archives
     attribute lifecycle { "unpublished" | "beta" | "supported" | "unsupported" },
+    ## Whether to build a navigational page for this product version:
+    ## * `linked` for navigational pages linked from the homepage (default)
+    ## * `hidden` for navigational pages not linked from the homepage
+    ## * `disabled` to disable creation of a navigational page
     attribute navigation { "linked" | "hidden" | "disabled" }?,
     # To allow for name changes between versions, as in the example of SUSE
     # Cloud -> SUSE OpenStack Cloud: optional ds.name here
@@ -298,24 +351,34 @@ ds.docset =
 # clean up eventually when use cases are clearer
 
 ds.version =
+  ## User-visible version number (or name of second-level category)
   element version {
+    ## Whether the version number name includes the product name (default: `false`)
     attribute includes-productname { xsd:boolean }?,
     text
   }
 ds.listingversion =
+  ## User-visible version number (or name of second-level category) displayed in homepage listing
   element listingversion {
+    ## Whether the version number name includes the product name (default: `false`)
     attribute includes-productname { xsd:boolean }?,
     text
   }
 
 ds.overridedesc =
+  ## Collection of version-specific product descriptions
   element overridedesc {
+    ## How to treat version-specific product descriptions:
+    ## * `append`: append this description to the original product description
+    ## * `prepend`: prepend this description to the original product description
+    ## * `replace`: replace the original product description with this description
     attribute treatment { 'append' | 'prepend' | 'replace' },
     ds.desc_default,
     ds.desc_translation*
   }
 
 ds.builddocs =
+  ## Container for definitions of documents to build
   element builddocs {
     ds.git,
     ds.buildcontainer?,
@@ -327,13 +390,17 @@ ds.builddocs =
   }
 
 ds.git =
+  ## Definition of Git remote URL to use for documentation of a specific product version (or second-level category)
   element git {
+    ## Git remote URL
     attribute remote { ds.type.gitremote },
     empty
   }
 
 ds.buildcontainer =
+  ## Docker container to use for specific product version (or second-level category)
   element buildcontainer {
+    ## Image ID, can be identified by a SHA hash (locally-available Docker image) or reference to remote Docker image
     attribute image { ds.type.hexdigest | ds.type.containerref },
     empty
   }
@@ -346,8 +413,11 @@ ds.buildcontainer =
 #   this docset
 
 ds.language_default =
+  ## Set of documents to build (default language, must list full set of documents available for product version)
   element language {
+    ## Language code (`la-ng` style) of documents to build in this context
     attribute lang { ds.type.lang },
+    ## Whether this is the default language (must be true for initial `<language/>` element)
     attribute default { ds.true.enum },
     ds.branch,
     ds.subdir?,
@@ -357,18 +427,26 @@ ds.language_default =
     )+
   }
 ds.language_translation_list =
+  ## Set of documents to build (dependent languages, lists a subset of documents available in the default language)
   element language {
+    ## Language code (`la-ng` style) of documents to build in this context
     attribute lang { ds.type.lang },
+    ## Whether this is the default language (must be false for subsequent `<language/>` element)
     attribute default { ds.false.enum }?,
+    ## Documents to build for this language are a subset of documents available in the default language
     attribute translation-type { "list" },
     ds.branch?,
     ds.subdir?,
     ds.deliverablerestricted+
   }
 ds.language_translation_full =
+  ## Set of documents to build (dependent languages, set of documents matches documents available in default language)
   element language {
+    ## Language code (`la-ng` style) of documents to build in this context
     attribute lang { ds.type.lang },
+    ## Whether this is the default language (must be false for subsequent `<language/>` element)
     attribute default { ds.false.enum }?,
+    ## Documents to build for this language match the documents available in the default language
     attribute translation-type { "full" },
     ds.branch?,
     ds.subdir?
@@ -376,21 +454,38 @@ ds.language_translation_full =
 
 
 ds.branch =
+  ## Branch of the source Git repository
   element branch {
     ds.type.branch
   }
 
 ds.subdir =
+  ## Subdirectory within the source Git repository
   element subdir {
     ds.type.dirname
   }
 
 ds.deliverable =
+  ## An individual DAPS-compatible document built on its own (default language)
   element deliverable {
+    ## Enable DocBook remarks in this document (`daps ... --remarks`; the default value varies depending on the site configuration)
     attribute remarks { xsd:boolean }?,
+    ## Enable DocBook draft watermark in this document (`daps ... --draft`; the default value varies depending on the site configuration and product lifecycle)
     attribute draft { xsd:boolean }?,
+    ## Enable DocBook meta information in this document (`daps ... --meta`; the default value varies depending on the site configuration)
     attribute meta { xsd:boolean }?,
+    ## What category or categories to display this document under on the product version navigational page
     attribute category { ds.type.idmulti }?,
+    ## How to display the document title on the product version navigational page, a combination of the following values:
+    ## * `title`: title as extracted from the document
+    ## * `subtitle`: subtitle as extracted from the document (can be empty)
+    ## * `docset`: product and version number as classified in the Docserv² product configuration
+    ## * `product`: product and version number as extracted from the document (can be empty)
+    ## Note the following:
+    ## * `title` is mandatory
+    ## * `docset` and `product` are mutually exclusive.
+    ## * the order of values must be `title`, `subtitle`, `docset`/`product`
+    ## Default: `title subtitle`
     attribute titleformat { ds.type.titleformat.build }?,
     ds.subdir?,
     ds.dc,
@@ -399,9 +494,13 @@ ds.deliverable =
   }
 
 ds.deliverable_subdeliverable =
+  ## An individual DAPS-compatible document that is a DocBook set/book that includes articles/book (default language)
   element deliverable {
+    ## Enable DocBook remarks in this document (`daps ... --remarks`; the default value varies depending on the site configuration)
     attribute remarks { xsd:boolean }?,
+    ## Enable DocBook draft watermark in this document (`daps ... --draft`; the default value varies depending on the site configuration and product lifecycle)
     attribute draft { xsd:boolean }?,
+    ## Enable DocBook meta information in this document (`daps ... --meta`; the default value varies depending on the site configuration)
     attribute meta { xsd:boolean }?,
     ds.subdir?,
     ds.dc,
@@ -411,6 +510,7 @@ ds.deliverable_subdeliverable =
   }
 
 ds.dc =
+  ## Reference to DC file
   element dc {
     ds.type.dcfile
   }
@@ -418,28 +518,47 @@ ds.dc =
 # Unfortunately, this way, I can't force people to choose at least one format
 # they actually want to build.
 ds.format =
+  ## Allows enabling/disabling document formats, at least one format must be enabled
   element format {
+    ## Whether to enable multi-page HTML builds
     attribute html { xsd:boolean }?,
+    ## Whether to enable single-page HTML builds
     attribute single-html { xsd:boolean }?,
+    ## Whether to enable PDF builds
     attribute pdf { xsd:boolean }?,
+    ## Whether to enable EPUB builds
     attribute epub { xsd:boolean }?
   }
 
 ds.param =
+  ## Custom XSLT parameter
   element param {
+    ## Name of the XSLT parameter
     attribute name { ds.type.xsltparam },
     text
   }
 
 
 ds.subdeliverable =
+  ## Individual document within a DocBook set as identified by their XML ID (default language)
   element subdeliverable {
     attribute category { ds.type.idmulti }?,
+    ## How to display the document title on the product version navigational page, a combination of the following values:
+    ## * `title`: title as extracted from the document
+    ## * `subtitle`: subtitle as extracted from the document (can be empty)
+    ## * `docset`: product and version number as classified in the Docserv² product configuration
+    ## * `product`: product and version number as extracted from the document (can be empty)
+    ## Note the following:
+    ## * `title` is mandatory
+    ## * `docset` and `product` are mutually exclusive.
+    ## * the order of values must be `title`, `subtitle`, `docset`/`product`
+    ## Default: `title subtitle`
     attribute titleformat { ds.type.titleformat.build }?,
     ds.type.id
   }
 
 ds.deliverablerestricted =
+  ## An individual DAPS-compatible document that is a DocBook set/book that includes articles/book (dependent languages)
   element deliverable {
     ds.subdir?,
     ds.dc,
@@ -447,11 +566,13 @@ ds.deliverablerestricted =
   }
 
 ds.subdeliverablerestricted =
+  ## Individual document within a DocBook set as identified by its XML ID (dependent languages)
   element subdeliverable {
     ds.type.id
   }
 
 ds.internal =
+  ## Container for Docserv²-internal references
   element internal {
     ds.ref+
   }
@@ -464,15 +585,41 @@ ds.internal =
 # * a specific deliverable (by DC), subdeliverable (by DC and rootid), or an
 #   external link (by link ID)
 ds.ref =
+  ## Docserv²-internal reference
   element ref {
+    ## Product ID of referenced document or navigational page
     attribute product { ds.type.id },
-    (attribute docset { ds.type.id }? |
-      (attribute docset { ds.type.id },
+    (
+      ## Docset ID of referenced navigational page
+      attribute docset { ds.type.id }? |
+      (
+        ## Docset ID of referenced document
+        attribute docset { ds.type.id },
         (
-          (attribute dc { ds.type.id },
+          (
+           ## DC file name of referenced document
+           attribute dc { ds.type.id },
+           ## Subdeliverable (DocBook/AsciiDoc ID) of referenced document
            attribute subdeliverable { ds.type.id }?,
+           ## How to display the document title on the product version navigational page, a combination of the following values:
+           ## * `title`: title as extracted from the document
+           ## * `subtitle`: subtitle as extracted from the document (can be empty)
+           ## * `docset`: product and version number as classified in the Docserv² product configuration
+           ## * `product`: product and version number as extracted from the document (can be empty)
+           ## Note the following:
+           ## * `title` is mandatory
+           ## * `docset` and `product` are mutually exclusive.
+           ## * the order of values must be `title`, `subtitle`, `docset`/`product`
+           ## Default: `title subtitle docset`
            attribute titleformat { ds.type.titleformat.build }?) |
           (attribute link { ds.type.id },
+           ## How to display the document title on the product version navigational page, a combination of the following values:
+           ## * `title`: title as extracted from the document
+           ## * `docset`: product and version number as classified in the Docserv² product configuration
+           ## Note the following:
+           ## * `title` is mandatory
+           ## * the order of values must be `title`, `docset`
+           ## Default: `title docset`
            attribute titleformat { ds.type.titleformat.link }?)
         )
       )
@@ -482,38 +629,58 @@ ds.ref =
   }
 
 ds.external =
+  ## Container for references to externally-hosted documents
   element external {
     ds.link*
   }
 
 ds.link =
+  ## Collection of URLs for a single externally-hosted document in different languages and formats
   element link {
     attribute linkid { ds.type.id }?,
     attribute category { ds.type.idmulti }?,
+    ## How to display the document title on the product version navigational page, a combination of the following values:
+    ## * `title`: title as extracted from the document
+    ## * `docset`: product and version number as classified in the Docserv² product configuration
+    ## Note the following:
+    ## * `title` is mandatory
+    ## * the order of values must be `title`, `docset`
+    ## Default: `title`
     attribute titleformat { ds.type.titleformat.link }?,
     ds.linklanguage_default,
     ds.linklanguage_translation*
   }
 
 ds.linklanguage_default =
+  ## Collection of URLs for a single externally-hosted document in different formats (default language)
   element language {
+    ## Language code (`la-ng` style) of this link
     attribute lang { ds.type.lang }?,
+    ## Whether this is the default language (must be `false` for initial `<language/>` element)
     attribute default { ds.true.enum },
+    ## Localized title of the link
     attribute title { text },
     ds.url+
   }
 
 ds.linklanguage_translation =
+  ## Collection of URLs for a single externally-hosted document in different formats (dependent languages)
   element language {
+    ## Language code (`la-ng` style) of this link
     attribute lang { ds.type.lang }?,
+    ## Whether this is the default language (must be `false` for subsequent `<language/>` elements)
     attribute default { ds.false.enum }?,
+    ## Localized title of the link
     attribute title { text },
     ds.url+
   }
 
 ds.url =
+  ## URL of externally-hosted document
   element url {
+    ## Target URL for the link (if the URL has no protocol prefix, the link is assumed to be local to the current host and a `/` will be added automatically)
     attribute href { xsd:anyURI },
+    ## Target file format of the link for display in the UI
     attribute format { "html" | "single-html" | "pdf" | "epub" | "zip" | "tar" | "other" },
     empty
   }
@@ -522,11 +689,13 @@ ds.url =
 # SUPPORTED HTML SUBSET
 
 ds.p =
+  ## Paragraph (HTML, block)
   element p {
     ds.htmlinlinecontent
   }
 
 ds.div =
+  ## Generic block element (HTML, block)
   element div {
     ds.htmlattr,
     (
@@ -537,143 +706,177 @@ ds.div =
   }
 
 ds.pre =
+  ## Preformatted text (HTML, block)
   element pre {
     ds.htmlattr,
     text*
   }
 
 ds.ul =
+  ## Unordered list (HTML, block)
   element ul {
     ds.htmlattr,
     ds.li+
   }
 
 ds.ol =
+  ## Ordered (itemized) list (HTML, block)
   element ol {
     ds.htmlattr,
     ds.li+
   }
 
 ds.dl =
+  ## Definition list (HTML, block)
   element dl {
     ds.htmlattr,
     (ds.dt, ds.dd)+
   }
 
 ds.dt =
+  ## Term in definition list (HTML, block)
   element dt {
     ds.htmlattr,
     ds.htmlblock*
   }
 
 ds.dd =
+  ## Definition in definition list (HTML, block)
   element dd {
     ds.htmlattr,
     ds.htmlblock*
   }
 
 ds.li =
+  ## List item in unordered or ordered list (HTML, block)
   element li {
     ds.htmlattr,
     ds.htmlblock*
   }
 
 ds.h1 =
+  ## Heading of level 1 (HTML, block)
   element h1 {
     ds.htmlinlinecontent
   }
 
 ds.h2 =
+  ## Heading of level 2 (HTML, block)
   element h2 {
     ds.htmlinlinecontent
   }
 
 ds.h3 =
+  ## Heading of level 3 (HTML, block)
   element h3 {
     ds.htmlinlinecontent
   }
 
 ds.h4 =
+  ## Heading of level 4 (HTML, block)
   element h4 {
     ds.htmlinlinecontent
   }
 
 ds.h5 =
+  ## Heading of level 5 (HTML, block)
   element h5 {
     ds.htmlinlinecontent
   }
 
 ds.h6 =
+  ## Heading of level 6 (HTML, block)
   element h6 {
     ds.htmlinlinecontent
   }
 
 
 ds.sup =
+  ## Superscript text (HTML, inline)
   element sup {
     ds.htmlinlinecontent
   }
 
 ds.sub =
+  ## Subscript text (HTML, inline)
   element sub {
     ds.htmlinlinecontent
   }
 
 ds.s =
+  ## Struck text (HTML, inline)
   element s {
     ds.htmlinlinecontent
   }
 
 ds.u =
+  ## Underlined text (HTML, inline)
   element u {
     ds.htmlinlinecontent
   }
 
 ds.q =
+  ## Short quote (HTML, inline)
   element q {
     ds.htmlinlinecontent
   }
 
 ds.em =
+  ## Emphasized text, displayed in italics (HTML, inline)
   element em {
     ds.htmlinlinecontent
   }
 
 ds.a =
+  ## Web link (HTML, inline)
   element a {
+    ## Target URL of the link
     attribute href { xsd:anyURI },
+    ## Whether to open the link in a new tab/window (`_blank`)
     attribute target { "_blank" }?,
+    ## Attributes of the link:
+    ## * `nofollow`: Ask search engine spiders not to follow the link
+    ## * `prev`: Link target is the previous in a series of documents
+    ## * `next`: Link target is the next in a series of documents
+    ## * `license`: Link target represents a license of the current page
+    ## * `alternate`: Link target represents an alternate variant of the current page (such as a different language or format)
     attribute rel { "nofollow" | "prev" | "next" | "license" | "alternate" }?,
     ds.htmlinlinecontent
   }
 
 ds.strong =
+  ## Strongly emphasized text, displayed in boldface (HTML, inline)
   element strong {
     ds.htmlinlinecontent
   }
 
 ds.code =
+  ## Code/command (HTML, inline)
   element code {
     ds.htmlinlinecontent
   }
 
 ds.cite =
+  ## Citation (HTML, inline)
   element cite {
     ds.htmlinlinecontent
   }
 
 ds.span =
+  ## Generic inline element (HTML, inline)
   element span {
     ds.htmlinlinecontent
   }
 
 ds.br =
+  ## Manual line break (HTML, inline)
   element br {
     ds.htmlattr,
     empty
   }
 
 ds.hr =
+  ## Horizontal rule (HTML, inline)
   element hr {
     ds.htmlattr,
     empty

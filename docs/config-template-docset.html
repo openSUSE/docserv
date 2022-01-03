@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>Chapter 6. Docset page template</title><link rel="stylesheet" type="text/css" href="static/css/docserv-style.css" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.2" /><link rel="home" href="index.html" title="Docserv² Guide" /><link rel="up" href="index.html" title="Docserv² Guide" /><link rel="prev" href="config-template.html" title="Chapter 5. Navigational page templates" /><link rel="next" href="config-localization.html" title="Chapter 7. Localization" /></head><body><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Chapter 6. Docset page template</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="config-template.html">Prev</a> </td><th width="60%" align="center"> </th><td width="20%" align="right"> <a accesskey="n" href="config-localization.html">Next</a></td></tr></table><hr /></div><div class="chapter"><div class="titlepage"><div><div><h1 class="title"><a id="config-template-docset"></a>Chapter 6. Docset page template</h1></div></div></div><p>Site section overview pages all pages that allow selecting a docset from a site section.
+The homepage is a special case of a site section overview page.</p><p>The docset page template must be named <code class="literal">template-product.html</code>.
+The file extension (<code class="literal"><span class="emphasis"><em>EXT</em></span></code>) of page templates will generally be <code class="literal">.html</code>, though you can use other file extensions.</p><p>A minimal docset page template consists of the following elements:</p><pre class="screen">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+  &lt;head&gt;
+    &lt;title&gt;Site section template&lt;/title&gt;
+    &lt;script&gt;
+var basePath = '@{{#base_path#}}';
+var templateExtension = '@{{#template_extension#}}';
+var pageRole = 'product';
+var pageLanguage = '@{{#ui_language#}}';
+var omitPathComponent = '@{{#omit_path_component#}}';
+var pageProduct = '@{{#product#}}';
+var pageDocSet = '@{{#docset#}}';
+    &lt;/script&gt;
+    &lt;script src="@{{base_path}}docserv/res/docservui.js"&gt;&lt;/script&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;div id="docsetwrap" class="ds-page-wrap"&gt;
+    &lt;/div&gt;
+  &lt;/body&gt;
+&lt;/html&gt;</pre><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Docserv² will replace the variable definitions of the form <code class="literal">@{{…​}}</code> during the page-generation process.
+All variables shown within the <code class="literal">&lt;script/&gt;</code> element above are mandatory.</p></li><li class="listitem"><p><code class="literal">docservui.js</code> must be included to make loading the document overview work.</p></li><li class="listitem"><p>The element in the body are necessary to make document overview work.
+You can add any other desired element around it.</p></li></ul></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="config-template.html">Prev</a> </td><td width="20%" align="center"> </td><td width="40%" align="right"> <a accesskey="n" href="config-localization.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Chapter 5. Navigational page templates </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> Chapter 7. Localization</td></tr></table></div></body></html>

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>Chapter 3. Site configuration</title><link rel="stylesheet" type="text/css" href="static/css/docserv-style.css" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.2" /><link rel="home" href="index.html" title="Docserv² Guide" /><link rel="up" href="index.html" title="Docserv² Guide" /><link rel="prev" href="config-general.html" title="Chapter 2. Configuration in general" /><link rel="next" href="config-product.html" title="Chapter 4. Product configuration" /></head><body><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Chapter 3. Site configuration</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="config-general.html">Prev</a> </td><th width="60%" align="center"> </th><td width="20%" align="right"> <a accesskey="n" href="config-product.html">Next</a></td></tr></table><hr /></div><div class="chapter"><div class="titlepage"><div><div><h1 class="title"><a id="config-site"></a>Chapter 3. Site configuration</h1></div></div></div><div class="toc"><p><strong>Table of Contents</strong></p><dl class="toc"><dt><span class="section"><a href="config-site.html#config-site-server-section">The <code class="literal">[server]</code> section</a></span></dt><dt><span class="section"><a href="config-site.html#config-site-target-section">Target sections</a></span></dt></dl></div><p>The site configuration file of Docserv² is an INI file that defines basic parameters, such as:</p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>How many CPUs to use for building</p></li><li class="listitem"><p>Where to run the API endpoint</p></li><li class="listitem"><p>Where to synchronize content to</p></li><li class="listitem"><p>Where to find further configuration</p></li></ul></div><p>It consists of a <code class="literal">[server]</code> section and 1 or more <code class="literal">[target_<span class="emphasis"><em>n</em></span>]</code> sections (<code class="literal"><span class="emphasis"><em>n</em></span></code> can be any integer).</p><p>The default site configuration for Docserv² is named <code class="literal">/etc/docserv/docserv.ini</code>.
+However, you can pass a parameter to the <code class="literal"><span class="strong"><strong>docserv</strong></span></code> command to choose a differently-named <code class="literal">.ini</code> file from <code class="literal">/etc/docserv</code>.
+For example, to use the file <code class="literal">/etc/docserv/my-config.ini</code>, use:</p><pre class="screen">&gt; docserv my-config</pre><div class="important" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Restart Docserv² after each change to the site configuration</h3><p>Whenever you change any aspect of the site configuration file, you must restart the <code class="literal"><span class="strong"><strong>docserv</strong></span></code> process.
+This is unlike all other Docserv² configuration which will be re-evaluated during each build instruction.</p></div><div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a id="config-site-server-section"></a>The <code class="literal">[server]</code> section</h2></div></div></div><p>The server section defines global attributes for Docserv².
+It accepts the following attributes:</p><pre class="screen">[server]
+host = localhost
+port = 8080
+loglevel = 2
+repo_dir = /home/docserv/docserv-repos/
+temp_repo_dir = /home/docserv/docserv-temp-repos/
+max_threads = 8
+valid_languages = en-us de-de fr-fr</pre><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">[server]</code></span></dt><dd><p>The section identifier.</p></dd><dt><span class="term"><code class="literal">host</code> and <code class="literal">port</code></span></dt><dd><p>Specify using these attributes where to run the API endpoint of Docserv².
+The API endpoint is used to trigger builds and check build status.</p></dd><dt><span class="term"><code class="literal">loglevel</code></span></dt><dd><p>Specifies which types of messages to log via <code class="literal">stdout</code> (when running interactively) or on the system log (when running as a daemon).
+Allows the values <code class="literal">0</code> (warnings only), <code class="literal">1</code> (warnings and informational messages), or <code class="literal">2</code> (all messages including debugging messages).</p></dd><dt><span class="term"><code class="literal">repo_dir</code></span></dt><dd><p>Specifies the directory that is used to permanently cache remote Git repositories.
+Git repositories in this directory persist across builds and instances of the Docserv² process.</p></dd><dt><span class="term"><code class="literal">temp_repo_dir</code></span></dt><dd><p>Specifies the directory that is used to temporarily cache specific Git branches.
+When receiving a build instruction, Docserv² will clone an individual branch of a Git repository from <code class="literal">repo_dir</code>.
+It will then build using the data from <code class="literal">temp_repo_dir</code>.
+This prevents branch checkout collisions during builds and other problems.
+After the build instruction has run through,</p></dd><dt><span class="term"><code class="literal">max_threads</code></span></dt><dd><p>Specifies the maximum number of threads to use for Docserv².
+You can specify either a number, such as <code class="literal">4</code> or use <code class="literal">max</code> to use as many threads as there are logical CPU cores.</p><p>In any case, the upper limit to the number of threads is the number of logical CPU cores.</p></dd><dt><span class="term"><code class="literal">valid_languages</code></span></dt><dd><p>Specifies the overall list of language codes recognized as valid by this instance of Docserv².
+Language codes must follow the schema <code class="literal">la-ng</code> (where <code class="literal">la</code> is the language and <code class="literal">ng</code> is the regional variety).
+Languages codes must be specified separated by spaces.</p><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;"><h3 class="title">Independent sets of language code definitions</h3><p>Docserv² uses two independent sets of language code definitions:</p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>A set of language codes valid for documents and navigational pages (this attribute, global)</p></li><li class="listitem"><p>A set of language codes that navigational pages are created for (<code class="literal">languages</code> attribute, target-specific)</p></li></ul></div></div></dd></dl></div></div><div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a id="config-site-target-section"></a>Target sections</h2></div></div></div><p>Docserv² supports reuse of the same <code class="literal"><span class="strong"><strong>docserv</strong></span></code> process to synchronize to multiple target servers.
+Each of those target servers is defined in its own target section.
+All or a subset of target servers can share certain parts of their configuration by sharing the specific configuration directories, if desired.</p><pre class="screen">[target_0]
+name = internal
+active = yes
+internal = yes
+
+enable_target_sync = yes
+target_path = ssh://user@server:/srv/www/htdocs
+backup_path = /home/docserv/target-internal/
+
+config_dir = /etc/docserv/config.d/
+template_dir = /etc/docserv/templates/
+server_root_files = /etc/docserv/server-root-files-internal
+default_xslt_params = /etc/docserv/xslt-params.txt
+
+enable_ssi_fragments = yes
+fragment_dir = /etc/docserv/fragment-internal
+fragment_l10n_dir = /etc/docserv/fragment-l10n-internal
+
+server_base_path = /
+canonical_url_domain = https://www.example.org
+
+draft = yes
+remarks = yes
+meta = no
+
+languages = en-us
+default_lang = en-us
+omit_default_lang_path = no
+
+site_sections = section-a section-b
+default_site_section = section-a
+
+zip_formats = pdf epub single-html</pre><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="literal">[target_<span class="emphasis"><em>n</em></span>]</code></span></dt><dd><p>The section identifier which needs to start with <code class="literal">target_</code>, followed by an integer.</p></dd><dt><span class="term"><code class="literal">name</code></span></dt><dd><p>Name of the target that is used to identify the target in the API and in internal messages.
+The name should consist of ASCII characters and must not contain spaces.
+The name must be unique among target names within this site configuration file.</p></dd><dt><span class="term"><code class="literal">active</code></span></dt><dd><p>If this attribute is set to <code class="literal">yes</code>, Docserv² will allow building documents for this target.</p></dd><dt><span class="term"><code class="literal">internal</code></span></dt><dd><p>If the target is set up as an internal target, Docserv² will allow building docsets that are marked as <code class="literal">unpublished</code> via their lifecycle value.
+It also means that navigational pages will be created for such docsets.</p></dd><dt><span class="term"><code class="literal">enable_target_sync</code></span></dt><dd><p>Whether to automatically synchronize to the target
+Docserv² only supports synchronizing the entirety of content available from the <code class="literal">backup_path</code> to the <code class="literal">target_path</code>.
+Depending on the amount of content available as part of your site, doing a full synchronization can take very long and block subsequent builds.</p></dd><dt><span class="term"><code class="literal">target_path</code></span></dt><dd><p>The target path defines where content is published.
+This can be a local or an SSH URL.
+Whenever Docserv² finishes a build instruction, it will update the content at this path using <code class="literal"><span class="strong"><strong>rsync</strong></span></code>.</p><p>If you use an SSH connection, make sure to set up non-interactive SSH login to the server <span class="emphasis"><em>before</em></span> trying to use Docserv².
+That means, the SSH key of the build server’s <code class="literal">docserv</code> user must be set up in the <code class="literal">.ssh/authorized_keys</code> file of the target server.</p></dd><dt><span class="term"><code class="literal">backup_path</code></span></dt><dd><p>Local path that contains all publication-ready content.
+Whenever Docserv² finishes a build instruction, it will update the content at this path before updating <code class="literal">target_path</code>.</p></dd><dt><span class="term"><code class="literal">config_dir</code></span></dt><dd><p>Directory of the product configuration.
+The product configuration defines which documents can be built within this instance of Docserv².</p></dd><dt><span class="term"><code class="literal">template_dir</code></span></dt><dd><p>Directory for overview page templates.</p></dd><dt><span class="term"><code class="literal">server_root_files</code></span></dt><dd><p>Directory with files to copy to the server’s root directory, such as <code class="literal">robots.txt</code>, <code class="literal">.htaccess</code>, or a <code class="literal">favicon.ico</code>.</p></dd><dt><span class="term"><code class="literal">default_xslt_params</code></span></dt><dd><p>Defines a file of XSLT parameters that will be applied to all documents built within the context of this target.
+This parameter must define a file to use for this purpose.
+However, it can point at an empty text file.
+An example for such a file could look like this:</p><pre class="screen">parameter1=value
+parameter2=value</pre><p>Not all characters are safe to use within this file.
+Parameter names must match the character set <code class="literal">[a-zA-Z0-9-_.]</code>.
+Parameter values must match the character set <code class="literal">[a-zA-Z0-9:/-_.]</code>.
+There must not be spaces around the <code class="literal">=</code> character.
+Use line feed (<code class="literal">\n</code>) characters to separate lines.</p></dd><dt><span class="term"><code class="literal">enable_ssi_fragments</code></span></dt><dd><p>Fragments allow using localized Server-Side Includes (SSIs) as part of templates.
+This allows reuse and localization of certain XHTML snippets.
+Using fragments is optional.
+To disable fragments, set <code class="literal">enable_ssi_fragments</code> to <code class="literal">no</code>.
+If <code class="literal">enable_ssi_fragments</code> is set to <code class="literal">yes</code>, the parameters <code class="literal">fragment_dir</code> and <code class="literal">fragment_l10n_dir</code> are required as well.</p><p>For more information about SSIs, see <a class="xref" href="config-ssi-fragment.html" title="Chapter 8. SSI fragments">Chapter 8, <em>SSI fragments</em></a>.</p></dd><dt><span class="term"><code class="literal">fragment_dir</code></span></dt><dd><p>Directory that contains localizable XHTML fragments.
+Only necessary if <code class="literal">enable_ssi_fragments</code> is enabled.</p></dd><dt><span class="term"><code class="literal">fragment_l10n_dir</code></span></dt><dd><p>Directory that contains localization strings for XHTML SSI fragments.</p></dd><dt><span class="term"><code class="literal">draft</code></span></dt><dd><p>Adds a <span class="emphasis"><em>DRAFT</em></span> watermark for all documents within this target.
+This uses the DAPS option <code class="literal">--draft</code>.</p><p>This option can also be enabled depending on the <code class="literal">lifecycle</code> value of a specific docset or manually for a specific document.
+If this option is specified here, it cannot be disabled using other configuration.</p></dd><dt><span class="term"><code class="literal">remarks</code></span></dt><dd><p>Enables display of the content of DocBook <code class="literal">&lt;remarks/&gt;</code> elements for all documents within this target.
+This uses the DAPS option <code class="literal">--remarks</code>.</p><p>This option can also be enabled manually for a specific document.
+If this option is specified here, it cannot be disabled using other configuration.</p></dd><dt><span class="term"><code class="literal">meta</code></span></dt><dd><p>Add meta information (XML ID and source file name) to documents within this target.
+This uses the DAPS option <code class="literal">--meta</code>.</p><p>This option can also be enabled manually for a specific document.
+If this option is specified here, it cannot be disabled using other configuration.</p></dd><dt><span class="term"><code class="literal">languages</code></span></dt><dd><p>Languages that will navigational pages will be generated for.
+This set of languages must be a subset of the languages defined for the server in <code class="literal">valid_languages</code>.
+Language codes must follow the schema <code class="literal">la-ng</code> (where <code class="literal">la</code> is the language and <code class="literal">ng</code> is the regional variety).
+Languages codes must be specified separated by spaces.
+This set of languages must be a subset of the set defined in the attribute <code class="literal">valid_languages</code>.</p></dd><dt><span class="term"><code class="literal">default_lang</code></span></dt><dd><p>The default language of navigational pages.
+The language code defined here must follow the schema <code class="literal">la-ng</code> (where <code class="literal">la</code> is the language and <code class="literal">ng</code> is the regional variety).
+The language code defined here must be part of the languages defined in <code class="literal">languages</code>.</p><p>Independently from this setting, Docserv² also allows defining a different default language for each docset and for each external link.
+These settings are part of the product configuration.</p></dd><dt><span class="term"><code class="literal">omit_default_lang_path</code></span></dt><dd><p>Whether to omit the path component for <code class="literal">default_lang</code> from internal links by default.
+For example, if the <code class="literal">default_lang</code> is defined as <code class="literal">en-us</code>, this</p></dd><dt><span class="term"><code class="literal">server_base_path</code></span></dt><dd><p>Relative root path of the Docserv² content on the publication server.
+Used for relative resource paths within the navigational HTML pages.</p></dd><dt><span class="term"><code class="literal">canonical_url_domain</code></span></dt><dd><p>Protocol and domain name to use for <code class="literal">&lt;link rel="canonical"/&gt;</code> tags.
+Always omit <code class="literal">server_base_path</code> and generated path from this attribute.</p></dd><dt><span class="term"><code class="literal">site_sections</code></span></dt><dd><p>Sections of the published site.
+Each section gets an own top-level navigation page.
+Product configuration files can be assigned to a site section using the <code class="literal">&lt;product site-section="…​"/&gt;</code> attribute.</p><p>Each site section should have 2 associated HTML template files named <code class="literal">template-[SITE_SECTION]-supported.html</code> and <code class="literal">template-section.[SITE_SECTION_NAME].unsupported.html</code>.
+Alternatively, Docserv² will use the fallback template <code class="literal">template-section-default.html</code>.</p></dd><dt><span class="term"><code class="literal">default_site_section</code></span></dt><dd><p>The default site section is used as the top-level <code class="literal">index.html</code> page.</p></dd><dt><span class="term"><code class="literal">zip_formats</code></span></dt><dd><p>Docserv² automatically creates ZIP files for documents built internally.
+ZIP files are docset-specific and language-specific.
+ZIP files only include documents in the formats defined within this attribute.
+This attribute allows a space-separated list of values that can include <code class="literal">html</code>, <code class="literal">single-html</code>, <code class="literal">pdf</code>, and <code class="literal">epub</code>.</p></dd></dl></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="config-general.html">Prev</a> </td><td width="20%" align="center"> </td><td width="40%" align="right"> <a accesskey="n" href="config-product.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Chapter 2. Configuration in general </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> Chapter 4. Product configuration</td></tr></table></div></body></html>

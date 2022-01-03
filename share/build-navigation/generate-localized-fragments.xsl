@@ -41,7 +41,7 @@
     </xsl:choose>
   </xsl:template>
 
-  <xsl:template match="@f:l10n|@f:l10n-2|@f:l10n-3">
+  <xsl:template match="@f:l10n|@f:*[starts-with(local-name(.), 'l10n-')]">
     <xsl:param name="attribute" select="substring-before(., '|')"/>
     <xsl:param name="key" select="substring-after(., '|')"/>
     <xsl:choose>

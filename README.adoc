@@ -1,0 +1,95 @@
+:ds2: Docserv²
+:db: DocBook
+:ad: AsciiDoc
+:daps: DAPS
+
+# {ds2}
+
+{ds2} is a tool to publish and semi-automatically update large-scale documentation websites accommodating multiple products, product versions, and localizations.
+It focuses on allowing publication of {db}/{ad} content that is compatible with {daps}.
+However, it can also accommodate links to other sources of documents.
+
+High notes:
+
+* Supports HTML, PDF, Single-HTML, and EPUB output formats
+
+* Support for localized documentation
+
+* Documents created outside of {ds2} can be linked to from the navigational pages
+
+* Output directory tree is all-static Web content
+
+* Separation of build server and publishing server(s)
+
+* Documentation sources are automatically synchronized from a remote Git repository
+
+* Output documents can be rebuilt and synchronized to publishing servers using a simple API call
+
+* Rigorous configuration format that prevents many errors etc.
+
+
+## Installing {ds2}
+
+RPM builds are available in the openSUSE Build Service in the link:https://build.opensuse.org/project/show/Documentation:Tools[`Documentation:Tools` repository].
+
+
+### openSUSE Leap 15.3
+
+. `+++zypper ar --refresh https://download.opensuse.org/repositories/Documentation:/Tools/openSUSE_Leap_15.3/Documentation:Tools.repo+++`
+
+. `zypper in docserv`
+
+
+## Dependencies
+
+{ds2} depends on the following software:
+
+* Linux with systemd
+* Python 3.4 or higher
+* `pygit2`, `lxml`
+* Docker Engine
+* Bash
+* `xmllint`, `xsltproc`
+* `xmlstarlet`
+* Jing (needs a JVM)
+* `daps2docker` (from https://github.com/openSUSE/daps2docker or the openSUSE Build Service's `Documentation:Tools` repository)
+
+
+## Running {ds2} from the Git repository
+
+To use {ds2}, make sure that the dependencies listed above are installed and then set up a development environment:
+
+. Make sure the Docker service is running: `systemctl start docker`
+  (To run {ds2} as a regular user, make sure your user is part of the group `docker`.)
+
+. `cd` to the local repository checkout
+
+. Source the dev-mode.sh script: `source dev-mode.sh`
+
+. Make sure that the right configuration (INI) directory is chosen (defaults to the configuration directory from this repository).
+To set a different one, use `export DOCSERV_CONFIG_DIR=/path/to/dir`.
+
+. Create a virtual environment with Python: `python3 -m venv .venv`
+
+. Activate the virtual environment: `source .venv/bin/activate`
+
+. Update the pip Python package manager: `pip3 install -U pip setuptools`
+
+. Install requirements via pip: `pip3 install -r requirements.txt`
+
+. Install {ds2} with setuptools in develop mode: `python3 setup.py develop`
+
+
+## Scripts delivered as part of {ds2}
+
+Parts of {ds2} that can be run individually:
+
+* `docserv`: The main build scheduling script.
+
+* `docserv-dchash`: Reduces a {daps} DC file to its core components and creates a hash value for comparison with related DC files.
+
+* `docserv-createconfig`: Creates draft product configuration files.
+
+* `docserv-stitch`: Validate the {ds2} product configuration and merge it into a single big XML file (see `--help`).
+
+* `docserv-build-navigation`: Build navigational pages for documentation content (see `--help`).

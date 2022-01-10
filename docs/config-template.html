@@ -25,10 +25,10 @@ var omitPathComponent = '@{{#omit_path_component#}}';
    &lt;div id="ds-section-select"&gt;&lt;/div&gt;
 
    &lt;div class="ds-select-list" id="ds-product-select"&gt;
-     &lt;div class="ds-select-instruction"&gt;&lt;f:l10n select="product-selector-wait"/&gt;&lt;/div&gt;
+     &lt;div class="ds-select-instruction"&gt;Downloading data...&lt;/div&gt;
    &lt;/div&gt;
    &lt;div class="ds-select-list" id="ds-version-select"&gt;
-     &lt;div class="ds-select-instruction"&gt;&lt;f:l10n select="product-selector-select"/&gt;&lt;/div&gt;
+     &lt;div class="ds-select-instruction"&gt;Select a product&lt;/div&gt;
    &lt;/div&gt;
   &lt;/body&gt;
 &lt;/html&gt;</pre><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Docserv² will replace the variable definitions of the form <code class="literal">@{{…​}}</code> during the page-generation process.
@@ -38,7 +38,7 @@ The homepage is a special case of a site section overview page.</p><p>The docset
 The file extension (<code class="literal"><span class="emphasis"><em>EXT</em></span></code>) of page templates will generally be <code class="literal">.html</code>, though you can use other file extensions.</p><p>A minimal docset page template consists of the following elements:</p><pre class="screen">&lt;!DOCTYPE html&gt;
 &lt;html&gt;
   &lt;head&gt;
-    &lt;title&gt;Site section template&lt;/title&gt;
+    &lt;title&gt;Docset template&lt;/title&gt;
     &lt;script&gt;
 var basePath = '@{{#base_path#}}';
 var templateExtension = '@{{#template_extension#}}';
@@ -55,6 +55,6 @@ var pageDocSet = '@{{#docset#}}';
     &lt;/div&gt;
   &lt;/body&gt;
 &lt;/html&gt;</pre><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Docserv² will replace the variable definitions of the form <code class="literal">@{{…​}}</code> during the page-generation process.
-All variables shown within the <code class="literal">&lt;script/&gt;</code> element above are mandatory.</p></li><li class="listitem"><p><code class="literal">docservui.js</code> must be included to make loading the document overview work.</p></li><li class="listitem"><p>The element in the body are necessary to make document overview work.
-You can add any other desired element around it.</p></li></ul></div></div><div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a id="config-template-test-local"></a>Testing templates locally</h2></div></div></div><p>Docserv² HTML template files depend on the ability to download JSON data via XHRs.
-To locally test whether everything works without running a server, you need to disable some browser security mechanisms:</p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Firefox: In <code class="literal">about:config</code>, set <code class="literal">security.fileuri.strict_origin_policy</code> to <code class="literal">false</code>.</p></li><li class="listitem"><p>Chrome: Start the browser with <code class="literal">chromium --allow-file-access-from-files</code></p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="config-product.html">Prev</a> </td><td width="20%" align="center"> </td><td width="40%" align="right"> <a accesskey="n" href="config-localization.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Chapter 6. Product configuration </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> Chapter 8. Localization</td></tr></table></div></body></html>
+All variables shown within the <code class="literal">&lt;script/&gt;</code> element above are mandatory.</p></li><li class="listitem"><p><code class="literal">docservui.js</code> must be included to make loading the document overview work.</p></li><li class="listitem"><p>The element in the body is necessary to make the document overview work.
+You can add any other desired element around it.</p></li></ul></div></div><div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a id="config-template-test-local"></a>Testing templates locally</h2></div></div></div><p>Docserv² HTML template files depend on the ability to access JSON data via XHRs.
+To test locally whether everything works without running a server, you need to disable browser security mechanisms temporarily:</p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Firefox: In <code class="literal">about:config</code>, set <code class="literal">security.fileuri.strict_origin_policy</code> to <code class="literal">false</code>.</p></li><li class="listitem"><p>Chrome: Start the browser with <code class="literal">chromium --allow-file-access-from-files</code></p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="config-product.html">Prev</a> </td><td width="20%" align="center"> </td><td width="40%" align="right"> <a accesskey="n" href="config-localization.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Chapter 6. Product configuration </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> Chapter 8. Localization</td></tr></table></div></body></html>

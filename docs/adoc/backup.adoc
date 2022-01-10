@@ -1,0 +1,48 @@
+include::1-attribute.adoc[]
+
+[#backup]
+# Backing up {ds2} data
+
+{ds2} itself has no built-in backup functionality.
+Neither for the configuration nor for its configuration or its document metadata store.
+
+You need make sure to back up all relevant data yourself.
+
+
+[#maintain-backup-config]
+## Maintaining, backing up, and restoring configuration files
+
+To maintain and back up configuration, create a Git repository at `/etc/docserv/`.
+To do so, run `git -C /etc/docserv/ init`.
+Then add, commit, and push all content as desired.
+
+To restore configuration, use Git commands.
+You do not need to exit or restart {ds2} to apply most configuration, as it is re-evaluated upon every build instruction.
+The exception to this is restoring site configuration: In this case, make sure to exit {ds2} and restart after having restored it.
+
+
+[#backup-metadata]
+## Backing up the metadata store
+
+The metadata store contains metadata extracted from documents, such as document titles and subtitles.
+If it is deleted, all metadata will have to be created anew.
+This means, all docsets of the site have to be rebuilt which can take a substantial amount of time.
+If you do not do so, navigational pages will lose links to most content after the immediate next build.
+
+To maintain and back up the metadata store, create a Git repository at `/var/cache/docserv/`.
+To do so, run `git -C /var/cache/docserv/ init`.
+Create a `.gitignore` file that ignores `.json` files on the top level of the repository to avoid backing up build queue files.
+Then add, commit, and push all content as desired.
+
+It usually makes sense to create a cronjob or similar that automatically adds/commits/pushes all changes on a regular basis.
+
+
+[#backup-content]
+## Backing up {ds2} content
+
+{ds2} content is stored in the directory configured as the `backup_dir` in the site configuration for each target.
+This directory can be compressed (for example with: `tar -cvf "__[BACKUP_FILE]__.tar" -C "__[BACKUP_DIR_FOR_TARGET]__" .`).
+Finally, upload or copy the backup.
+
+To restore content, exit {ds2}, temporarily rename the `backup_dir`.
+Then extract the content of the backup to `backup_dir`.

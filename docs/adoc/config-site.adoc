@@ -1,0 +1,314 @@
+include::1-attribute.adoc[]
+
+[#config-site]
+# Site configuration
+
+The site configuration file of {ds2} is an INI file that defines basic parameters, such as:
+
+* How many CPUs to use for building
+
+* Where to run the API endpoint
+
+* Where to synchronize content to
+
+* Where to find further configuration
+
+It consists of a `[server]` section and 1 or more `[target+++_+++__n__]` sections (`_n_` can be any integer).
+
+The default site configuration for {ds2} is named `/etc/docserv/my-site.ini`.
+To choose a differently-named `.ini` file from `/etc/docserv`, pass a parameter to the `**docserv**` command.
+For example, to use the file `/etc/docserv/my-other-site.ini`, use:
+
+----
+> docserv my-other-site
+----
+
+[IMPORTANT]
+.Restart {ds2} after each change to the site configuration
+====
+Whenever you change any aspect of the site configuration file, you must restart the `**docserv**` process.
+This is unlike all other {ds2} configuration which will be re-evaluated during each build instruction.
+====
+
+
+[#config-site-server-section]
+## The `[server]` section
+
+The server section defines global attributes for {ds2}.
+It accepts the following attributes:
+
+[source,ini]
+----
+[server]
+host = localhost
+port = 8080
+
+repo_dir = /home/docserv/docserv-repos/
+temp_repo_dir = /home/docserv/docserv-temp-repos/
+
+valid_languages = en-us de-de fr-fr
+max_threads = 8
+
+enable_mail = no
+loglevel = 0
+----
+
+`[server]`::
+  The section identifier.
+
+`host` (host name) and `port` (integer)::
+  Specify using these attributes where to run the API endpoint of {ds2}.
+The API endpoint is used to trigger builds and check build status.
+
+`repo_dir` (directory path)::
+  Specifies the directory that is used to permanently cache remote Git repositories.
+Git repositories in this directory persist across builds and instances of the {ds2} process.
++
+This attribute allows using a relative path, based on the directory containing the site configuration file.
+
+`temp_repo_dir` (directory path)::
+  Specifies the directory that is used to temporarily cache specific Git branches.
+When receiving a build instruction, {ds2} will clone an individual branch of a Git repository from `repo_dir`.
+It will then build using the data from `temp_repo_dir`.
+This prevents branch checkout collisions during builds and other problems.
+After the build instruction has run through, the temporary branch clone is deleted.
++
+This attribute allows using a relative path, based on the directory containing the site configuration file.
+
+`valid_languages` (language codes, space-separated)::
+  Specifies the overall list of language codes recognized as valid by this instance of {ds2}.
+Language codes must use the format `la-ng` (see also <<term-language-code>>).
+Languages codes must be specified separated by spaces.
++
+[NOTE]
+.Independent sets of language code definitions
+====
+{ds2} uses two independent sets of language code definitions:
+
+* A set of language codes valid for documents and navigational pages (this attribute, global)
+* A set of language codes that navigational pages are created for (`languages` attribute, target-specific)
+====
+
+`max_threads` (integer or `max`)::
+  Specifies the maximum number of threads to use for {ds2}.
+You can specify either a number, such as `4` or use `max` to use as many threads as there are logical CPU cores.
++
+In any case, the upper limit to the number of threads is the number of logical CPU cores.
+
+`enable_mail` (boolean)::
+  Specifies whether to send build error reports via email.
+Allows the values `yes` (default) and `no`.
+If enabled, the build server must have a valid `**sendmail**` setup.
+
+`loglevel` (integer)::
+  Specifies which types of messages to log via `stdout` (when running interactively) or on the system log (when running as a daemon).
+Allows the values `0` (warnings only), `1` (warnings and informational messages), or `2` (all messages including debugging messages).
+
+
+[#config-site-target-section]
+## Target sections
+
+{ds2} supports reuse of the same `**docserv**` process to synchronize to multiple target servers.
+Each of those target servers is defined in its own target section.
+All or a subset of target servers can share certain parts of their configuration by sharing the specific configuration directories, if desired.
+
+[source,ini]
+----
+[target_0]
+name = internal
+active = yes
+internal = yes
+
+enable_target_sync = yes
+target_path = ssh://user@server:/srv/www/htdocs
+backup_path = /home/docserv/target-internal/
+
+config_dir = /etc/docserv/config.d/
+template_dir = /etc/docserv/templates/
+server_root_files = /etc/docserv/server-root-files-internal
+default_xslt_params = /etc/docserv/xslt-params.txt
+
+enable_ssi_fragments = yes
+fragment_dir = /etc/docserv/fragment-internal
+fragment_l10n_dir = /etc/docserv/fragment-l10n-internal
+
+server_base_path = /
+canonical_url_domain = https://www.example.org
+
+draft = yes
+remarks = yes
+meta = no
+# build_container = ...
+
+languages = en-us
+default_lang = en-us
+omit_default_lang_path = no
+
+site_sections = section-a section-b
+default_site_section = section-a
+
+zip_formats = pdf epub single-html
+----
+
+`[target+++_+++__n__]`::
+  The section identifier which needs to start with `target_`, followed by an integer.
+
+`name` (string)::
+  Name of the target that is used to identify the target in the API and in internal messages.
+The name should consist of alphanumeric ASCII characters and must not contain spaces.
+The name must be unique among target names within this site configuration file.
+
+`active` (boolean)::
+  If this attribute is set to `yes`, {ds2} will allow building documents for this target.
+
+`internal` (boolean)::
+  If the target is set up as an internal target, {ds2} will allow building docsets that are marked as `unpublished` via their lifecycle value.
+It also means that navigational pages will be created for such docsets.
+
+`enable_target_sync` (boolean)::
+  Whether to automatically synchronize to the target
+{ds2} only supports synchronizing the entirety of content available from the `backup_path` to the `target_path`.
+Depending on the amount of content available as part of your site, doing a full synchronization can take very long and block subsequent builds.
+
+`target_path` (directory path)::
+  The target path defines where content is published.
+This can be a local or an SSH URL.
+Whenever {ds2} finishes a build instruction, it will update the content at this path using `*rsync*`.
++
+If you use an SSH connection, make sure to set up non-interactive SSH login to the server __before__ trying to use {ds2}.
+That means, the SSH key of the build server's `docserv` user must be set up in the `.ssh/authorized_keys` file of the target server.
+For more information, see <<setup-extra>>.
+
+`backup_path` (directory path)::
+  Local path that contains all publication-ready content.
+Whenever {ds2} finishes a build instruction, it will update the content at this path before updating `target_path`.
++
+This attribute allows using a relative path, based on the directory containing the site configuration file.
+
+`config_dir` (directory path)::
+  Directory containing product configuration.
+The product configuration defines which documents can be built within this instance of {ds2}.
++
+This attribute allows using a relative path, based on the directory containing the site configuration file.
+
+`template_dir` (directory path)::
+  Directory for overview page templates.
++
+This attribute allows using a relative path, based on the directory containing the site configuration file.
+
+`server_root_files` (directory path)::
+  Directory containing files to copy to the server's root directory, such as `robots.txt`, `.htaccess`, or `favicon.ico`.
++
+This attribute allows using a relative path, based on the directory containing the site configuration file.
+
+`default_xslt_params` (file path)::
+  Defines a file containing XSLT parameters that will be applied to all documents built within the context of this target.
+This parameter must define a file to use for this purpose.
+However, it can point at an empty text file.
+An example for such a file could look like this:
++
+[source,ini]
+----
+parameter1=value
+parameter2=value
+----
++
+Not all characters are safe to use within this file.
+Parameter names must match the character set `+++[a-zA-Z0-9-_.]+++`.
+Parameter values must match the character set `+++[a-zA-Z0-9:/-_.]+++`.
+There must not be spaces around the `=` character.
+Use line feed (`\n`) characters to separate lines.
++
+This attribute allows using a relative path, based on the directory containing the site configuration file.
+
+`enable_ssi_fragments` (boolean)::
+  Fragments allow using localized Server-Side Includes (SSIs) as part of templates.
+This allows reuse and localization of certain XHTML snippets.
+Using fragments is optional.
+To disable fragments, set `enable_ssi_fragments` to `no`.
+If `enable_ssi_fragments` is set to `yes`, the parameters `fragment_dir` and `fragment_l10n_dir` are required as well.
++
+For more information about SSIs, see <<config-ssi-fragment>>.
+
+`fragment_dir` (directory path)::
+  Directory that contains localizable XHTML fragments.
+Only necessary if `enable_ssi_fragments` is enabled.
++
+This attribute allows using a relative path, based on the directory containing the site configuration file.
+
+`fragment_l10n_dir` (directory path)::
+  Directory that contains localization strings for XHTML SSI fragments.
++
+This attribute allows using a relative path, based on the directory containing the site configuration file.
+
+`draft` (boolean)::
+  Adds a __DRAFT__ watermark for all documents within this target.
+This uses the DAPS option `--draft`.
++
+This option can also be enabled depending on the `lifecycle` value of a specific docset or manually for a specific document.
+If this option is specified here, it cannot be disabled using other configuration.
+
+`remarks` (boolean)::
+  Enables display of the content of DocBook `<remarks/>` elements for all documents within this target.
+This uses the DAPS option `--remarks`.
++
+This option can also be enabled manually for a specific document.
+If this option is specified here, it cannot be disabled using other configuration.
+
+`meta` (boolean)::
+  Add meta information (XML ID and source file name) to documents within this target.
+This uses the DAPS option `--meta`.
++
+This option can also be enabled manually for a specific document.
+If this option is specified here, it cannot be disabled using other configuration.
+
+`build_container` (container image reference, optional attribute)::
+  This option can be used define a specific container image to be used for building documents from this target.
+By default, the container image to use is defined to be the default of `daps2docker`.
++
+You can also define a container reference for a specific docset from within the product configuration.
+
+`languages` (language codes, space-separated)::
+  Languages that will navigational pages will be generated for.
+This set of languages must be a subset of the languages defined for the server in `valid_languages`.
+Language codes must use the format `la-ng` (see also <<term-language-code>>).
+Languages codes must be specified separated by spaces.
+This set of languages must be a subset of the set defined in the attribute `valid_languages`.
+
+`default_lang` (language code)::
+  The default language of navigational pages.
+The language code must use the format `la-ng` (see also <<term-language-code>>).
+The language code defined here must be part of the languages defined in `languages`.
++
+Independently from this setting, {ds2} also allows defining a different default language for each docset and for each external link.
+These settings are part of the product configuration.
+
+`omit_default_lang_path` (boolean)::
+  Whether to omit the path component for `default_lang` from internal links by default.
+For example, if the `default_lang` is defined as `en-us`, the path component `en-us/` will be omitted from internally-created links.
+Using this option will only lead to usable website if you also implement support for this path omission in the HTTP server configuration of that target.
+
+`server_base_path` (directory path)::
+  Relative root path of the {ds2} content on the publication server.
+Used for relative resource paths within the navigational XHTML pages.
+
+`canonical_url_domain` (protocol and host name)::
+  Protocol and domain name to use for `<link rel="canonical"/>` tags.
+Always omit `server_base_path` and generated path from this attribute.
+
+`site_sections` (site section identifiers, space-separated)::
+  Sections of the published site.
+Each section gets an own top-level navigation page.
+Product configuration files can be assigned to a site section using the `<product site-section="..."/>` attribute.
+The order of sections in this attribute determines the order of the sections on the site.
++
+For more information about XHTML templates needed for site sections, see <<config-template-site-section>>.
+
+`default_site_section` (site section identifier)::
+  The default site section is used as the top-level `index.html` page.
+
+`zip_formats` (format identifiers, space-separated)::
+  {ds2} automatically creates ZIP files for documents built internally.
+ZIP files are docset-specific and language-specific.
+ZIP files only include documents in the formats defined within this attribute.
+This attribute allows a space-separated list of values that can include `html`, `single-html`, `pdf`, and `epub`.

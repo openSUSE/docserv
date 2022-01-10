@@ -1,0 +1,69 @@
+include::1-attribute.adoc[]
+
+[#config-localization]
+# Localization
+
+{ds2} supports localization of the templates for navigational pages via localization files in conjunction with __Server Side Includes__ (SSI) fragments (see <<config-ssi-fragment>>).
+Use of the SSI fragment feature also necessitates use of localization files.
+
+All localization files must be collected in a single directory.
+
+There must be at least one localization file for the default UI language.
+This file must contain all requested localization strings.
+
+Files for alternative UI languages and the strings within them are optional.
+In case they are missing, the default UI language's string will be used as a fallback.
+
+
+[#config-localization-file]
+## Localization file structure
+
+Localization files are based on a simple file format and easy to validate.
+Each file represents a single language.
+Within a localization file, localization strings are uniquely identified by their __localization key__.
+
+Localization files must be named `__[LANGUAGE_CODE]__.xml`.
+The `__[LANGUAGE_CODE]__` must use the format `la-ng` (see also <<term-language-code>>).
+
+The file format of localization files looks like this:
+
+[source,xml,subs="+quotes"]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<locale xmlns="https://github.com/openSUSE/docserv/l10n" lang="__[LANGUAGE_CODE]__">
+
+  <content key="__[LOCALIZATION_KEY]__">__[LOCALIZED_CONTENT]__</content>
+
+</locale>
+----
+
+* The `__[LANGUAGE_CODE]__` must use the format `la-ng` (see also <<term-language-code>>).
+This language code definition is purely informative, as {ds2} will pick up the language code from the file name.
+
+* The `__[LOCALIZATION_KEY]__` must be unique within each localization file.
+The localization key uses an `xsd:ID` data type.
+It must not contain spaces or a leading digit.
+
+* The `__[LOCALIZED_CONTENT]__` can be any content, including a limited XHTML subset.
+
+
+[#config-localization-placeholder]
+## Placeholders
+
+Localized content can contain the following placeholders:
+
+* `@{{#year#}}` within the content:
+Placeholder for the current year (for example, `2022`).
+This replacement is not handled by XML tools.
+
+* `@({{#ui_language#}}` within the content:
+Placeholder for the language code of the generated fragment (in the format `la-ng`, see also <<term-language-code>>).
+This replacement is not handled by XML tools.
+
+* `@{{#ui_language_omissible#}}`
+Placeholder for the UI language of the generated fragment, for situations where the language code is omissible in URLs (for example, __empty string__ for the default UI language or `la-ng` for alternative UI languages).
+This replacement is not handled by XML tools.
+
+* `@{{#ui_language_omissible_slash#}}`
+Placeholder for the UI language of the generated fragment with a slash appended, for situations where the language code is omissible in URLs (for example, __empty string__ for the default UI language or `la-ng/` for alternative UI languages).
+This replacement is not handled by XML tools.

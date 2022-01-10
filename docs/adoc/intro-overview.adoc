@@ -1,0 +1,35 @@
+include::1-attribute.adoc[]
+
+[#intro-overview]
+# Overview of {ds2}
+
+{ds2} is a tool to publish large-scale documentation websites accommodating multiple products, product versions, and localizations.
+It focuses on allowing publication of {db}/{ad} content that is compatible with {daps}.
+However, it can also accommodate links to other sources of documents.
+
+The {ds2} build server is written in Python/Bash/XSLT and designed to run as a daemon.
+Its Git repository is at https://github.com/openSUSE/docserv.
+
+image::docserv2-overview.svg[title="{ds2} overview",width=90%]
+
+The following elements that are relevant to {ds2}:
+
+* Machines:
+
+** Git is used for versioning the sources of the content to publish.
+
+** The {ds2} build server is the core piece of the publication process.
+It builds documents and their associated navigation pages.
+After building a specific piece of documentation, it copies the documentation output to a backup directory and from there to a publication server.
+
+** The build server also provides a REST API that can be used to trigger rebuilds for documentation and check the status of those rebuilds.
+
+** The publication server (or __target__) is the server where documentation is ultimately hosted.
+There are no server-side scripts that needs to run on targets.
+Therefore, any computer running a compatible Web server is suitable as a target.
+
+* People:
+
+** Writers create content in the form of {db} or {ad} articles, books, and sets.
+
+** Release managers publish content by creating configuration and triggering API calls.

@@ -1,0 +1,125 @@
+include::1-attribute.adoc[]
+
+[#config-ssi-fragment]
+# SSI fragments
+
+Server-Side Includes (SSIs) allow centrally updating certain content and including it within plain HTML pages using an XML comment.
+{ds2} can optionally use SSIs to allow translations of navigational pages.
+For general information about SSIs, see link:https://en.wikipedia.org/wiki/Server_Side_Includes[Wikipedia].
+
+To use SSIs, you must:
+
+* Use a web server that supports SSIs (such as Apache) with the SSI feature enabled.
+
+* Enable SSIs in the site configuration.
+For information about enabling SSIs in the site configuration, see <<config-site-target-section>>.
+
+{ds2} does not natively support plain HTML fragments.
+Instead, it prefers XHTML fragments wrapped in a minimalist XML markup.
+This format allows adding string placeholders which {ds2} will pick up and replace, generating localized plain-XHTML fragments.
+To avoid limiting the XHTML syntax that can be used as part of it, there is intentionally no XML schema for XML-wrapped fragments.
+
+[IMPORTANT]
+.Javascript and similar content in fragments
+====
+Be aware that the XML-wrapped XHTML fragments must be legal XML and are handled by an XML toolchain.
+Certain Javascript and similar content may need to be specially escaped.
+====
+
+
+[#config-ssi-fragment-file]
+## SSI fragment file structure
+
+A minimalist example of a fragment could look like this:
+
+[source,xml]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<f:fragment xmlns:f="https://github.com/openSUSE/docserv/fragment">
+
+  <p>... any XHTML 5 content...</p>
+
+</f:fragment>
+----
+
+
+[#config-ssi-fragment-feature]
+## SSI fragment file format features
+
+Besides allowing inclusion of practically all XHTML content, this format supports including the following elements, attributes and variables:
+
+* `@force-breaks` attribute in the root element:
+`<f:fragment force-breaks="yes">` makes sure that all line breaks from the original source document are included literally.
+This helps generate nicely formatted HTML source where necessary.
+By default, this setting is off (that is, set to `no`).
+
+* `<f:l10n select="__[LOCALIZATION_KEY]__"/>` within the content:
+Adds the translation string which `__[LOCALIZATION_KEY]__` resolves to into the generated localized fragment.
++
+For example:
++
+--
+* Using this markup in a SSI fragment:
++
+[source,html]
+----
+<p><f:l10n select="my-content"/></p>
+----
+
+* With `my-content` defined thus in `en-us.xml`:
++
+[source,xml]
+----
+<content key="my-content">This is translated text content.</content>
+----
+
+* ...Yields this `en-us` output:
++
+[source,html]
+----
+<p>This is translated text content.</p>
+----
+--
+
+* `@f:l10n="__[ATTRIBUTE_NAME]__|__[LOCALIZATION_KEY]__"/>` within any XHTML element:
+Adds an XHTML attribute with the name `__[ATTRIBUTE_NAME]__` into the generated localized fragment.
+The value of the attribute will be the resolution of `__[LOCALIZATION_KEY]__`.
++
+You can add multiple localized attributes to the same XHTML element by appending a hyphen (`-`) and a number to the attribute name.
++
+For example:
++
+--
+* Using this markup in a SSI fragment:
++
+[source,html]
+----
+<img src="example.png" f:l10n="alt|my-alt-text" f:l10n-2="title|my-title-text"/>
+----
+
+* With `my-alt-text` and `my-title-text` defined thus in `en-us.xml`:
++
+[source,xml]
+----
+<content key="my-alt-text">This is alternative text.</content>
+<content key="my-title-text">This is title text.</content>
+----
+
+* ...Yields this `en-us` output:
++
+[source,html]
+----
+<img src="example.png" alt="This is alternative text." title="This is title text."/>
+----
+--
+
+* `<f:comment>A comment</f:comment>` within the content:
+An XML comment that needs to be kept in generated localized fragments.
+All regular XML comments (`<+++!-- ... --+++>`) present in the XML-wrapped fragments will be removed from generated fragments.
+
+* `<f:br/>` within the content:
+An individual forced break.
+This can be used to improve XHTML source formatting of generated fragments.
+
+* In addition, the placeholders supported within localized content are also supported within the HTML content here.
+See <<config-localization-placeholder>>.

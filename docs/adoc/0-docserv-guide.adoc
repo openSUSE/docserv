@@ -1,0 +1,26 @@
+include::1-attribute.adoc[]
+
+[#docserv2-guide]
+# {ds2} Guide
+
+include::intro-overview.adoc[leveloffset=+1]
+
+include::intro-terminology.adoc[leveloffset=+1]
+
+include::install-run.adoc[leveloffset=+1]
+
+include::config-overview.adoc[leveloffset=+1]
+
+include::config-site.adoc[leveloffset=+1]
+
+include::config-product.adoc[leveloffset=+1]
+
+include::config-template.adoc[leveloffset=+1]
+
+include::config-localization.adoc[leveloffset=+1]
+
+include::config-ssi-fragment.adoc[leveloffset=+1]
+
+include::backup.adoc[leveloffset=+1]
+
+include::api.adoc[leveloffset=+1]

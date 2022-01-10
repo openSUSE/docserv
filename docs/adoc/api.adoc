@@ -1,0 +1,77 @@
+include::1-attribute.adoc[]
+
+[#api]
+# Using the {ds2} API
+
+{ds2} includes a nascent (read, "not particularly good") REST API.
+
+The API runs at the API interface defined via the site configuration's `host` and `port` attributes.
+For more information, see <<config-site-server-section>>.
+
+
+[#api-client-dscmd]
+## The {dscmd} command-line API client
+
+The official API client is {dscmd} which is available as an RPM package from the openSUSE Build Service's `Documentation:Tools` repository or from the link:https://github.com/openSUSE/dscmd[dscmd GitHub repository].
+Installation from the RPM works analogously to that of {ds2} itself, see <<install>>.
+
+The {dscmd} client includes a `--help` switch.
+
+To set up {dscmd}, create a configuration file `~/.dscmd-server.conf` with the following content:
+
+[source,bash,subs="+quotes"]
+----
+server=__[HOST]__
+port=__[PORT]__
+validtargets=__[TARGETS]__
+----
+
+Replace `__[HOST]__`, `__[PORT]__`, and `__[TARGETS]__` with values appropriate for your installation.
+Target names must match the names defined using the `name` attribute of the target sections in the site configuration (<<config-site-target-section>>).
+You can combine multiple target values using commas characters (`,`), for example: `validtargets=target_1,target_2`.
+(Do not add spaces around the comma characters.)
+
+This configuration file will be sourced by Bash.
+This means it must follow Bash syntax (and may contain arbitrary code).
+
+[#api-call]
+## API calls
+
+
+[#api-check-build]
+### Checking build status
+
+To check the current build statuses and review the past build queue, make a `GET` request to the JSON endpoint `http://__[HOST]__:__[PORT]__/`.
+
+Alternatively, use `**dscmd queue**`.
+
+
+[#api-send-build-instruction]
+### Sending a build instruction
+
+To send a build instruction, make a `POST` request to the endpoint `http://__[HOST]__:__[PORT]__/` with JSON data attached:
+
+[source,bash,subs="+quotes"]
+----
+> curl \
+    --header "Content-Type: application/json" \
+    --request POST \
+    --data '{"target":"__[TARGET]__","product":"__[PRODUCT]__","docset":"__[DOCSET]__","lang":"__[LANGUAGE_CODE]__"}' \
+    __[HOST]__:__[PORT]__
+----
+
+Replace `__[TARGET]__`, `__[PRODUCT]__`, `__[DOCSET]__`, `__[LANGUAGE_CODE]__`, `__[HOST]__`, and `__[PORT]__` with appropriate values.
+You can combine multiple build instructions into a single `POST` requests by sending a data field with multiple JSON objects separated with comma characters (`,`).
+
+Alternatively, use:
+
+[source,bash,subs="+quotes"]
+----
+> dscmd trigger \
+    --target=__[TARGET]__
+    --product=__[PRODUCT_ID]__ --docset=__[DOCSET_ID]__
+    --lang=__[LANGUAGE_CODE]__.
+----
+
+Within each parameter, you can combine multiple values using comma characters (`,`), for example: `--target=target_1,target_2`.
+(Do not add spaces around the comma characters. Always use equal-to characters [`=`] as shown in the example.)

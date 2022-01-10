@@ -1,0 +1,10 @@
+:ds2: Docserv²
+// FIXME: Can't get this to work :/ cf. https://docs.asciidoctor.org/asciidoc/latest/attributes/attribute-entry-substitutions/
+//   :dscmd: `**dscmd**`
+:dscmd: dscmd
+:db: DocBook
+:ad: AsciiDoc
+:daps: DAPS
+:os: openSUSE
+:leap: {os} Leap
+:tw: {os} Tumbleweed

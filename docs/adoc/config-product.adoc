@@ -1,0 +1,327 @@
+include::1-attribute.adoc[]
+
+[#config-product]
+# Product configuration
+
+The product configuration of {ds2} is a directory of XML files that define which documents to build and which external documents to link to and where they are place within the overall structure of the site.
+Each XML file from the directory defines documentation for a single product (alternatively, it may also be used as a first-level category).
+
+Internally, {ds2} validates and combines all configuration files into a single large file ("stitching").
+{ds2} will re-evaluate the product configuration with each new build instruction.
+
+A very reduced example of a product configuration file may look like this:
+
+[source,xml]
+----
+<?xml version="1.0" encoding="utf-8"?>
+<product productid="example-product" schemaversion="6.0">
+  <name>Example Product</name>
+
+  <maintainers>
+    <contact>p.erson@doma.in</contact>
+  </maintainers>
+
+  <category categoryid="example-category">
+    <language default="1" lang="en-us" title="Example Category"/>
+  </category>
+
+  <desc default="1" lang="en-us">
+    <p>
+      This product is good.
+    </p>
+  </desc>
+
+  <docset setid="1.0" lifecycle="supported">
+    <version>1.0</version>
+    <builddocs>
+      <git remote="https://github.com/example.org/doc-example"/>
+      <language default="1" lang="en-us">
+        <branch>main</branch>
+        <deliverable category="example-category">
+          <dc>DC-example-admin</dc>
+          <format html="1" pdf="1"/>
+        </deliverable>
+      </language>
+    </builddocs>
+    <internal>
+      <ref product="example-product"/>
+    </internal>
+    <external>
+      <link linkid="rn">
+        <language lang="en-us" default="1" title="Extra document">
+          <url format="html" href="https://www.example.org/1"/>
+          <url format="pdf" href="https://www.example.org/1.pdf"/>
+        </language>
+      </link>
+    </external>
+  </docset>
+
+</product>
+----
+
+A product configuration file has the following basic components:
+
+* Product metadata:
+
+** `@productid` and `<name/>`: The product ID which is used by the API and as a URL component, and the product name which is displayed to users.
+
+** `<maintainers/>`: A section defining documentation maintainers.
+Email addresses referenced here receive email when a build instruction in the context of this product fails.
+
+** `<category/>`: Product-specific categories allow sorting documents within docset navigational pages.
+In some contexts, these on-page categories may be called "third-level categories".
+** `<desc/>`: A generic product description.
+* `<docset/>` definitions: Docsets define which documents to reference within a docset navigational page.
+A docset usually maps to a product version.
+In some contexts, docsets may be called "second-level categories".
++
+In most cases, there are multiple docsets within a product configuration file.
+
+A longer, annotated example configuration file is available from link:https://github.com/openSUSE/docserv/blob/main/config/config.d/example_product.xml[GitHub].
+
+
+[#config-product-metadata]
+## Product metadata configuration
+
+This document will not focus further on defining product metadata.
+
+//FIXME For more information about product metadata, see the annotated schema at link:FIXME[].
+
+
+[#config-product-docset]
+## Docset configuration
+
+A `<docset/>` collates all information needed to generate output documents and navigational pages for a specific product version (or second-level category).
+
+The `<docset/>` element has the following basic elements:
+
+* Docset metadata:
+** `@setid` and `<version/>`:  The docset ID which is used by the API and as a URL component, and the product version which is displayed to users.
+** The lifecycle attribute is set according to the support lifecycle of the product.
+It defines how and in which context the docset is displayed.
+
+* References to documents to build and link to
+
+## The `@lifecycle` attribute of docsets
+
+The `@lifecycle` attribute is meant to map to the product lifecycle:
+
+* `unpublished`: Documents can only be built and published for targets marked internal and by default will carry a _DRAFT_ watermark.
+
+* `beta`: Documents can be built and published for any target and will carry a _DRAFT_ watermark.
+
+* `supported`: Documents can be built and published for any target and will not carry a _DRAFT_ watermark by default.
+
+* `unsupported`: Documents can be built and published for any target and will not carry a _DRAFT_ watermark by default. However, they will only be published within a single ZIP file, making them non-indexable for search engines. This also reduces visibility in the navigational pages, as documents will only be shown under Deprecated documents header.
+
+
+[#config-product-reference]
+## Document references in docsets
+
+`<docset/>` elements allow different types of document references, each defined within an own element:
+
+* `<builddocs/>`: DAPS-compatible DocBook and AsciiDoc Documents that {ds2} can build itself.
+{ds2} will define the publishing URL and extract metadata such as the document title from these documents during the build process.
+{ds2} will automatically create ZIP archives of these documents.
++
+However, to update the navigational pages for such documents, the documents need to remain buildable within {ds2}, even if the product is no longer supported.
+* `<internal/>`: References to {ds2} navigational pages or documents defined elsewhere in the product configuration.
+{ds2} will extract the URL and metadata such as the document title from their original context in the product configuration.
+
+* `<external/>`: References to documents created outside of {ds2}.
+Such documents can be located anywhere on the internet.
+They can also be located on the same host as {ds2}-created documents, placed in such a way that they do not interfere with the directory structure created by {ds2}.
+URLs and document titles of such documents must be defined manually.
+{ds2} cannot prevent link breakage or similar issues for these documents.
+
+[IMPORTANT]
+.No page dependency management
+====
+Docset navigational pages can only be rebuilt individually.
+
+Internal links can become outdated when the original document is reconfigured but the docset containing the internal reference is not specifically rebuilt after the change.
+Make sure to rebuild dependent docsets manually.
+====
+
+
+[#config-product-build]
+### Documents generated with {ds2}, `<builddocs/>`
+
+References within `<builddocs/>` are references to documents that are generated within Docserv² for that product version.
+Documents can only be generated via {ds2} if they fulfull both of the following requirements:
+
+* DAPS-compatible {db} or {ad} documents.
+
+* Hosted in a Git repository which the {ds2} build server can unauthenticated read access.
+
+Such documents can be configured for multiple output formats and languages.
+
+The primary ordering principle for documents within `<builddocs/>` is by language.
+The listing of documents available in the default language (`<language default="true"/>`) must come first.
+
+After the listing of documents available in the default language, you can set up translation languages (`<language default="false"/>`).
+The document listing from the default language will be used as the reference for all other languages, indirectly promoting consistency within the source documentation repositories.
+In translation languages, you cannot define additional documents—the set of translated documents must be a subset of the documents that exist in the primary language.
+
+The default language is defined per docset only.
+If necessary, it can be different for each docset.
+
+Within the `<builddocs/>` section, you must define a Git source repository using the `<git/>` element.
+Use the HTTPS-based remote address to configure Git source repositories.
+
+This Git repository must contain all documents to generate in this product context.
+However, documents in different languages can use different branches and subdirectories of the Git source repository.
+To present documents from multiple Git repositories as part of the same product context, include the documents from the secondary repository using internal references.
+
+For DocBook set documents and similar collection documents, you can add `<subdeliverable/>` elements to link to a specific ID within the set.
+
+Each `<language/>` element defines `<deliverable/>` elements, that is, output documents.
+Choose which formats to enable for which document using the `<format/>`.
+
+Subsequent `<language/>` elements, that is, references to translations can use two modes:
+
+* `@translation-type="full"`: All documents available in the default language will also be generated for the translation.
+
+* `@translation-type="list"`: Use `<deliverable/>` elements to select those documents from the default language which have a translation.
+Within a `<deliverable/>` element of a non-default `<language/>` element, the number of elements available is restricted to `<dc/>` and `<subdeliverable/>`, other parameters will be
+
+
+[#config-product-external-reference]
+### References to documents not generated within {ds2}, `<external/>`
+
+The `<external/>` element collects links to documents that are not generated using {ds2}.
+{ds2} makes no effort to ensure availability of such documents, meaning all links to them must be checked manually.
+Such documents can be co-hosted along with {ds2} or be on another host altogether.
+
+For each required document, add a `<link/>` element to the `<external/>` element.
+A `<link/>` can reference documents in multiple formats and multiple languages.
+The primary language (`<language default="true"/>`) must be listed first.
+
+
+[#config-product-internal-reference]
+### {ds2}-internal references, `<internal/>`
+
+Within the `<internal/>` element, reference documents already defined elsewhere in the {ds2} configuration.
+Document references (using the `<ref/>` element) will inherit all properties of the original document, such as available formats and languages and reduce duplication.
+You can also reference related product pages within this element.
+
+References identify the document using the product ID, docset ID, and DC file/link ID.
+
+A `<ref/>` can have the following structures:
+
+* A reference to the default docset of a product: `<ref product="__[PRODUCT_ID]__"/>`
+
+* A reference to a specific docset of a product: `<ref product="__[PRODUCT_ID]__" docset="__[SET_ID]__"/>`
+
+* A reference to a specific DC definition within `<builddocs/>`: `<ref product="__[PRODUCT_ID]__" docset="__[SET_ID]__" dc="__[DC_NAME]__"/>`
+
+* A reference to a specific DC definition that has subdeliverables within `<builddocs/>`: `<ref product="__[PRODUCT_ID]__" docset="__[SET_ID]__" dc="__[DC_NAME]__" subdeliverable="__[SUBDELIVERABLE_NAME]__"/>`
+
+* A reference to a specific external link: `<ref product="__[PRODUCT_ID]__" docset="__[SET_ID]__" link="__[LINK_ID]__"/>`
+The value for `__[LINK_ID]__` has to be specifically set on the corresponding `<link/>` element by adding the attribute `<link linkid="__[NAME_OF_ID]__"/>`. `__[NAME_OF_ID]__ must be unique within the current `<docset/>` and may consist of alphanumeric characters and the characters `_-.`.
+
+In addition, <ref/> elements can have a category attribute which categorizes them on the target page.
+
+
+[#config-product-identifier]
+## Identifying elements and URL generation
+
+{ds2} product configuration uses a number of independent identifier systems and values other values that must be unique in a certain context:
+
+* `<product productid="__[ID]__"/>` identifies the product and is used as a path component for that product's documents.
+This identifier must be unique across all product configuration files.
+
+* `<docset setid="__[ID]__"/>` identifies the product version and is used as a path component for that product version's documents.
+This identifier must be unique within the context of each product configuration file.
+
+* `<category categoryid="__[ID]__"/>` identifies categories that are used to sort documents on docset navigational pages and can appear as an ID in HTML documents.
+This identifier must be unique within the contextof a product configuration file.
+
+* Language names (`@lang` attributes) are checked for uniqueness within the context of their parent element.
+For example, there must only be a single US English (`en-us`) product description (`<desc/>`) for a product/first-level category (`<product/>`).
+Likewise, within a `<builddocs/>` section, the `@lang` attributes' values of `<language/>` elements must be unique.
+
+* DC file names (`<dc/>` attributes) must be unique within the `<language/>` that contains them.
+After removing the `DC-` prefix, DC file names are used as path components.
+These identifiers can be used for `<internal/>` references to generated documents.
+* `<link linkid="__[ID]__"/>` is an optional identifier for `<external/>` links.
+These identifiers can be used for `<internal/>` references to such links.
+
+* URLs referenced within external links (`<link/>`) elements must be unique within the context of the docset they are used in.
+
+
+[#config-product-createconfig-tool]
+## Generating configuration for a product with `docserv-createconfig`
+
+To add a new product, you can use the tool `*docserv-createconfig*`
+This tool works well to create draft configuration files for repositories that follow the following conventions:
+
+* The main branch is called `master`.
+* Maintenance branches for previous product versions are named `maintenance/__[PRODUCT_VERSION]__`.
+* Translations for documents are available in branches named `trans/__[PRODUCT_VERSION]__`.
+
+* DC files for documents in the primary language are kept in the root directory of the repository.
+
+* A DC file named with its name ending in -all references a set of books and articles.
+
+Its usefulness degrades the fewer of these conventions are implemented in the Git source repository.
+
+To add a new product, proceed as follows:
+
+. Install {ds2} locally or clone the {ds2} Git repository and create a developer setup.
+
+. Clone the product documentation repository that you want to create a configuration file for.
+Make sure this repository has no uncommitted changes in it.
+The tool used in the following steps needs to be able to change branches freely.
+
+. On the command line, navigate to your product configuration directory.
+
+. Run `docserv-createconfig __[PATH_TO_REPO_CLONE]__`
+
+. Follow the instructions.
+
+. `docserv-createconfig` will output the file name of the generated file at the end.
+Open this file and make any necessary finishing touches, such as removing unnecessary branches and setting up document translations and external links.
+
+
+[#config-product-remove]
+## Removing documents
+
+* To remove an entire product definition, remove the corresponding XML file from the product configuration directory
+* To remove a docset, a language, or a deliverable element, remove the corresponding elements from the appropriate XML file.
+
+[IMPORTANT]
+.Output documents removed from the configuration are not deleted automatically in all cases
+====
+{ds2} will remove individual documents that have been removed from the product configuration with the next successful rebuild of the respective docset.
+However, when an entire docset or product definition is removed from the product configuration, {ds2} will not automatically remove associated content.
+{ds2} will no longer link to such content from the homepage.
+
+To remove such content from the site entirely, delete it from the `backup_dir` for the target that is defined in the site configuration.
+The relevant directories are:
+
+* The content within each language-specific directory (`la-ng/`, <<term-language-code>>) for the respective product or docset.
+
+* The metadata stored in `docserv/data` for the respective product or docset.
+====
+
+
+[#config-product-html]
+## Supported HTML subset
+
+Certain elements in the schema support the use of a restricted XHTML subset.
+Notably, the `<desc/>` element for product descriptions and `<category/>` descriptions support XHTML.
+Because your XHTML is nested within a XML document, it must also be valid XML.
+It must not use SGML-only structures, such as unclosed tags.
+You cannot use SGML-style short tags such as `<hr>`, instead use an XML-style self-closing tag, `<hr/>`.
+Validation of XHTML structures is otherwise minimal, ensuring flexibility.
+
+The following XHTML elements are allowed:
+
+* Block elements: `<p/>` (a paragraph), `<div/>` (a generic block), `<pre/>` (preformatted text), `<ul/>` (an unordered list), `<ol/>` (an ordered list), `<li/>` (a list item), `<dl/>` (a definition list), `<dt/>` (a definition term), `<dd/>` (a definition), `<h1/>`, `<h2/>`, `<h3/>`, `<h4/>`, `<h5/>`, `<h6/>` (first-level to sixth-level headlines)
+
+* Inline elements: `<sup/>` (superscript), `<sub/>` (subscript), `<s/>` (struck-out text), `<u/>` (underlined text), `<q/>` (quoted text), `<em/>` (an emphasis), `<a/>` (a link, supports href attribute), `<strong/>` (a strong emphasis), `<code/>` (monospaced text), `<cite/>` (a cited title), `<span/>` (a generic inline)
+
+All elements support using `@id` and `@class` attributes which can be used for CSS styling.
+XHTML `@id` elements are not checked for uniqueness.
+CSS styles can be applied using template CSS.

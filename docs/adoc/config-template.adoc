@@ -1,0 +1,134 @@
+include::1-attribute.adoc[]
+
+[#config-template]
+# Navigational page templates
+
+Templates are used to add menus, footers, and similar content to navigational pages.
+Navigational pages are currently:
+
+* The homepage and other site section overview pages
+
+* Docset (product) overview pages
+
+Templates are HTML files that include certain variables which allow {ds2} to insert content.
+Template files are not validated or handled with XML tooling in any way.
+This means they can contain non-HTML content such as Javascript or PHP if necessary.
+We advise using valid XHTML5.
+
+All templates must be placed within the directory defined as the `template_dir` in the site configuration.
+
+{ds2} will copy all content of the `res` subdirectory of the `template_dir` to `docserv/res` in the output path.
+This allows including custom CSS, Javascript, and images.
+{ds2} will add `docserv/res/docservui.js` to the output path unless the file exists in your template.
+If the file `res/docservui.js` exists in your template, that file will overwrite the `docservui.js` file of {ds2}.
+
+
+[#config-template-site-section]
+## Site section page templates
+
+Site section overview pages all pages that allow selecting a docset from a site section.
+The homepage is a special case of a site section overview page.
+
+Site section page templates must follow a naming scheme:
+
+* default template (used as fallback, mandatory): `template-section-default.__[EXT]__`
+
+* template for supported docsets of a site section (optional): `template-section.__[SITE_SECTION]__.supported.__[EXT]__`
+
+* template for unsupported docsets of a site section (optional): `template-section.__[SITE_SECTION]__.unsupported.__[EXT]__`
+
+The file extension (`__[EXT]__`) of page templates will generally be `.html`, though you can use other file extensions.
+
+A minimal site section page template consists of the following elements:
+
+[source,html]
+----
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Site section template</title>
+    <script>
+var basePath = '@{{#base_path#}}';
+var templateExtension = '@{{#template_extension#}}';
+var pageRole = '@{{#page_role#}}';
+var sectionName = '@{{#section_name#}}';
+var pageLanguage = '@{{#ui_language#}}';
+var omitPathComponent = '@{{#omit_path_component#}}';
+    </script>
+    <script src="@{{base_path}}docserv/res/docservui.js"></script>
+  </head>
+  <body>
+   <div id="ds-section-select"></div>
+
+   <div class="ds-select-list" id="ds-product-select">
+     <div class="ds-select-instruction">Downloading data...</div>
+   </div>
+   <div class="ds-select-list" id="ds-version-select">
+     <div class="ds-select-instruction">Select a product</div>
+   </div>
+  </body>
+</html>
+----
+
+* {ds2} will replace the variable definitions of the form `@{{...}}` during the page-generation process.
+All variables shown within the `<script/>` element above are mandatory.
+
+* `docservui.js` must be included to make product and docset selectors work.
+
+* The elements in the body are necessary to make product and docset selectors work.
+You can add any other desired element around them.
+
+
+[#config-template-docset]
+## Docset page template
+
+Site section overview pages all pages that allow selecting a docset from a site section.
+The homepage is a special case of a site section overview page.
+
+The docset page template must be named `template-product.html`.
+The file extension (`__[EXT]__`) of page templates will generally be `.html`, though you can use other file extensions.
+
+A minimal docset page template consists of the following elements:
+
+[source,html]
+----
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Docset template</title>
+    <script>
+var basePath = '@{{#base_path#}}';
+var templateExtension = '@{{#template_extension#}}';
+var pageRole = 'product';
+var pageLanguage = '@{{#ui_language#}}';
+var omitPathComponent = '@{{#omit_path_component#}}';
+var pageProduct = '@{{#product#}}';
+var pageDocSet = '@{{#docset#}}';
+    </script>
+    <script src="@{{base_path}}docserv/res/docservui.js"></script>
+  </head>
+  <body>
+    <div id="docsetwrap" class="ds-page-wrap">
+    </div>
+  </body>
+</html>
+----
+
+* {ds2} will replace the variable definitions of the form `@{{...}}` during the page-generation process.
+All variables shown within the `<script/>` element above are mandatory.
+
+* `docservui.js` must be included to make loading the document overview work.
+
+* The element in the body is necessary to make the document overview work.
+You can add any other desired element around it.
+
+
+[#config-template-test-local]
+## Testing templates locally
+
+{ds2} XHTML template files depend on the ability to access JSON data via XHRs.
+To test locally whether everything works without running a server, you need to disable browser security mechanisms temporarily:
+
+* Firefox: In `about:config`, set `security.fileuri.strict_origin_policy` to `false`.
+
+* Chrome: Start the browser with `chromium --allow-file-access-from-files`

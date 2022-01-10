@@ -1,0 +1,88 @@
+include::1-attribute.adoc[]
+
+[#install-start]
+# Installing and starting {ds2}
+
+This section gives a concise overview of how to install and start {ds2}.
+However, an integral part of using {ds2} is creating custom configuration.
+As such, do not expect a useful installation after following the instructions from this section.
+For more information about configuring {ds2}, see <<config-overview>>.
+
+
+[#install]
+## Installing {ds2}
+
+The easiest way to install {ds2} is to install the native RPM package available for {leap} and {tw}.
+For example, to install on any supported version of {leap}, use:
+
+. Add the openSUSE Build Service's __Documentation:Tools__ RPM repository:
++
+[source,bash]
+----
+> zypper ar --refresh \
+  'https://download.opensuse.org/repositories/Documentation:/Tools/openSUSE_Leap_$releasever/Documentation:Tools.repo'
+----
+
+. Install the package: `zypper in docserv`
+
+
+If you are using any other Linux-based operating system, you can use the Git repository and `pip3` to install {ds2}.
+{ds2} is not compatible with non-Linux operating systems.
+For information about alternative installation methods, see the repository link:https://github.com/openSUSE/docserv/#readme[readme].
+
+
+[#setup-start]
+## Setting up initial configuration and starting {ds2}
+
+This section assumes that you have installed the {ds2} RPM package.
+
+. Create a directory `/etc/docserv`.
+Copy the example configuration from `/usr/share/docserv/example/` to `/etc/docserv/`.
+
+. Check whether the site configuration file `/etc/docserv/docserv.ini` makes sense in your context.
+
+** Make sure the `host` and `port` attributes within the `[server]` section are valid.
+
+** Make sure to disable email functionality via the attribute `enable_mail = no` to the `[server]` section.
+
+** Make sure to disable syncing targets is turned off via the attribute `enable_target_sync = no` to each `[target+++_+++__n__]` section.
+
+** Installing the {ds2} RPM package creates a user account `docserv`.
+However, this user account may not have a home directory.
+Some paths in the default configuration may use the path `/home/docserv/`.
+Make sure there is a home directory for the `docserv` user at `/home/docserv/`.
+
+. Enable/start the Docker engine: `systemctl enable --now docker.service`
+
+. You can now run {ds2}.
+
+** If you are just trying out {ds2}, use: `> docserv my-site`
+
+** You can run {ds2} as a service: `> systemctl enable --now docserv@my-site.service`
+
++
+`my-site` denotes the name of site configuration file.
+By default, that name is `/etc/docserv/my-site.ini`.
+
+
+If all goes well, you can send a build instruction to test the installation now.
+For more information, see <<api-send-build-instruction>>.
+
+
+[#setup-extra]
+## Setting up target sync and email notifications
+
+To simplify initial setup, <<setup-start>> disabled functionalities that depend on tools that need to be set up in addition to {ds2}.
+
+SSH setup::
+  To be able to sync to targets (that is, publication servers), you need to set up passwordless SSH for the `docserv` user account to the target.
+Create a valid SSH setup for the user `docserv` (either by copying existing keys or by using `**ssh-keygen**`).
+Add the public key of the user `docserv` to the `authorized_keys` file of all relevant targets.
+Make an initial SSH connection from the build server to all relevant targets and interactively accept their SSH fingerprint.
++
+Afterward, you can set the attribute `enable_target_sync` to `yes` in each `[target+++_+++__n__]` section.
+
+Mail setup::
+  To be able to receive build failure notifications, make sure the machine has a mail setup that is compatible with `sendmail`.
+Build failure notifications are sent to the email addresses listed under `<maintainers/>` in the product configuration.
+Make sure to set up valid addresses in all XML files in the `/etc/docserv/product-config/` directory.

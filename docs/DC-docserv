@@ -1,0 +1,6 @@
+MAIN=0-docserv-guide.adoc
+
+HTML_CSS=docserv-style.css
+ADOC_POST=yes
+ADOC_TYPE=book
+XSLTPARAM=--stringparam chunk.section.depth=0

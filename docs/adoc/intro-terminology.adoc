@@ -1,0 +1,60 @@
+include::1-attribute.adoc[]
+
+[#terminology]
+# Terminology
+
+// Sorted alphabetically.
+
+// We would have loved to use a variablelist::, but the default DocBook
+// stylesheets do not support using xrefs to <term/>s (or rather, don't generate
+// xref titles in that case).
+
+
+[#term-build-instruction]
+## Build instruction
+
+An instruction to build (or rebuild) a specific set of documents in a specific language.
+This term may be abbreviated to __BI__ in some cases.
+
+
+[#term-build-server]
+## Build server
+
+The machine that runs {ds2}.
+This machine can be different from the __target__ (but it does not have to be).
+
+
+[#term-docset]
+## Docset
+
+A set of documents, usually represents a specific version of a product.
+
+
+[#term-git-source]
+## Git source repository
+
+A Git repository that holds the source code of a document/set of documents.
+
+
+[#term-language-code]
+## Language code
+
+{ds2} uses language codes everywhere localization of content is concerned.
+{ds2} language codes follow the pattern `__LANGUAGE__-__COUNTRY__`, using lowercase link:https://en.wikipedia.org/wiki/ISO_639-1[ISO 639-1 language codes] for the language name and lowercase link:https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2[ISO 3166-1 alpha 2 country codes] for the regional variety.
+This means, US English is referred to as `en-us`, whereas German is referred to as `de-de`, etc.
+
+This document may use `la-ng` as a generic to refer to this language code format.
+
+
+[#term-site-section]
+## Site section
+
+A homepage-level category.
+
+
+[#term-target]
+## Target
+
+The machine that documentation content is published to.
+The target is also be called the publication server.
+This machine can be different from the __build server__ (but it does not have to be).

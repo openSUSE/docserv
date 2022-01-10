@@ -1,0 +1,23 @@
+include::1-attribute.adoc[]
+
+[#config-overview]
+# Configuration overview
+
+Configuration of {ds2} is split in a number of parts that are described in the following.
+
+* Site configuration configures the site and sync targets in itself.
+For more information, see <<config-site>>.
+
+* Product configuration configures what documentation to publish.
+For more information, see <<config-product>>.
+
+* Templates for navigational pages configure the look of the homepage and product overview pages.
+For more information, see <<config-template>>.
+
+* Localization files allow localizing the homepage and product overview pages.
+For more information, see <<config-localization>>.
+
+* SSI fragments allow reusing XHTML page fragments as part of different navigational pages.
+For more information, see <<config-ssi-fragment>>.
+
+The order above gives a rough idea of the order and importance of each item, though you are free to work on them any other order.

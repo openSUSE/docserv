@@ -1,0 +1,38 @@
+html {
+  max-width: 60rem;
+  margin: 1rem auto;
+  font-family: "Open Sans", OpenSans, Verdana, sans-serif;
+}
+
+div.caution,
+div.important,
+div.note,
+div.tip,
+div.warning {
+  border-left: 0.25rem solid #CCC;
+  background-color: #EEE;
+  margin: 0rem !important;
+  padding: 0.25rem 0.5rem;
+}
+
+pre {
+  background-color: #EFEFEF;
+  padding: 0.5rem;
+}
+
+div.toc {
+  background-color: #EFEFEF;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+div.book div.toc {
+  background-color: transparent;
+  padding: 0.5rem;
+  margin-bottom: 0;
+}
+
+hr {
+  color: transparent;
+  border-bottom: 0.3rem dotted #CCC;
+}

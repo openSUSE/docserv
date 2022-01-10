@@ -259,7 +259,7 @@ class DocservConfig:
 
         config = configparser()
         if len(argv) == 1:
-            config_file = "docserv"
+            config_file = "my-site"
         else:
             config_file = argv[1]
         config_path=os.path.join(CONF_DIR, config_file + '.ini')

@@ -7,7 +7,7 @@
      only works within the docserv Git repository. -->
 <?xml-model href="../../share/validate-product-config/product-config-schema.rnc" type="application/relax-ng-compact-syntax"?>
 
-<product productid="example_product" schemaversion="3.0" navigation="linked">
+<product productid="example_product" enabled="0" schemaversion="6.0">
   <!-- ID can be used for build commands, HTML IDs, etc. -->
   <!-- lifecycle="unpublished"/"beta"/"supported"/"unsupported":
     + "unpublished": Don't build, don't mention on overview page
@@ -60,14 +60,14 @@
     q, cite + class/id attributes -->
     <p>
       This product will lose control of you and help you live free.
-      SP is so glad to have you and your evil curls.
+      XP is so glad to have you and your evil curls.
     </p>
   </desc>
 
   <desc default="0" lang="fr-fr">
     <p>
       Ce produit ne peut pas obtenir la contrôle de vous, mais le vous aidez
-      a vivir libre. SP est très heureux de vous avoir et d'avoir vos
+      a vivir libre. XP est très heureux de vous avoir et d'avoir vos
       cheveux chevalier.
     </p>
   </desc>
@@ -75,12 +75,12 @@
   <desc lang="de-de">
     <p>
       Dieses Produkt hat die Kontrolle über Sie bereits verloren und will
-      Ihnen helfen, lieber libre zu leben. SP ist verzückt, dass Sie ihm
+      Ihnen helfen, lieber libre zu leben. XP ist verzückt, dass Sie ihm
       und seinen bösartigen Lockrufen gefolgt sind.
     </p>
   </desc>
 
-  <docset setid="2.0" lifecycle="supported" default="true">
+  <docset setid="2.0" lifecycle="supported">
     <version>2.0</version>
 
     <builddocs>
@@ -88,7 +88,7 @@
       <git remote="https://github.com/example.org/doc-example"/>
 
       <language default="1" lang="en-us">
-        <branch>develop</branch>
+        <branch>main</branch>
 
         <!-- MAXIMALIST (<param>) COMPILATION (i.e. w/ <subdeliverables/>) DELIVERABLE EXAMPLE -->
         <deliverable remarks="0" draft="false" meta="0">
@@ -119,19 +119,7 @@
 
       </language>
 
-      <language lang="de-de" translation-type="negative-list">
-        <branch>maint/xp15</branch>
-        <subdir>sles/de</subdir>
-        <deliverable>
-          <dc>DC-example-all</dc>
-          <subdeliverable>book.user</subdeliverable>
-        </deliverable>
-        <deliverable>
-          <dc>DC-example-user</dc>
-        </deliverable>
-      </language>
-
-      <language lang="zh-cn" translation-type="positive-list">
+      <language lang="zh-cn" translation-type="list">
         <branch>maint/xp15</branch>
         <subdir>sles/zh-cn</subdir>
         <deliverable>
@@ -192,7 +180,7 @@
       <git remote="https://github.com/example.org/doc-example"/>
 
       <language default="1" lang="en-us">
-        <branch>develop</branch>
+        <branch>main</branch>
 
         <deliverable remarks="0" draft="false" meta="0">
           <dc>DC-example-all</dc>
@@ -222,7 +210,12 @@
     <external>
       <link linkid="release-notes">
         <language lang="en-us" default="1" title="Release Notes">
-          <url format="html" href="https://www.example.org/1"/>
+          <url format="html" href="https://www.example.org/1/"/>
+          <url format="pdf"  href="https://www.example.org/1.pdf"/>
+        </language>
+        <language lang="de-de" default="0" title="Versionshinweise">
+          <url format="html" href="https://www.example.org/de-de/1/"/>
+          <url format="pdf"  href="https://www.example.org/de-de/1.pdf"/>
         </language>
       </link>
       <link>

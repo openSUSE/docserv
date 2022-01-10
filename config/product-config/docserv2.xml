@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<product productid="docserv2" schemaversion="6.0">
+  <name>Docserv²</name>
+  <acronym>Ds2</acronym>
+  <maintainers>
+    <contact>p.erson@example.org</contact>
+  </maintainers>
+
+  <desc default="1" lang="en-us">
+    <p>
+      Docserv² is a tool to publish and semi-automatically update large-scale
+      documentation websites accommodating multiple products, product
+      versions, and localizations. It focuses on allowing publication of
+      DocBook/AsciiDoc content that is compatible with DAPS. However, it can
+      also accommodate links to other sources of documents.
+    </p>
+  </desc>
+
+  <docset setid="6" lifecycle="supported">
+    <version>6</version>
+
+    <builddocs>
+
+      <git remote="https://github.com/openSUSE/docserv"/>
+
+      <language default="1" lang="en-us">
+        <branch>main</branch>
+        <subdir>docs</subdir>
+
+        <deliverable remarks="0" draft="false" meta="0">
+          <dc>DC-docserv</dc>
+          <format html="1" single-html="0" pdf="1" epub="0"/>
+        </deliverable>
+      </language>
+
+    </builddocs>
+
+    <external>
+      <link linkid="change-log">
+        <language lang="en-us" default="1" title="Change log">
+          <url format="html" href="https://github.com/openSUSE/docserv/blob/main/CHANGELOG.md"/>
+        </language>
+      </link>
+    </external>
+
+  </docset>
+
+</product>

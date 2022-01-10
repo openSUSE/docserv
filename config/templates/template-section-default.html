@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Site section template</title>
+    <script>
+var basePath = '@{{#base_path#}}';
+var templateExtension = '@{{#template_extension#}}';
+var pageRole = '@{{#page_role#}}';
+var sectionName = '@{{#section_name#}}';
+var pageLanguage = '@{{#ui_language#}}';
+var omitPathComponent = '@{{#omit_path_component#}}';
+    </script>
+    <script src="@{{base_path}}docserv/res/docservui.js"></script>
+  </head>
+  <body>
+   <div id="ds-section-select"></div>
+
+   <div class="ds-select-list" id="ds-product-select">
+     <div class="ds-select-instruction">Downloading data...</div>
+   </div>
+   <div class="ds-select-list" id="ds-version-select">
+     <div class="ds-select-instruction">Select a product</div>
+   </div>
+  </body>
+</html>

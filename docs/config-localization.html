@@ -6,9 +6,9 @@ In case they are missing, the default UI language’s string will be used as a f
 Each file represents a single language.
 Within a localization file, localization strings are uniquely identified by their <span class="emphasis"><em>localization key</em></span>.</p><p>Localization files must be named <code class="literal"><span class="emphasis"><em>[LANGUAGE_CODE]</em></span>.xml</code>.
 The <code class="literal"><span class="emphasis"><em>[LANGUAGE_CODE]</em></span></code> must use the format <code class="literal">la-ng</code> (see also <a class="xref" href="terminology.html#term-language-code" title="Language code">the section called “Language code”</a>).</p><p>The file format of localization files looks like this:</p><pre class="screen">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
-&lt;locale xmlns="https://github.com/openSUSE/docserv/l10n" lang="[LANGUAGE_CODE]"&gt;
+&lt;locale xmlns="https://github.com/openSUSE/docserv/l10n" lang="<span class="emphasis"><em>[LANGUAGE_CODE]</em></span>"&gt;
 
-  &lt;content key="[LOCALIZATION_KEY]"&gt;[LOCALIZED_CONTENT]&lt;/content&gt;
+  &lt;content key="<span class="emphasis"><em>[LOCALIZATION_KEY]</em></span>"&gt;<span class="emphasis"><em>[LOCALIZED_CONTENT]</em></span>&lt;/content&gt;
 
 &lt;/locale&gt;</pre><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>The <code class="literal"><span class="emphasis"><em>[LANGUAGE_CODE]</em></span></code> must use the format <code class="literal">la-ng</code> (see also <a class="xref" href="terminology.html#term-language-code" title="Language code">the section called “Language code”</a>).
 This language code definition is purely informative, as Docserv² will pick up the language code from the file name.</p></li><li class="listitem"><p>The <code class="literal"><span class="emphasis"><em>[LOCALIZATION_KEY]</em></span></code> must be unique within each localization file.

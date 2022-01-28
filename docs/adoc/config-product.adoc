@@ -102,9 +102,10 @@ It defines how and in which context the docset is displayed.
 
 * References to documents to build and link to
 
+[#config-product-lifecycle]
 ## The `@lifecycle` attribute of docsets
 
-The `@lifecycle` attribute is meant to map to the product lifecycle:
+The mandatory `@lifecycle` attribute is meant to map to the product lifecycle:
 
 * `unpublished`: Documents can only be built and published for targets marked internal and by default will carry a _DRAFT_ watermark.
 
@@ -113,6 +114,18 @@ The `@lifecycle` attribute is meant to map to the product lifecycle:
 * `supported`: Documents can be built and published for any target and will not carry a _DRAFT_ watermark by default.
 
 * `unsupported`: Documents can be built and published for any target and will not carry a _DRAFT_ watermark by default. However, they will only be published within a single ZIP file, making them non-indexable for search engines. This also reduces visibility in the navigational pages, as documents will only be shown under Deprecated documents header.
+
+
+[#config-product-navigation]
+## The `@navigation` attribute of docsets
+
+The optional `@navigation` attribute of docsets defines whether to create navigational pages for this docset:
+
+* `linked` (default): Create navigational pages and link them from the homepage.
+
+* `hidden`: Create navigational pages but do not link them from the homepage.
+
+* `disabled`: Do not create navigational pages, do not create a homepage link
 
 
 [#config-product-reference]

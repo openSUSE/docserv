@@ -77,7 +77,7 @@ In some contexts, docsets may be called "second-level categories".
 +
 In most cases, there are multiple docsets within a product configuration file.
 
-A longer, annotated example configuration file is available from link:https://github.com/openSUSE/docserv/blob/main/config/config.d/example_product.xml[GitHub].
+A longer, annotated example configuration file is available from link:https://github.com/openSUSE/docserv/blob/main/config/product-config/example_product.xml[GitHub].
 
 
 [#config-product-metadata]

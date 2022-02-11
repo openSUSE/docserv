@@ -20,14 +20,19 @@
 #                                 # validate the configuration)
 #
 # XML tool deps: xmlstarlet, jing, xmllint, xsltproc
+# other deps: GNU Parallel
 
 out() {
   >&2 echo -e "$1"
   exit 1
 }
 
-me=$(test -L $(realpath $0) && readlink $(realpath $0) || echo $(realpath $0))
-mydir=$(dirname $me)
+export SHELL=$(type -p bash)
+
+export me=$(test -L $(realpath $0) && readlink $(realpath $0) || echo $(realpath $0))
+export mydir=$(dirname $me)
+
+
 
 source $mydir/docserv-dirs
 
@@ -43,6 +48,7 @@ add_issue() {
   issuelist+="\n\n- "$(echo -e "$1" | head -1 | fold -s -w 78 | sed '2,${s/^ */  /}')
   [[ $(echo -e "$1" | wc -l) -gt 1 ]] && issuelist+='\n'$(echo -e "$1" | tail -n +2 | sed 's/^/  /')
 }
+export -f add_issue
 
 add_multiple_issues() {
   affected_file="$1"
@@ -58,6 +64,21 @@ add_multiple_issues() {
     fi
   done < <(echo -e "$issues")
 }
+export -f add_multiple_issues
+
+# to allow using the classify function with GNU parallel:
+# http://stackoverflow.com/questions/23814360/#23815646
+run_checkfile() {
+  command='bash'
+  [[ $check_file =~ \.xsl$ ]] && command='xsltproc'
+  result=$( \
+    xmllint="$xmllint" jing="$jing" starlet="$starlet" \
+    valid_languages="$valid_languages_sorted" \
+    $command $check_file $file)
+  [[ $? -eq 0 ]] || out "Validation check file $check_file is misbehaving."
+  [[ "$result" ]] && add_multiple_issues "$input_dir/$file" "$result"
+}
+export -f run_checkfile
 
 # Mostly because we need to put something random on screen when running within
 # CI, so we don't get killed for inactivity
@@ -163,12 +184,12 @@ cd $input_dir
   out "There are no product configuration files."
 
 
-valid_languages_sorted=''
-[[ "$valid_languages" ]] && valid_languages_sorted=$(echo -e "$valid_languages" | tr ' ' '\n' | sort -u)
-valid_site_sections_sorted=''
-[[ "$valid_site_sections" ]] && valid_site_sections_sorted=$(echo -e "$valid_site_sections" | tr ' ' '\n' | sort -u)
+export valid_languages_sorted=''
+[[ "$valid_languages" ]] && export valid_languages_sorted=$(echo -e "$valid_languages" | tr ' ' '\n' | sort -u)
+export valid_site_sections_sorted=''
+[[ "$valid_site_sections" ]] && export valid_site_sections_sorted=$(echo -e "$valid_site_sections" | tr ' ' '\n' | sort -u)
 
-issuelist=''
+export issuelist=''
 
 
 # Create md5 hashes for all config files. From the md5sum output, we are only
@@ -206,23 +227,11 @@ for file in *.xml; do
 
   # Additional validation checks may come either as XSLTs or Bash scripts.
   # No script output is assumed to mean there are no issues.
-  for check_file in $checks_dir/check-*.{sh,xsl}; do
-    # As long as at least one variety of check files does not exist, the glob
-    # pattern above will not resolve correctly in one case and the literal
-    # file name "check-*.xsl" (or .sh) will enter this loop. The hack below
-    # avoids that.
-    [[ $check_file =~ \*\. ]] && continue
-    command='bash'
-    [[ $check_file =~ \.xsl$ ]] && command='xsltproc'
-    result=$( \
-      xmllint="$xmllint" jing="$jing" starlet="$starlet" \
-      valid_languages="$valid_languages_sorted" \
-      valid_site_sections="$valid_site_sections_sorted" \
-      $command $check_file $file)
-    [[ $? -eq 0 ]] || out "Validation check file $check_file is misbehaving."
-    [[ "$result" ]] && add_multiple_issues "$input_dir/$file" "$result"
-    spin
-  done
+  checks=$(find . -regex '.*\.\(xsl\|sh\)$')
+
+  issuelist=$(echo "$checks" | parallel run_checkfile {})
+
+  spin
 
   outfile+=$($starlet sel -t -c "/*" $file)
   outfile+='\n'

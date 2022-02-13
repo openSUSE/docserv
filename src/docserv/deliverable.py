@@ -173,7 +173,7 @@ class Deliverable:
         if self.build_container:
             use_build_container = "--container=%s" % self.build_container
         commands[n] = {}
-        commands[n]['cmd'] = "d2d_runner --create-bigfile=1 --json-filelist=1 --auto-validate=1 --container-update=1 %s --xslt-param-file=%s --daps-param-file=%s --out=%s --in=%s --formats=%s %s" % (
+        commands[n]['cmd'] = "d2d_runner --create-bigfile=1 --json-filelist=1 --auto-validate=1 --validate-tables=0 --container-update=1 %s --xslt-param-file=%s --daps-param-file=%s --out=%s --in=%s --formats=%s %s" % (
             use_build_container,
             xslt_params_file[1],
             daps_params_file[1],

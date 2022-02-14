@@ -165,7 +165,7 @@ Documents can only be generated via {ds2} if they fulfull both of the following 
 
 * DAPS-compatible {db} or {ad} documents.
 
-* Hosted in a Git repository which the {ds2} build server can unauthenticated read access.
+* Hosted in a Git repository that the {ds2} build server has unauthenticated read access to (via HTTP/HTTPS).
 
 Such documents can be configured for multiple output formats and languages.
 

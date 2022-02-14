@@ -72,7 +72,7 @@ function getSections() {
           sectionInit();
         }
         else {
-          window.addEventListener("DOMContentLoaded", sectionInit, false);
+          window.addEventListener("load", sectionInit, false);
         };
     },
     function (xhr) {
@@ -91,7 +91,7 @@ function getProductData() {
           dsInit();
         }
         else {
-          window.addEventListener("DOMContentLoaded", dsInit, false);
+          window.addEventListener("load", dsInit, false);
         };
     },
     function (xhr) {
@@ -162,7 +162,7 @@ function loadDocSet(setid) {
           dsInit();
         }
         else {
-          window.addEventListener("DOMContentLoaded", dsInit, false);
+          window.addEventListener("load", dsInit, false);
         };
     },
     function (xhr) {

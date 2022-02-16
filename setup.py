@@ -44,11 +44,13 @@ setup(
     ],
     install_requires=[],
     data_files=[
-        ('/usr/share/docserv/example/', ['config/docserv.ini']),
-        ('/usr/share/docserv/example/config/config.d/', glob('config/config.d/*.xml')),
+        ('/usr/share/docserv/example/', ['config/my-site.ini']),
+        ('/usr/share/docserv/example/', ['config/xslt-params.txt']),
+        ('/usr/share/docserv/example/product-config/', glob('config/product-config/*.xml')),
+        # can contain .htaccess, a favicon, etc.
+        ('/usr/share/docserv/example/server-root-files/', glob('config/server-root-files/*')),
         # template can be .html or .php (and potentially more in the future)
-        ('/usr/share/docserv/example/template/', glob('config/templates/template.*')),
-        ('/usr/share/docserv/example/template/', ['config/templates/translation.xml']),
+        ('/usr/share/docserv/example/template/', glob('config/templates/template-*')),
         # will likely contain .css and .js and perhaps imagery of some sort
         ('/usr/share/docserv/example/template/res/', glob('config/templates/res/*')),
         ('/usr/share/docserv/validate-product-config/', ['share/validate-product-config/product-config-schema.rnc']),

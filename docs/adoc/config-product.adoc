@@ -148,12 +148,12 @@ URLs and document titles of such documents must be defined manually.
 {ds2} cannot prevent link breakage or similar issues for these documents.
 
 [IMPORTANT]
-.No page dependency management
+.Partial navigation page dependency management only
 ====
-Docset navigational pages can only be rebuilt individually.
+In certain cases, docset navigational pages will not update when an internal reference are removed.
 
 Internal links can become outdated when the original document is reconfigured but the docset containing the internal reference is not specifically rebuilt after the change.
-Make sure to rebuild dependent docsets manually.
+Make sure to rebuild dependent docsets from which links have been removed manually.
 ====
 
 

@@ -64,9 +64,17 @@ starlet='xmlstarlet'
 fragment_l10n_schema=$share_dir/build-navigation/fragment-l10n-schema.rnc
 fragment_stylesheet=$share_dir/build-navigation/generate-localized-fragments.xsl
 
+all_stylesheet=$share_dir/build-navigation/list-all-products.xsl
+related_stylesheet=$share_dir/build-navigation/list-related-products.xsl
+
 stylesheet=$share_dir/build-navigation/build-navigation-json.xsl
 docserv_js=$share_dir/build-navigation/web-resources/docservui.js
-[[ ! -f $stylesheet ]] && out "Stylesheet $stylesheet does not exist.$(readme_message)"
+
+for dependency in $fragment_l10n_schema $fragment_stylesheet \
+  $all_stylesheet $related_stylesheet $stylesheet \
+  $docserv_js; do
+  [[ ! -f "$dependency" ]] && out "File $dependency does not exist.$(readme_message)"
+done
 
 stitched_config=
 
@@ -220,7 +228,13 @@ if [[ "$enable_ssi_fragments" -eq 1 ]]; then
   done
 fi
 
-allproducts=$($xsltproc $share_dir/build-navigation/list-all-products.xsl "$stitched_config")
+allproducts=$($xsltproc "$all_stylesheet" "$stitched_config")
+relatedproducts=$($xsltproc \
+  --stringparam product "$relevant_product" \
+  --stringparam docset "$relevant_docset" \
+  --stringparam internal-mode "$internal_mode" \
+  "$related_stylesheet" "$stitched_config" | \
+  sort -u)
 
 if [[ ! $(echo -e "$allproducts" | grep -oP "^${relevant_product}/${relevant_docset}\$") ]]; then
   out "Either product $relevant_product or docset $relevant_docset does not exist."
@@ -307,17 +321,24 @@ done
 stitched_cache+='\n</docservcache>\n'
 echo -e "$stitched_cache" > $cache_file
 
-xsltproc \
-  --stringparam "output_root" "$output_dir/$data_path/" \
-  --stringparam "cache_file" "$cache_file" \
-  --stringparam "internal_mode" "$internal_mode" \
-  --stringparam "ui_languages" "$ui_languages" \
-  --stringparam "site_sections" "$site_sections_deduped" \
-  --stringparam "default_site_section" "$default_site_section" \
-  --stringparam "product" "$relevant_product" \
-  --stringparam "docset" "$relevant_docset" \
-  "$stylesheet" \
-  "$stitched_config"
+for product_docset in "${relevant_product}/${relevant_docset}" $relatedproducts; do
+
+  this_product=$(echo "$product_docset" | cut -f1 -d'/')
+  this_docset=$(echo "$product_docset" | cut -f2 -d'/')
+
+  xsltproc \
+    --stringparam "output_root" "$output_dir/$data_path/" \
+    --stringparam "cache_file" "$cache_file" \
+    --stringparam "internal_mode" "$internal_mode" \
+    --stringparam "ui_languages" "$ui_languages" \
+    --stringparam "site_sections" "$site_sections_deduped" \
+    --stringparam "default_site_section" "$default_site_section" \
+    --stringparam "product" "$this_product" \
+    --stringparam "docset" "$this_docset" \
+    "$stylesheet" \
+    "$stitched_config"
+
+done
 
 # Clean up stray ',' characters that are extremely hard to avoid when
 # generating JSON via XSLT.
@@ -375,21 +396,24 @@ for lang in $ui_languages; do
 
   done
 
-  product="$relevant_product"
-  docset="$relevant_docset"
+  for product_docset in "${relevant_product}/${relevant_docset}" $relatedproducts; do
 
-  mkdir -p $output_dir/$lang/$product/$docset
+    this_product=$(echo "$product_docset" | cut -f1 -d'/')
+    this_docset=$(echo "$product_docset" | cut -f2 -d'/')
 
-  cat "$template_product" | sed -r \
-    -e 's%@\{\{#base_path#}}%'"${base_path}"'%g' \
-    -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
-    -e 's%@\{\{#page_role#}}%'"product"'%g' \
-    -e 's%@\{\{#template_extension#}}%'"$ext"'%g' \
-    -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
-    -e 's%@\{\{#omit_path_component#}}%'"$omit_lang_path"'%g' \
-    -e 's%@\{\{#product#}}%'"$product"'%g' \
-    -e 's%@\{\{#docset#}}%'"$docset"'%g' \
-    > $output_dir/$lang/$product/$docset/index.$ext
+    mkdir -p "$output_dir/$lang/$this_product/$this_docset"
+
+    cat "$template_product" | sed -r \
+      -e 's%@\{\{#base_path#}}%'"${base_path}"'%g' \
+      -e 's%@\{\{#base_path_res#}}%'"${base_path}${res_path}"'%g' \
+      -e 's%@\{\{#page_role#}}%'"product"'%g' \
+      -e 's%@\{\{#template_extension#}}%'"$ext"'%g' \
+      -e 's%@\{\{#ui_language#}}%'"$lang"'%g' \
+      -e 's%@\{\{#omit_path_component#}}%'"$omit_lang_path"'%g' \
+      -e 's%@\{\{#product#}}%'"$this_product"'%g' \
+      -e 's%@\{\{#docset#}}%'"$this_docset"'%g' \
+      > "$output_dir/$lang/$this_product/$this_docset/index.$ext"
+  done
 
 done
 

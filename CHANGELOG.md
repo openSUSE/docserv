@@ -1,5 +1,19 @@
 # Release History
 
+## v6.5, 2022-02-16, sknorr
+
+- core:
+  - Disable DAPS 3.3 extended table validation
+  - Use `my-site.ini` rather than `docserv.ini`
+    as the default name of the site
+    configuration file
+- build-navigation:
+  - Add partial page dependency management
+- documentation:
+  - Add proper documentation, updated examples
+    (woot?!)
+
+
 ## v6.4, 2021-11-23, sknorr
 
 - Stitch:

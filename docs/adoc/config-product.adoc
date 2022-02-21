@@ -263,6 +263,34 @@ These identifiers can be used for `<internal/>` references to such links.
 * URLs referenced within external links (`<link/>`) elements must be unique within the context of the docset they are used in.
 
 
+[#config-product-navigation-display]
+## How {ds2} decides which documents to list in the same/multiple rows in the navigation
+
+{ds2}'s navigation pages groups certain documents generated from different DC files into the same table row.
+This section explains how those groupings come to exist.
+
+One of the design requirements of {ds2} was keeping {db}'s internal cross references (`<xref/>`) intact as much as possible within documents for a single product.
+This can be done by using {db} set documents that contain all books/articles published for a certain product.
+However, publishing DocBook set documents is only practical for the regular (chunked) HTML format.
+For single-HTML, PDF, and EPUB, sets are generally too heavyweight.
+This means {ds2} has to build both set documents and individual book/article documents, depending on the document format.
+This created the challenge of displaying all formats of a document in the same table row despite having been built separately.
+
+To allow handling this display issue, {ds2} uses `*docserv-dchash*` which performs the following on a DC file:
+
+. Allows replacing the `ROOTID` parameter (which is what separates a set from a book it contains)
+
+. Strips DC files to their main constituting parts (`MAIN`, `ROOTID`, `PROF...` profiling, and `ADOC_ATTRIBUTES` parameters)
+
+. Creates an MD5 hash of the resulting reduced, sanitized file.
+
+If the same MD5 sum is generated for different DC files, their build results will be displayed together.
+For example, the HTML output of a subdeliverable in the {ds2} product configuration (in `*docserv-dchash*`'s eyes, a set's DC file with its `ROOTID` replaced) along with the single-HTML and PDF of the equivalent book.
+In turn, this means that innocuous-seeming differences between one of the `PROF...` parameters or the `ADOC_ATTRIBUTES` parameter may be consequential for the {ds2} output.
+(Another hitch is categorization within the {ds2} product configuration file:
+Both the `<subdeliverable/>` of the set and the `<deliverable/>` for the book must be categorized the same way.)
+
+
 [#config-product-createconfig-tool]
 ## Generating configuration for a product with `docserv-createconfig`
 

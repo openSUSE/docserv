@@ -1,5 +1,14 @@
 # Release History
 
+## v6.6, 2022-02-21, sknorr
+
+- core:
+  - Split `docserv-write-param-file` into a variant
+    for DAPS and a variant for XSLT parameters
+  - Added replacement of `@{{# ... #}}` placeholders
+    to `docserv-write-xslt-param-file`
+
+
 ## v6.5, 2022-02-16, sknorr
 
 - core:
@@ -8,10 +17,10 @@
     as the default name of the site
     configuration file
 - build-navigation:
-  - Add partial page dependency management
+  - Added partial page dependency management
 - documentation:
-  - Add proper documentation, updated examples
-    (woot?!)
+  - Add proper documentation, update example
+    configuration (woot?!)
 
 
 ## v6.4, 2021-11-23, sknorr

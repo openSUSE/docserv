@@ -25,7 +25,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="docserv",
-    version="6.5",
+    version="6.6",
     packages=find_packages('src'),
     package_dir={'': 'src'},
     entry_points={

@@ -405,8 +405,8 @@
           select="( builddocs/language[@default = 'true']/deliverable[not(subdeliverable)][not(@category)] |
                     builddocs/language[@default = 'true']/deliverable/subdeliverable[not(@category)] )"
           mode="generate-docset-json"/>
-        <xsl:apply-templates select="internal/ref[not(@category)]" mode="generate-docset-json"/>
-        <xsl:apply-templates select="external/link[not(@category)]" mode="generate-docset-json"/>
+        <xsl:apply-templates select="crossrefs/ref[not(@category)]" mode="generate-docset-json"/>
+        <xsl:apply-templates select="weblinks/link[not(@category)]" mode="generate-docset-json"/>
       </xsl:variable>
       <xsl:variable name="documents">
         <xsl:call-template name="dedupe-documents">
@@ -436,8 +436,8 @@
           select="( $node/builddocs/language[@default = 'true']/deliverable[not(subdeliverable)][contains(concat(' ', @category,' '), $categoryid)] |
                     $node/builddocs/language[@default = 'true']/deliverable/subdeliverable[contains(concat(' ',@category,' '), $categoryid)] )"
           mode="generate-docset-json"/>
-        <xsl:apply-templates select="$node/internal/ref[contains(concat(' ',@category,' '), $categoryid)]" mode="generate-docset-json"/>
-        <xsl:apply-templates select="$node/external/link[contains(concat(' ',@category,' '), $categoryid)]" mode="generate-docset-json"/>
+        <xsl:apply-templates select="$node/crossrefs/ref[contains(concat(' ',@category,' '), $categoryid)]" mode="generate-docset-json"/>
+        <xsl:apply-templates select="$node/weblinks/link[contains(concat(' ',@category,' '), $categoryid)]" mode="generate-docset-json"/>
       </xsl:variable>
       <xsl:variable name="documents">
         <xsl:call-template name="dedupe-documents">
@@ -724,7 +724,7 @@
     </xsl:choose>
   </xsl:template>
 
-  <xsl:template match="internal/ref" mode="generate-docset-json">
+  <xsl:template match="crossrefs/ref" mode="generate-docset-json">
     <xsl:variable name="product" select="@product"/>
     <xsl:variable name="docset" select="@docset"/>
     <xsl:variable name="dc" select="@dc"/>
@@ -740,7 +740,7 @@
 
     <xsl:choose>
       <xsl:when test="$link != ''">
-        <xsl:apply-templates select="(//product[@productid = $product]/docset[@setid = $docset]/external/link[@linkid = $link])[1]" mode="generate-docset-json">
+        <xsl:apply-templates select="(//product[@productid = $product]/docset[@setid = $docset]/weblinks/link[@linkid = $link])[1]" mode="generate-docset-json">
           <xsl:with-param name="titleformat" select="$titleformat"/>
         </xsl:apply-templates>
       </xsl:when>
@@ -840,7 +840,7 @@
     </xsl:if>
   </xsl:template>
 
-  <xsl:template match="external/link" mode="generate-docset-json">
+  <xsl:template match="weblinks/link" mode="generate-docset-json">
     <xsl:param name="docset-title-inject" select="0"/>
 
     <xsl:variable name="injected-title">

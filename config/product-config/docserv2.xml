@@ -36,13 +36,13 @@
 
     </builddocs>
 
-    <external>
+    <weblinks>
       <link linkid="change-log">
         <language lang="en-us" default="1" title="Change log">
           <url format="html" href="https://github.com/openSUSE/docserv/blob/main/CHANGELOG.md"/>
         </language>
       </link>
-    </external>
+    </weblinks>
 
   </docset>
 

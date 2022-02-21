@@ -6,13 +6,13 @@
 
 file=$1
 
-externals=$($starlet sel -t -v "count(//external)" $file)
+externals=$($starlet sel -t -v "count(//weblinks)" $file)
 
 for external in $(seq 1 $externals); do
-  linkids=$($starlet sel -t -v '(//external)['"$external"']/link/@linkid' $file | sort)
+  linkids=$($starlet sel -t -v '(//weblinks)['"$external"']/link/@linkid' $file | sort)
   uniquelinkids=$(echo -e "$linkids" | sort -u)
 
-  curdocset=$($starlet sel -t -v '(//external)['"$external"']/ancestor::docset/@setid' $file)
+  curdocset=$($starlet sel -t -v '(//weblinks)['"$external"']/ancestor::docset/@setid' $file)
 
   [[ ! "$linkids" == "$uniquelinkids" ]] && \
     echo -e \

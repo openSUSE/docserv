@@ -51,7 +51,7 @@ all exist. -->
       </xsl:when>
       <xsl:when test="@link and @docset and @product">
         <xsl:if
-          test="not(//product[@productid = $product]/docset[@setid = $docset]/external/link[@linkid = $link])">
+          test="not(//product[@productid = $product]/docset[@setid = $docset]/weblinks/link[@linkid = $link])">
           <xsl:text>Reference (ref) to </xsl:text>
           <xsl:value-of select="concat($product, '/', $docset, '@', $link)"/>
           <xsl:text> failed. Referenced external link does not exist.</xsl:text>

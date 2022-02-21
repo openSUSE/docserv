@@ -331,11 +331,11 @@ ds.docset =
     ds.overridedesc?,
     (
       (ds.builddocs,
-       ds.internal?,
-       ds.external?) |
-      (ds.internal,
-       ds.external?) |
-      ds.external
+       ds.crossrefs?,
+       ds.weblinks?) |
+      (ds.crossrefs,
+       ds.weblinks?) |
+      ds.weblinks
     )
   }
 
@@ -571,9 +571,9 @@ ds.subdeliverablerestricted =
     ds.type.id
   }
 
-ds.internal =
+ds.crossrefs =
   ## Container for Docserv²-internal references
-  element internal {
+  element crossrefs {
     ds.ref+
   }
 
@@ -628,9 +628,9 @@ ds.ref =
     empty
   }
 
-ds.external =
+ds.weblinks =
   ## Container for references to externally-hosted documents
-  element external {
+  element weblinks {
     ds.link*
   }
 

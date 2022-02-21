@@ -138,15 +138,15 @@
 
     </builddocs>
 
-    <internal>
+    <crossrefs>
       <ref product="example_product" category="another_example"/>
       <ref product="example_product" docset="1.0"/>
       <ref product="example_product" docset="1.0" dc="DC-example-admin"/>
       <ref product="example_product" docset="1.0" dc="DC-example-all" subdeliverable="book.admin"/>
       <ref product="example_product" docset="1.0" link="release-notes"/>
-    </internal>
+    </crossrefs>
 
-    <external>
+    <weblinks>
       <link linkid="rn">
         <language lang="en-us" default="1" title="Release Notes">
           <url format="html" href="https://www.example.org/1"/>
@@ -167,7 +167,7 @@
           <url format="html" href="https://www.example.org/3"/>
         </language>
       </link>
-    </external>
+    </weblinks>
 
   </docset>
 
@@ -207,7 +207,7 @@
 
     </builddocs>
 
-    <external>
+    <weblinks>
       <link linkid="release-notes">
         <language lang="en-us" default="1" title="Release Notes">
           <url format="html" href="https://www.example.org/1/"/>
@@ -223,7 +223,7 @@
           <url format="pdf" href="https://www.example.org/2"/>
         </language>
       </link>
-    </external>
+    </weblinks>
 
   </docset>
 

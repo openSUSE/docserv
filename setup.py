@@ -40,7 +40,8 @@ setup(
         'bin/docserv-createconfig',
         'bin/docserv-build-navigation',
         'bin/docserv-dchash',
-        'bin/docserv-write-param-file',
+        'bin/docserv-write-daps-param-file',
+        'bin/docserv-write-xslt-param-file',
     ],
     install_requires=[],
     data_files=[

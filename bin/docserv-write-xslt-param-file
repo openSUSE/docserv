@@ -1,0 +1,116 @@
+#!/bin/bash
+# Write an XSLT parameter file for daps2docker.
+
+
+out() {
+  >&2 echo -e "$1"
+  exit 1
+}
+
+me=$(test -L $(realpath $0) && readlink $(realpath $0) || echo $(realpath $0))
+mydir=$(dirname "$me")
+
+ui_language=
+omit_ui_language_path=0
+document_language=
+product=
+docset=
+parameters=
+extra_parameter_file=
+output_file=
+unknown=
+
+for i in "$@"
+  do
+    case $i in
+      --parameters=*)
+        parameters="${i#*=}"
+      ;;
+      --extra-parameter-file=*)
+        extra_parameter_file="${i#*=}"
+      ;;
+      --document-language=*)
+        document_language="${i#*=}"
+      ;;
+      --product=*)
+        product="${i#*=}"
+      ;;
+      --docset=*)
+        docset="${i#*=}"
+      ;;
+      --ui-language=*)
+        ui_language="${i#*=}"
+      ;;
+      --omit-ui-language-path)
+        omit_ui_language_path=1
+      ;;
+      --output-file=*)
+        output_file="${i#*=}"
+      ;;
+      *)
+        unknown+="  $i\n"
+      ;;
+    esac
+done
+
+[[ "$unknown" ]] && \
+  out "There are unknown parameters:\n$unknown"
+
+[[ ! -f "$output_file" ]] && \
+  out "(error) '$output_file' does not exist yet. 'docserv-write-xslt-param-file' only writes to files that already exist."
+
+if [[ -n "$parameters" && "$parameters" != '--' ]] || [[ -f "$extra_parameter_file" ]]; then
+  # document-specific parameters have precedence over server-default parameters,
+  # so set server-default parameters first.
+  output=
+
+  [[ -f "$extra_parameter_file" ]] && \
+    output+=$(cat "$extra_parameter_file")
+
+  [[ -n "$parameters" && "$parameters" != '--' ]] && \
+    output+=$(echo -e "\n$parameters")
+
+  output=$(echo -e "$output" | sed -r \
+    -e 's/@(\{\{|%7B%7B)#year#(}}|%7D%7D)/'"$(date '+%Y')"'/g' \
+    -e 's/@(\{\{|%7B%7B)#document_language#(}}|%7D%7D)/'"$document_language"'/g' \
+    -e 's/@(\{\{|%7B%7B)#document_language_slash#(}}|%7D%7D)/'"$document_language"'\//g' \
+    -e 's/@(\{\{|%7B%7B)#product#(}}|%7D%7D)/'"$product"'/g' \
+    -e 's/@(\{\{|%7B%7B)#docset#(}}|%7D%7D)/'"$docset"'/g' \
+    -e 's/@(\{\{|%7B%7B)#ui_language#(}}|%7D%7D)/'"$ui_language"'/g' \
+    -e 's/@(\{\{|%7B%7B)#ui_language_slash#(}}|%7D%7D)/'"$ui_language"'\//g' \
+    )
+
+  if [[ "$omit_ui_language_path" -eq 1 ]]; then
+    output=$(echo -e "$output" | sed -r \
+      -e 's/@(\{\{|%7B%7B)#ui_language_omissible#(}}|%7D%7D)//g' \
+      -e 's/@(\{\{|%7B%7B)#ui_language_omissible_slash#(}}|%7D%7D)//g' \
+      )
+  else
+    output=$(echo -e "$output" | sed -r \
+      -e 's/@(\{\{|%7B%7B)#ui_language_omissible#(}}|%7D%7D)/'"$ui_language"'/g' \
+      -e 's/@(\{\{|%7B%7B)#ui_language_omissible_slash#(}}|%7D%7D)/'"$ui_language"'\//g' \
+      )
+  fi
+
+  # the document language can only ever be omissible if it is the UI language
+  if [[ "$omit_ui_language_path" -eq 1 ]] && [[ "$document_language" == "$ui_language" ]]; then
+    output=$(echo -e "$output" | sed -r \
+      -e 's/@(\{\{|%7B%7B)#document_language_omissible#(}}|%7D%7D)//g' \
+      -e 's/@(\{\{|%7B%7B)#document_language_omissible_slash#(}}|%7D%7D)//g' \
+      )
+  else
+    output=$(echo -e "$output" | sed -r \
+      -e 's/@(\{\{|%7B%7B)#document_language_omissible#(}}|%7D%7D)/'"$document_language"'/g' \
+      -e 's/@(\{\{|%7B%7B)#document_language_omissible_slash#(}}|%7D%7D)/'"$document_language"'\//g' \
+      )
+  fi
+
+  echo -e "$output" | sed -n '/^$/ !p' > "$output_file"
+
+else
+
+  echo "" > "$output_file"
+
+fi
+
+exit 0

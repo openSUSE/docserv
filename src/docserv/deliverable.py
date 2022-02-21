@@ -143,8 +143,33 @@ class Deliverable:
         # Special default value to prevent odd errors
         if xslt_params == "":
             xslt_params = "--"
+        associated_ui_language = self.parent.build_instruction['lang']
+        ui_languages = self.parent.config['targets'][self.parent.build_instruction['target']]['languages'].split()
+        if not self.parent.build_instruction['lang'] in ui_languages:
+            associated_ui_language = self.parent.config['targets'][self.parent.build_instruction['target']]['default_lang']
+        omit_ui_language_path = False
+        if self.parent.config['targets'][self.parent.build_instruction['target']]['omit_default_lang_path'] == "yes":
+            if self.parent.build_instruction['lang'] == self.parent.config['targets'][self.parent.build_instruction['target']]['default_lang']:
+                omit_ui_language_path = True
         commands[n] = {}
-        commands[n]['cmd'] = "docserv-write-param-file %s \"%s\" %s" % (xslt_params_file[1], xslt_params, default_xslt_params)
+        commands[n]['cmd'] = ("docserv-write-xslt-param-file "
+                             "--parameters=\"%s\" " \
+                             "--extra-parameter-file=\"%s\" "
+                             "--document-language=\"%s\" "
+                             "--product=\"%s\" "
+                             "--docset=\"%s\" "
+                             "--ui-language=\"%s\" "
+                             "%s "
+                             "--output-file=\"%s\"") % (
+            xslt_params,
+            default_xslt_params,
+            self.parent.build_instruction['lang'],
+            self.parent.build_instruction['docset'],
+            self.parent.build_instruction['product'],
+            associated_ui_language,
+            "--omit-ui-language-path" if omit_ui_language_path else "",
+            xslt_params_file[1],
+        )
 
         # Write daps parameters to temp file
         n += 1
@@ -160,7 +185,7 @@ class Deliverable:
             "--meta" if meta == "yes" else ""
         ])
         commands[n] = {}
-        commands[n]['cmd'] = "docserv-write-param-file %s \"%s\"" % (daps_params_file[1], daps_params)
+        commands[n]['cmd'] = "docserv-write-daps-param-file %s \"%s\"" % (daps_params_file[1], daps_params)
 
         # Run daps in the docker container, copy results to a
         # build target directory

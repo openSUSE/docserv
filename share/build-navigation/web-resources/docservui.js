@@ -346,12 +346,12 @@ function buildArchiveTable(e_docSetWrap) {
     var e_documentTitle = document.createElement('td');
     e_documentTitle.classList.add('ds-docset-table-title');
 
-    doc_title_text = dsLocalize('auto-categories', 'archive-title-original') + ' (' + docSetData.archive[0].lang + ')';
+    doc_title_text = dsLocalize('auto-categories', 'archive-title-original') + ' (' + dsLocalize('languages', docSetData.archive[0].lang) + ')';
     var use_lang = 0;
     // Start at l=1, we have already set correct values for l=0
     for (var l = 1; l < docSetData.archive.length; l++) {
       if (docSetData.archive[l].lang == pageLanguage) {
-        doc_title_text = dsLocalize('auto-categories', 'archive-title-translated') + ' (' + docSetData.archive[l].lang + ')';
+        doc_title_text = dsLocalize('auto-categories', 'archive-title-translated') + ' (' + dsLocalize('languages', docSetData.archive[l].lang) + ')';
         use_lang = l;
       };
     };

@@ -67,15 +67,6 @@ all exist. -->
           <xsl:text>&#10;---&#10;</xsl:text>
         </xsl:if>
       </xsl:when>
-      <xsl:when test="@product">
-        <xsl:if
-          test="not(//product[@productid = $product])">
-          <xsl:text>Reference (ref) to </xsl:text>
-          <xsl:value-of select="concat($product, '/', $docset)"/>
-          <xsl:text> failed. Referenced product does not exist.</xsl:text>
-          <xsl:text>&#10;---&#10;</xsl:text>
-        </xsl:if>
-      </xsl:when>
       <xsl:otherwise>
         <xsl:text>Reference failed. This issue should have been caught by the RNC validation. This is a docserv-stitch bug.</xsl:text>
         <xsl:text>&#10;---&#10;</xsl:text>

@@ -589,41 +589,36 @@ ds.ref =
   element ref {
     ## Product ID of referenced document or navigational page
     attribute product { ds.type.id },
+    ## Docset ID of referenced document or navigational page
+    attribute docset { ds.type.id },
     (
-      ## Docset ID of referenced navigational page
-      attribute docset { ds.type.id }? |
       (
-        ## Docset ID of referenced document
-        attribute docset { ds.type.id },
-        (
-          (
-           ## DC file name of referenced document
-           attribute dc { ds.type.id },
-           ## Subdeliverable (DocBook/AsciiDoc ID) of referenced document
-           attribute subdeliverable { ds.type.id }?,
-           ## How to display the document title on the product version navigational page, a combination of the following values:
-           ## * `title`: title as extracted from the document
-           ## * `subtitle`: subtitle as extracted from the document (can be empty)
-           ## * `docset`: product and version number as classified in the Docserv² product configuration
-           ## * `product`: product and version number as extracted from the document (can be empty)
-           ## Note the following:
-           ## * `title` is mandatory
-           ## * `docset` and `product` are mutually exclusive.
-           ## * the order of values must be `title`, `subtitle`, `docset`/`product`
-           ## Default: `title subtitle docset`
-           attribute titleformat { ds.type.titleformat.build }?) |
-          (attribute link { ds.type.id },
-           ## How to display the document title on the product version navigational page, a combination of the following values:
-           ## * `title`: title as extracted from the document
-           ## * `docset`: product and version number as classified in the Docserv² product configuration
-           ## Note the following:
-           ## * `title` is mandatory
-           ## * the order of values must be `title`, `docset`
-           ## Default: `title docset`
-           attribute titleformat { ds.type.titleformat.link }?)
-        )
-      )
-    ),
+        ## DC file name of referenced document
+        attribute dc { ds.type.id },
+        ## Subdeliverable (DocBook/AsciiDoc ID) of referenced document
+        attribute subdeliverable { ds.type.id }?,
+        ## How to display the document title on the product version navigational page, a combination of the following values:
+        ## * `title`: title as extracted from the document
+        ## * `subtitle`: subtitle as extracted from the document (can be empty)
+        ## * `docset`: product and version number as classified in the Docserv² product configuration
+        ## * `product`: product and version number as extracted from the document (can be empty)
+        ## Note the following:
+        ## * `title` is mandatory
+        ## * `docset` and `product` are mutually exclusive.
+        ## * the order of values must be `title`, `subtitle`, `docset`/`product`
+        ## Default: `title subtitle docset`
+        attribute titleformat { ds.type.titleformat.build }?) |
+     (
+       attribute link { ds.type.id },
+       ## How to display the document title on the product version navigational page, a combination of the following values:
+       ## * `title`: title as extracted from the document
+       ## * `docset`: product and version number as classified in the Docserv² product configuration
+       ## Note the following:
+       ## * `title` is mandatory
+       ## * the order of values must be `title`, `docset`
+       ## Default: `title docset`
+       attribute titleformat { ds.type.titleformat.link }?)
+    )?,
     attribute category { ds.type.idmulti }?,
     empty
   }

@@ -292,7 +292,7 @@ Both the `<subdeliverable/>` of the set and the `<deliverable/>` for the book mu
 
 
 [#config-product-createconfig-tool]
-## Generating configuration for a product with `docserv-createconfig`
+## Generating configuration for a product with `*docserv-createconfig*`
 
 To add a new product, you can use the tool `*docserv-createconfig*`
 This tool works well to create draft configuration files for repositories that follow the following conventions:

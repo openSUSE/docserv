@@ -61,7 +61,7 @@ ds.type.branch =
 
 ds.type.dcfile =
   ## A DC file name
-  xsd:anyURI {
+  xsd:string {
     pattern="""DC-[\-_\.\+a-zA-Z0-9]+"""
   }
 

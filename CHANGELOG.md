@@ -1,5 +1,13 @@
 # Release History
 
+## v6.7, 2022-04-13, toms
+
+- Keep temorary directories for debugging reasons.
+  Delete them with systemd-tmpfiles-clean.timer
+
+- Fix versionbump: if $EDITOR is unset, use vi as default.
+
+
 ## v6.6, 2022-02-21, sknorr
 
 - core:

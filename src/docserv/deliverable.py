@@ -252,17 +252,17 @@ class Deliverable:
         # remove daps parameter file
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "rm %s" % (daps_params_file[1])
+        commands[n]['cmd'] = "echo rm %s" % (daps_params_file[1])
 
         # remove xslt parameter file
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "rm %s" % (xslt_params_file[1])
+        commands[n]['cmd'] = "echo rm %s" % (xslt_params_file[1])
 
         # remove docker output directory
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "rm -rf %s" % (tmp_dir_docker)
+        commands[n]['cmd'] = "echo rm -rf %s" % (tmp_dir_docker)
 
         #
         # Now iterate through all commands and execute them
@@ -300,6 +300,8 @@ class Deliverable:
         s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
         self.out, self.err = s.communicate()
+
+        logging.debug("Command executed: %s => %s || %s", cmd, self.out, self.err)
 
         if int(s.returncode) != 0:
             self.failed_command = command['cmd']

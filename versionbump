@@ -13,6 +13,10 @@ files=$(sed -r -n 's/^files: *(([-_./a-zA-Z0-9]+ *)+)/\1/ p' $config)
 changes=$(sed -r -n 's/^changesfile: *(([-_./a-zA-Z0-9]+ *)+)/\1/ p' $config)
 tagprefix=$(sed -r -n 's/^tagprefix: *(([-_./a-zA-Z0-9]+ *)+)/\1/ p' $config)
 
+# In case EDITOR isn't set, use vi as default:
+EDITOR=${EDITOR:-vi}
+
+
 if [[ $1 == '' ]]; then
   currentversion=$(sed -r -n 's/^version: *(.+)$/\1/ p' $config)
   echo "Current version number is $currentversion"

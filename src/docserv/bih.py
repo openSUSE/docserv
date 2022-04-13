@@ -111,7 +111,9 @@ class BuildInstructionHandler:
             for deliverable in self.deliverables.keys():
                 if self.deliverables[deliverable]['status'] == 'fail':
                     bi_overall_status = 'fail'
-                    logger.debug("Deliverable failed: %s", deliverable)
+                    logger.debug("Deliverable failed: %s => %s",
+                                 deliverable, item
+                                 )
                     break
 
         logger.debug("Cleaning up after %s (%s)", json.dumps(self.build_instruction['id']), bi_overall_status)

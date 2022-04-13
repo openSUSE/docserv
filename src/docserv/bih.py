@@ -191,7 +191,7 @@ class BuildInstructionHandler:
             # remove contents of backup path for current build instruction
             n += 1
             commands[n] = {}
-            commands[n]['cmd'] = "rm -rf %s" % (backup_docset_relative_path)
+            commands[n]['cmd'] = "echo rm -rf %s" % (backup_docset_relative_path)
 
             # ideally, we'd copy in one fell swoop, but I guess two separate
             # commands do work too..?
@@ -216,21 +216,21 @@ class BuildInstructionHandler:
             # remove temp directory for navigation page
             n += 1
             commands[n] = {}
-            commands[n]['cmd'] = "rm -rf %s" % tmp_dir_nav
+            commands[n]['cmd'] = "echo rm -rf %s" % tmp_dir_nav
             commands[n]['execute_after_error'] = True
 
         if hasattr(self, 'tmp_bi_path'):
             # remove temp build instruction directory
             n += 1
             commands[n] = {}
-            commands[n]['cmd'] = "rm -rf %s" % self.tmp_dir_bi
+            commands[n]['cmd'] = "echo rm -rf %s" % self.tmp_dir_bi
             commands[n]['execute_after_error'] = True
 
         if hasattr(self, 'local_repo_build_dir'):
             # build target directory
             n += 1
             commands[n] = {}
-            commands[n]['cmd'] = "rm -rf %s" % self.local_repo_build_dir
+            commands[n]['cmd'] = "echo rm -rf %s" % self.local_repo_build_dir
             commands[n]['execute_after_error'] = True
 
         # rsync local backup path with web server target path

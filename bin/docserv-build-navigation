@@ -293,9 +293,10 @@ if [[ $enable_ssi_fragments -eq 1 ]]; then
           -e 's/@(\{\{|%7B%7B)#ui_language_omissible_slash#(}}|%7D%7D)/'"$ui_language"'\//g' \
            "$localized_fragment"
       else
+	# when we build default language (usually en-us)
         sed -ri \
-          -e 's/@(\{\{|%7B%7B)#ui_language_omissible#(}}|%7D%7D)//g' \
-          -e 's/@(\{\{|%7B%7B)#ui_language_omissible_slash#(}}|%7D%7D)//g' \
+          -e 's/@(\{\{|%7B%7B)#ui_language_omissible#(}}|%7D%7D)/'"$default_ui_language"'/g' \
+          -e 's/@(\{\{|%7B%7B)#ui_language_omissible_slash#(}}|%7D%7D)/'"$default_ui_language"'/g' \
             "$localized_fragment"
       fi
       sed -ni '/^$/ !p' "$localized_fragment"

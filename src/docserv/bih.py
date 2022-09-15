@@ -193,7 +193,7 @@ class BuildInstructionHandler:
             # remove contents of backup path for current build instruction
             n += 1
             commands[n] = {}
-            commands[n]['cmd'] = "echo rm -rf %s" % (backup_docset_relative_path)
+            commands[n]['cmd'] = "rm -rf %s" % (backup_docset_relative_path)
 
             # ideally, we'd copy in one fell swoop, but I guess two separate
             # commands do work too..?
@@ -207,7 +207,12 @@ class BuildInstructionHandler:
                 if self.lifecycle != 'unsupported':
                     commands[n]['cmd'] = "rsync -lr %s/ %s" % (self.tmp_dir_bi, backup_path)
                 else:
-                    commands[n]['cmd'] = "mkdir -p %s" % os.path.join(backup_path, self.docset_relative_path)
+                    # recreate directory
+                    commands[n]['cmd'] = "mkdir -p %s" % (backup_docset_relative_path) 
+                    # copy zip archive to directory created above
+                    n += 1
+                    commands[n] = {}
+                    commands[n]['cmd'] = "cp %s %s" % (os.path.join(self.tmp_bi_path, zip_name), backup_docset_relative_path)
 
             # rsync navigational pages dir to backup path
             n += 1

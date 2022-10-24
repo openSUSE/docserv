@@ -1,5 +1,11 @@
 # Release History
 
+## v6.8, 2022-10-22, toms
+
+- Makes sure no unused files remain in $backup_path
+  Copying the zip archive for unsupported products to $backup_path
+  This fixes an error, it was missing
+
 ## v6.7, 2022-04-13, toms
 
 - Keep temorary directories for debugging reasons.

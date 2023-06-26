@@ -4,16 +4,26 @@
 #
 # Arguments (in order of appearance):
 # --valid-languages="en-us ..."   # Space-separated list of valid language codes
+#
 # --valid-site-sections="..."     # Space-separated list of valid sections
+#
+# --product-config-schema="..."   # The RNC schema file to validate config files with Jing
+#
+# --checks-dir="..."              # Directory of all the check files (.sh/.xslt)
+#                                 # Defaults $share_dir/validate-product-config/checks
+#
 # --simplify                      # Simplify user-generated productconfig so the
 #                                 # docserv daemon can use it (optional)
+#
 # --revalidate-only               # If a file named of the same name as the
 #                                 # output file already exists and it contains a
 #                                 # <hashes/> section matching the current MD5
 #                                 # sums of the XML files in the input directory,
 #                                 # do not do a complete validation
+#
 # --spinner                       # Show a spinner while working, if you or your
 #                                 # CI are impatient and eager to kill processes
+#
 # INPUT_DIR                       # Directory with config files
 # OUTPUT_FILE                     # Output file name (parent directory must exist)
 #                                 # (optional; if not specified, this will only
@@ -22,12 +32,16 @@
 # XML tool deps: xmlstarlet, jing, xmllint, xsltproc
 
 out() {
-  >&2 echo -e "$1"
+  >&2 echo -e "ERROR: $1"
   exit 1
 }
 
+source $(which env_parallel.bash) || out "Package 'gnu_parallel' is missing"
+# env_parallel --session
+
 me=$(test -L $(realpath $0) && readlink $(realpath $0) || echo $(realpath $0))
-mydir=$(dirname $me)
+PROG=${me##*/}
+mydir=${me%/*}
 
 source $mydir/docserv-dirs
 
@@ -78,72 +92,178 @@ spin() {
   echo -ne "\b$spinstate"
 }
 
+JOBS=25
+tmpoutfile="docserv-stitch-XXXX.xml"
 xmllint='xmllint'
 jing='jing'
 starlet='xmlstarlet'
 
 stacksize=${stacksize:-"-Xss4096K"}
-java_flags="-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=org.apache.xerces.parsers.XIncludeParserConfiguration"
 
 schema_file=$share_dir/validate-product-config/product-config-schema.rnc
 checks_dir=$share_dir/validate-product-config/checks
 references_stylesheet=$share_dir/validate-product-config/global-check-ref-list.xsl
 simplify_stylesheet=$share_dir/simplify-product-config/simplify.xsl
 
-[[ ! -f $schema_file ]] && out "Schema $schema_file does not exist.$(readme_message)"
-[[ ! -d $checks_dir ]] && out "Directory $checks_dir does not exist.$(readme_message)"
-[[ ! -f $simplify_stylesheet ]] && out "Stylesheet $simplify_stylesheet does not exist.$(readme_message)"
-
 simplify_config=0
 enable_spinner=0
 revalidate=0
 valid_languages=""
 valid_site_sections=""
-unknown=""
 input_dir=""
 output_file=""
+DEBUG=1
 
-for i in "$@"
-  do
-    case $i in
-      -h|--help)
-        app_help
-      ;;
-      --simplify)
-        simplify_config=1
-      ;;
-      --revalidate-only)
-        revalidate=1
-      ;;
-      --spinner)
-        enable_spinner=1
-      ;;
-      --valid-languages=*)
-        valid_languages="${i#*=}"
-      ;;
-      --valid-site-sections=*)
-        valid_site_sections="${i#*=}"
-      ;;
-      *)
-        if [[ -d $(readlink -f -- $i) ]] && [[ ! $input_dir ]]; then
-          input_dir=$(readlink -f -- $i)
-        elif [[ -d $(readlink -f -- $(dirname $i)) ]] && [[ ! $output_file ]]; then
-          output_file=$(readlink -f -- $i)
-        else
-          unknown+="  $i\n"
-        fi
-      ;;
-    esac
-done
 
-[[ "$unknown" ]] && \
-  out "There are unknown parameters:\n$unknown\n(Note that input and output directories must exist before running this script.)"
+function debug() {
+  [[ $DEBUG -gt 0 ]] && 2>&1 echo -e "INFO: $1"
+}
+
+function validate_config() {
+  local file=$1
+
+  2>&1 echo "[$PARALLEL_SEQ] validating file $file..."
+
+  # (2) Validate file
+  valid=$(2>&1 ADDITIONAL_FLAGS="$java_flags" ADDITIONAL_OPTIONS="$java_flags" \
+  jing -ci $schema_file $file)
+  [[ $? -gt 0 ]] && out "$input_dir/$file: File is not valid:\n$valid"
+  # spin
+
+  # (3) Check optional "/product/@enabled" attribute
+  enabled=$(xmlstarlet sel -t -v "/product/@enabled" $file)
+  if [[ "$enabled" == 'false' ]] || [[ "$enabled" == '0' ]]; then
+    >&2 echo "File $file was not enabled"
+    return
+  fi
+}
+
+
+function check_config() {
+  local file=$1
+  local check_file=$2
+  local command='bash'
+  local _x
+  local java_flags="-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=org.apache.xerces.parsers.XIncludeParserConfiguration"
+  # local tmpfile=$(mktemp --tmpdir=/tmp "docserv-stitch-check_config-result-XXXX")
+
+  _x=${check_file##*/}
+  _x=${_x%*.xsl}
+  2>&1 echo "check_config [$PARALLEL_SEQ]: $file ${check_file##*/}"
+  # 2>&1 echo ">> $TMPCONFIGDIR/${file##*/}"
+
+  [[ $check_file =~ \.xsl$ ]] && command='xsltproc'
+  # result=$( \
+  #      xmllint="xmllint" jing="jing" starlet="xmlstarlet" \
+  #      valid_languages="$valid_languages_sorted" \
+  #      valid_site_sections="$valid_site_sections_sorted" \
+  #      $command $check_file $file
+  #      )
+  xmllint="xmllint" jing="jing" starlet="xmlstarlet" \
+  valid_languages="$valid_languages_sorted" \
+  valid_site_sections="$valid_site_sections_sorted" \
+  $command $check_file $file 2> "$TMPCONFIGDIR/$_x-${file##*/}.result"
+  # we are only interested in the bytes of the result file:
+  result=$(stat --format="%s" "$TMPCONFIGDIR/$_x-${file##*/}.result")
+ 
+  [[ $? -eq 0 ]] || out "Validation check file $check_file is misbehaving."
+  # add_multiple_issues "$input_dir/$file" "$result"
+  [[ "$result" -ne 0 ]] && out "Problem in $input_dir/$file: $TMPCONFIGDIR/$_x-${file##*/}.result" || true
+}
+
+function parsecli()
+{
+    # For details about getopt,
+    # see https://www.tutorialspoint.com/unix_commands/getopt.htm
+    local REST=()
+    local options=$(getopt -n "$PROG" \
+      -o vh \
+      --long version,help,simplify,revalidate-only,product-config-schema:,valid-languages:,valid-site-sections:,checks-dir: \
+      -- "$@")
+    [ $? -eq 0 ] || {
+        echo "Incorrect option provided"
+        exit 1
+    }
+    eval set -- "$options"
+    while true; do
+        case "$1" in
+        -v)
+            VERBOSE=$(($VERBOSE + 1))
+            ;;
+        -h|--help)
+            app_help
+            ;;
+        --version)
+            echo "$PROG $VERSION"
+            exit
+            ;;
+        --simplify)
+          simplify_config=1
+          ;;
+        --revalidate-only)
+          revalidate=1
+          ;;
+        --spinner)
+          enable_spinner=1
+          ;;
+        --valid-languages)
+          valid_languages="$2"
+          shift
+          ;;
+       --valid-site-sections)
+          valid_site_sections="$2"
+          shift
+          ;;
+       --product-config-schema)
+          schema_file="$2"
+          shift
+          ;;
+       --checks-dir=*)
+          checks_dir="$2"
+          shift
+          ;;
+
+        --)
+            shift
+            break
+            ;;
+        esac
+        shift
+    done
+    # Remove script name:
+    shift
+    # Process positional parameters
+    REST=( $@ )
+    [[ ${#REST[@]} != 2 ]] && out "Expected two parameters. Missing INPUT_DIR and/or OUTPUT_FILE"
+
+    echo "0=${REST[0]} 1=${REST[1]}"
+    input_dir=$(readlink -f -- ${REST[0]})
+    output_file=$(readlink -f -- ${REST[1]})
+
+    if [[ ! -d $input_dir ]]; then
+      out "Argument '$input_dir' is not a directory."
+    fi
+    if [[ ! -d ${output_file%/*} ]]; then
+      out "Parent directory of '${output_file%/*}' does not exist."
+    fi
+}
+
+## --------
+parsecli $0 "$@"
+debug "Args:\n  input_dir=$input_dir,\n  output_file=$output_file"
+
+# Sanity checks
+[[ ! -f $schema_file ]] && out "Schema $schema_file does not exist.$(readme_message)"
+[[ ! -d $checks_dir ]] && out "Directory $checks_dir does not exist.$(readme_message)"
+[[ ! -f $simplify_stylesheet ]] && out "Stylesheet $simplify_stylesheet does not exist.$(readme_message)"
+
 
 # FIXME: For --valid-languages and --valid-site-sections, we allow duplicated
 # entries. This is benign, because we deduplicate them, but since it hints at a
 # slightly b0rk config, we may not want to accept that.
 
 # matches ds.type.lang in product-config-schema.rnc
+# (([a-z]{2}(-[a-z]{2,8})?))$
 [[ ! $(echo " $valid_languages" | grep -oP '^( +[a-z]{2}(-[a-z]{2,8})?)+$') ]] && \
   out "Language codes parameter string does not conform to scheme (must be la-ng scheme, space-separated)."
 
@@ -174,92 +294,76 @@ issuelist=''
 # Create md5 hashes for all config files. From the md5sum output, we are only
 # keeping the hashes, as the file names of the config files are actually
 # irrelevant.
+#
+# parallel -j 30 md5sum ::: *.xml sort | sed -r 's/\s*[^ ]+$//' | tr '\n' '!'
 hashsums=$(md5sum *.xml | sort | sed -r 's/\s*[^ ]+$//' | tr '\n' '!')
 
 if [[ "$revalidate" == '1' ]] && [[ -f $output_file ]]; then
-  comparisonhashsums=$($starlet sel -t -v "(//hashes)[1]" $output_file)
+  comparisonhashsums=$(xmlstarlet sel -t -v "(//hashes)[1]" $output_file)
   [[ "$comparisonhashsums" == "$hashsums" ]] && exit 0
 fi
 
-outfile='<?xml version="1.0" encoding="UTF-8"?>\n<docservconfig>\n'
-outfile+="<hashes>${hashsums}</hashes>\n\n"
+# ------------------------
+debug "Start\n"
+debug "Validate with $schema_file\n"
+env_parallel ${JOBS:+-j$JOBS} --halt-on-error=soon,fail=3 validate_config ::: $input_dir/*.xml
+[[ $? -eq 0 ]] || out "ERROR: Some config files are not valid."
 
-for file in *.xml; do
+debug "Config validation was fine."
+debug "======================================="
+debug "Checking each config file..."
 
-  # xmllint is faster and gives more readable error messages than jing, so
-  # run that first
+tmpoutfile=$(mktemp --tmpdir=/tmp $tmpoutfile)
+TMPCONFIGDIR=$(mktemp -d --tmpdir=/tmp docserv-stitch-tmpdir-XXXX)
 
-  wellformed=$(2>&1 xmllint --noout --noent $file)
-  [[ $? -gt 0 ]] && add_issue "$input_dir/$file: File is not well-formed:\n$wellformed" && continue
-  spin
+cat << EOF > "$tmpoutfile"
+<?xml version="1.0" encoding="UTF-8"?>
+<docservconfig>
+<hashes>${hashsums}</hashes>
 
-  valid=$(2>&1 ADDITIONAL_FLAGS="$java_flags" ADDITIONAL_OPTIONS="$java_flags" \
-    $jing -ci $schema_file $file)
-  [[ $? -gt 0 ]] && add_issue "$input_dir/$file: File is not valid:\n$valid"
-  spin
+EOF
 
-  # This attribute is optional, and defaults to '1'/'true'
-  enabled=$($starlet sel -t -v "/product/@enabled" $file)
-  if [[ "$enabled" == 'false' ]] || [[ "$enabled" == '0' ]]; then
-    continue
-  fi
+# We want to exit when the first job fails.
+env_parallel ${JOBS:+-j$JOBS} --halt-on-error=soon,fail=1  check_config ::: $input_dir/*.xml ::: $checks_dir/check-*.{sh,xsl}
+[[ $? -eq 0 ]] || out "ERROR: There was one or more problems."
 
-  # Additional validation checks may come either as XSLTs or Bash scripts.
-  # No script output is assumed to mean there are no issues.
-  for check_file in $checks_dir/check-*.{sh,xsl}; do
-    # As long as at least one variety of check files does not exist, the glob
-    # pattern above will not resolve correctly in one case and the literal
-    # file name "check-*.xsl" (or .sh) will enter this loop. The hack below
-    # avoids that.
-    [[ $check_file =~ \*\. ]] && continue
-    command='bash'
-    [[ $check_file =~ \.xsl$ ]] && command='xsltproc'
-    result=$( \
-      xmllint="$xmllint" jing="$jing" starlet="$starlet" \
-      valid_languages="$valid_languages_sorted" \
-      valid_site_sections="$valid_site_sections_sorted" \
-      $command $check_file $file)
-    [[ $? -eq 0 ]] || out "Validation check file $check_file is misbehaving."
-    [[ "$result" ]] && add_multiple_issues "$input_dir/$file" "$result"
-    spin
-  done
+debug "Config checks were fine."
 
-  outfile+=$($starlet sel -t -c "/*" $file)
-  outfile+='\n'
+parallel ${JOBS:+-j$JOBS} --halt-on-error=now,fail=1 "xmlstarlet sel -t -c \"/*\" {} > $TMPCONFIGDIR/{/}" ::: $input_dir/*.xml
+[[ $? -eq 0 ]] || out "ERROR: Problems with one config check"
 
-done
+cat $TMPCONFIGDIR/*.xml >> "$tmpoutfile"
+printf "</docservconfig>\n" >> "$tmpoutfile"
 
-outfile+='\n</docservconfig>\n'
-
-spin 'clear'
-
-if [[ "$issuelist" ]]; then
-  out "The following issues occurred when validating:$issuelist\n"
-fi
+debug "written $tmpoutfile"
 
 
 # check for uniqueness of productid values (which we can't do before
 # stitching the file together)
 
-productids=$(echo -e "$outfile" | $starlet sel -t -v '//@productid' | sort)
+productids=$(cat "$tmpoutfile" | xmlstarlet sel -t -v '//@productid' | sort)
 uniqueproductids=$(echo -e "$productids" | sort -u)
 
 [[ ! "$productids" == "$uniqueproductids" ]] && \
-    add_issue \
+    out \
       "(global check): Some productid values in $input_dir are not unique. Check for the following productid values: "$(comm -2 -3 <(echo -e "$productids") <(echo -e "$uniqueproductids") | tr '\n' ' ')"."
 
-referencecheck=$(echo -e "$outfile" | xsltproc $references_stylesheet -)
+referencecheck=$(xsltproc $references_stylesheet "$tmpoutfile")
 [[ "$referencecheck" ]] && add_multiple_issues "(global check)" "$referencecheck"
 
-if [[ "$issuelist" ]]; then
-  out "The following issues occurred when validating:$issuelist\n"
-fi
+# if [[ "$issuelist" ]]; then
+#  out "The following issues occurred when validating:$issuelist\n"
+# fi
 
 cd - >/dev/null
 
 
 if [[ $simplify_config == 1 ]]; then
-  echo -e "$outfile" | xsltproc $simplify_stylesheet - > $output_file
+  xsltproc $simplify_stylesheet "$tmpoutfile" > $output_file
+  # TODO: rm "$tmpoutfile" 2>/dev/null || true
 elif [[ "$output_file" ]]; then
-  echo -e "$outfile" > $output_file
+  cp "$outfile" "$output_file"
 fi
+
+# env_parallel --end-session
+# [[ -e $TMPCONFIGDIR ]] && rm -rf "$TMPCONFIGDIR"

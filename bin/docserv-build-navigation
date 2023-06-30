@@ -204,6 +204,8 @@ if [[ "$enable_ssi_fragments" -eq 1 ]]; then
   # FIXME: there is no proper error mode here for when there are no fragments
   # but the option is enabled nonetheless.
   for file in "$fragment_dir/"*.fragment.html; do
+    # Skip our SUSE headers
+    [[ ${file##*/} =~ suse-(body|footer|head)\.fragment\.html ]] && continue
     # Writing a schema that can take into account all possible XHTML 5
     # constructs, including possibly embedded SVGs etc. would be hard.
     # Leave that as an exercise for a later date.

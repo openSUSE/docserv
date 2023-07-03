@@ -51,6 +51,12 @@ app_help() {
   exit
 }
 
+DEBUG=1
+function debug() {
+  local level="INFO"
+  [[ $DEBUG -gt 0 ]] && 2>&1 echo -e "$level: $1"
+}
+
 xsltproc='xsltproc'
 
 xmllint='xmllint'
@@ -93,6 +99,8 @@ internal_mode='false'
 enable_ssi_fragments=0
 fragment_dir=
 fragment_l10n_dir=
+SUSE_HEADERS="suse-(body|footer|head)\.fragment\.html"
+
 
 for i in "$@"
   do
@@ -205,16 +213,20 @@ if [[ "$enable_ssi_fragments" -eq 1 ]]; then
   # but the option is enabled nonetheless.
   for file in "$fragment_dir/"*.fragment.html; do
     # Skip our SUSE headers
-    [[ ${file##*/} =~ suse-(body|footer|head)\.fragment\.html ]] && continue
+    [[ ${file##*/} =~ $SUSE_HEADERS ]] && continue
     # Writing a schema that can take into account all possible XHTML 5
     # constructs, including possibly embedded SVGs etc. would be hard.
     # Leave that as an exercise for a later date.
     wellformedcheck=$(xmllint --noout "$file")
     [[ $? -gt 0 ]] && out "Fragment file $file is not well-formed XML:\n$validate"
   done
+
+  debug "All fragment files are well-formed."
+
   fragment_l10n_fallback="$fragment_l10n_dir/$default_ui_language.xml"
   [[ ! -f "$fragment_l10n_fallback" ]] && out "File $fragment_l10n_fallback does not exist."
   for ui_language in $ui_languages; do
+    debug "Selected $ui_language lang"
     l10n_file="$fragment_l10n_dir/$ui_language.xml"
     # If the file does not exist, we just use the fallback language file
     [[ ! -f "$l10n_file" ]] && continue
@@ -269,7 +281,7 @@ fragment_path='docserv/fragments'
 
 
 if [[ $enable_ssi_fragments -eq 1 ]]; then
-
+  debug "SSI fragments enabled"
   for ui_language in $ui_languages; do
     fragment_l10n_file="$fragment_l10n_dir/$ui_language.xml"
     if [[ ! -f "$fragment_l10n_file" ]]; then
@@ -277,7 +289,15 @@ if [[ $enable_ssi_fragments -eq 1 ]]; then
     fi
     mkdir -p "$output_dir/$fragment_path/$ui_language"
     for fragment in $fragment_dir/*.fragment.html; do
-      localized_fragment="$output_dir/$fragment_path/$ui_language/"$(basename "$fragment")
+      debug "  Processing fragment $fragment..."
+      localized_fragment="$output_dir/$fragment_path/$ui_language/${fragment##*/}"
+
+      if [[ ${fragment##*/} =~ $SUSE_HEADERS ]]; then
+        debug "  Coping fragment $fragment -> $localized_fragment..."
+        cp $fragment $localized_fragment
+        continue
+      fi
+
       xsltproc \
         --stringparam "l10n-file" "$fragment_l10n_file" \
         --stringparam "fallback-l10n-file" "$fragment_l10n_fallback" \
@@ -366,10 +386,10 @@ cp -r $template_resources/* $output_dir/$res_path
 for lang in $ui_languages; do
 
   mkdir -p $output_dir/$lang
-
+  debug "Processing language $lang..."
 
   for site_section in $site_sections_deduped; do
-
+    debug "  Processing site section $site_section..."
     for lifecycle in supported unsupported; do
 
       fallback_template=0
@@ -399,7 +419,7 @@ for lang in $ui_languages; do
   done
 
   for product_docset in "${relevant_product}/${relevant_docset}" $relatedproducts; do
-
+    debug "  Processing product docset $product_docset..."
     this_product=$(echo "$product_docset" | cut -f1 -d'/')
     this_docset=$(echo "$product_docset" | cut -f2 -d'/')
 

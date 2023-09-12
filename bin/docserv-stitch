@@ -178,7 +178,7 @@ function parsecli()
     local REST=()
     local options=$(getopt -n "$PROG" \
       -o vh \
-      --long version,help,simplify,revalidate-only,product-config-schema:,valid-languages:,valid-site-sections:,checks-dir: \
+      --long version,help,simplify,spinner,revalidate-only,product-config-schema:,valid-languages:,valid-site-sections:,checks-dir: \
       -- "$@")
     [ $? -eq 0 ] || {
         echo "Incorrect option provided"
@@ -362,7 +362,7 @@ if [[ $simplify_config == 1 ]]; then
   xsltproc $simplify_stylesheet "$tmpoutfile" > $output_file
   # TODO: rm "$tmpoutfile" 2>/dev/null || true
 elif [[ "$output_file" ]]; then
-  cp "$outfile" "$output_file"
+  cp "$tmpoutfile" "$output_file"
 fi
 
 # env_parallel --end-session

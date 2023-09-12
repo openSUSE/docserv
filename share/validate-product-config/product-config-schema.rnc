@@ -327,6 +327,7 @@ ds.docset =
     ds.sortname?,
     ds.acronym?,
     ds.version,
+    ds.canonical?,
     ds.listingversion?,
     ds.overridedesc?,
     (
@@ -356,6 +357,11 @@ ds.version =
     ## Whether the version number name includes the product name (default: `false`)
     attribute includes-productname { xsd:boolean }?,
     text
+  }
+ds.canonical =
+  ## For canonical links; from previous, obsolete SPs to the latest
+  element canonical {
+    xsd:anyURI
   }
 ds.listingversion =
   ## User-visible version number (or name of second-level category) displayed in homepage listing

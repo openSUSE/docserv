@@ -441,7 +441,7 @@ These are the details:
             return False
 
         # check if there is any buildable documentation in the language
-        # requested -- it's possible that there only are internal/external
+        # requested -- it's possible that there only are crossrefs/weblinks
         # sections but there is no builddocs section (or none for the language
         # in question).
         self.build_docs = True

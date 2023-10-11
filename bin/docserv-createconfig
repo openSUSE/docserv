@@ -164,9 +164,9 @@ def generate_config(args, git_url, branches, version=SCHEMAVERSION):
                         branch = "trans/%s" % tmp
                 etree.SubElement(lang, "branch").text = branch
                 etree.SubElement(lang, "subdir").text = FIXME
-        # TODO: add external/links as comments
-        # externallinks = etree.SubElement(docset, "external")
-        # etree.SubElement(externallinks, "link", href=FIXME).text = "SOME DESCRIPTION"
+        # TODO: add weblinks/links as comments
+        # weblinks = etree.SubElement(docset, "weblinks")
+        # etree.SubElement(weblinks, "link", href=FIXME).text = "SOME DESCRIPTION"
 
     tree = etree.ElementTree(root)
     configfile = os.path.join(os.getcwd(), "{}.xml".format(args.productid))

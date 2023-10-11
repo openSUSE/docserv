@@ -43,17 +43,17 @@ A very reduced example of a product configuration file may look like this:
         </deliverable>
       </language>
     </builddocs>
-    <internal>
+    <crossrefs>
       <ref product="example-product"/>
-    </internal>
-    <external>
+    </crossrefs>
+    <weblinks>
       <link linkid="rn">
         <language lang="en-us" default="1" title="Extra document">
           <url format="html" href="https://www.example.org/1"/>
           <url format="pdf" href="https://www.example.org/1.pdf"/>
         </language>
       </link>
-    </external>
+    </weblinks>
   </docset>
 
 </product>
@@ -138,10 +138,10 @@ The optional `@navigation` attribute of docsets defines whether to create naviga
 {ds2} will automatically create ZIP archives of these documents.
 +
 However, to update the navigational pages for such documents, the documents need to remain buildable within {ds2}, even if the product is no longer supported.
-* `<internal/>`: References to {ds2} navigational pages or documents defined elsewhere in the product configuration.
+* `<crossrefs/>`: References to {ds2} navigational pages or documents defined elsewhere in the product configuration.
 {ds2} will extract the URL and metadata such as the document title from their original context in the product configuration.
 
-* `<external/>`: References to documents created outside of {ds2}.
+* `<weblinks/>`: References to documents created outside of {ds2}.
 Such documents can be located anywhere on the internet.
 They can also be located on the same host as {ds2}-created documents, placed in such a way that they do not interfere with the directory structure created by {ds2}.
 URLs and document titles of such documents must be defined manually.
@@ -200,21 +200,21 @@ Within a `<deliverable/>` element of a non-default `<language/>` element, the nu
 
 
 [#config-product-external-reference]
-### References to documents not generated within {ds2}, `<external/>`
+### References to documents not generated within {ds2}, `<weblinks/>`
 
-The `<external/>` element collects links to documents that are not generated using {ds2}.
+The `<weblinks/>` element collects links to documents that are not generated using {ds2}.
 {ds2} makes no effort to ensure availability of such documents, meaning all links to them must be checked manually.
 Such documents can be co-hosted along with {ds2} or be on another host altogether.
 
-For each required document, add a `<link/>` element to the `<external/>` element.
+For each required document, add a `<link/>` element to the `<weblinks/>` element.
 A `<link/>` can reference documents in multiple formats and multiple languages.
 The primary language (`<language default="true"/>`) must be listed first.
 
 
 [#config-product-internal-reference]
-### {ds2}-internal references, `<internal/>`
+### {ds2}-internal references, `<crossrefs/>`
 
-Within the `<internal/>` element, reference documents already defined elsewhere in the {ds2} configuration.
+Within the `<crossrefs/>` element, reference documents already defined elsewhere in the {ds2} configuration.
 Document references (using the `<ref/>` element) will inherit all properties of the original document, such as available formats and languages and reduce duplication.
 You can also reference related product pages within this element.
 
@@ -256,9 +256,9 @@ Likewise, within a `<builddocs/>` section, the `@lang` attributes' values of `<l
 
 * DC file names (`<dc/>` attributes) must be unique within the `<language/>` that contains them.
 After removing the `DC-` prefix, DC file names are used as path components.
-These identifiers can be used for `<internal/>` references to generated documents.
-* `<link linkid="__[ID]__"/>` is an optional identifier for `<external/>` links.
-These identifiers can be used for `<internal/>` references to such links.
+These identifiers can be used for `<crossrefs/>` references to generated documents.
+* `<link linkid="__[ID]__"/>` is an optional identifier for `<weblinks/>` links.
+These identifiers can be used for `<crossrefs/>` references to such links.
 
 * URLs referenced within external links (`<link/>`) elements must be unique within the context of the docset they are used in.
 

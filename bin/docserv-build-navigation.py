@@ -59,7 +59,16 @@ class LanguageAction(argparse.Action):
 
 
 class SeparateAction(argparse.Action):
-    SEP_REGEX = re.compile('^( +[-_a-zA-Z0-9]+)+$')
+    SEP_REGEX = re.compile(r'[ ,;]')
+    def __call__(self, parser, namespace, values, option_string=None):
+        if type(self).SEP_REGEX.search(values):
+            v = [ _ for _ in type(self).SEP_REGEX.split(values) if _.strip() ]
+        else:
+            parser.error(
+                "Wrong syntax. "
+                "Each part must be separated by comma, semicolon, or space."
+            )
+        setattr(namespace, self.dest, v)
 
 
 def parse_cli(cliargs=None) -> argparse.Namespace:
@@ -108,7 +117,8 @@ def parse_cli(cliargs=None) -> argparse.Namespace:
     )
     parser.add_argument("--site-sections",
                         required=True,
-                        action="store",
+                        # action="store",
+                        action=SeparateAction,
                         help="Site sections that are supported"
     )
     parser.add_argument("--default-site-section",

@@ -220,20 +220,82 @@ def prepare(args: argparse.Namespace):
     if not args.output_dir.exists():
         args.output_dir.mkdir(parents=True, exist_ok=True)
 
+
+def render(args: argparse.Namespace):
+    """Render the templates
+    """
+    from babel.support import Translations
+    def get_translations():
+        translations = Translations.load('translations', locales=['en'])
+        return translations
+
+    def install_translations(env):
+        translations = get_translations()
+        env.install_gettext_translations(translations)
+
+    print("render, pwd=", os.getcwd())
+    loader=jinja2.FileSystemLoader(
+        [str(args.template_dir),
+         "templates",
+         DS_CONFIG_DIR
+         ]
+    )
+    env = jinja2.Environment(
+        extensions=['jinja2.ext.i18n', 'jinja2.ext.debug'],
+        trim_blocks=True,
+        loader=loader,
+        autoescape=jinja2.select_autoescape()
+    )
+    # Install translations into the environment
+    # install_translations(env)
+
+    # print("Jinja", env, dir(env))
+    template = env.get_template(f"section-{args.default_site_section}.supported.html.jinja2")
+    return template.render(
+        site=args.default_site_section,
+        allsites=args.site_sections,
+        product=args.product,
+        docset=args.docset,
+        lang=args.default_ui_language,
+    )
+
+
 def main(cliargs=None):
     try:
         args = parse_cli(cliargs)
-        print("Script:", PROG)
-        print("Directory:", SCRIPTDIR)
-        print(args)
+        print("> Script:", PROG)
+        print("> Directory:", SCRIPTDIR)
+        # print(args)
 
-        with tempfile.TemporaryDirectory(dir="/tmp",
-                                         prefix="docserv-build-navigation-"
-                                        ) as temp_dir:
-            pass
+        # with tempfile.TemporaryDirectory(
+        #     dir="/tmp",
+        #     prefix="docserv-build-navigation-",
+        #     delete=False,
+        # ) as temp_dir:
+        #    temp_dir = Path(temp_dir)
+        #    print('> created temporary directory', temp_dir)
+        data = render(args)
+        print("> Data received %d" % len(data))
+        index = args.output_dir / "index.html"
+        index.write_text(data)
+        print(f"> Written to {str(index)}")
+        print("Done.")
 
-    except Exception as exc:
-        print("Error %s" % exc, file=sys.stderr)
+
+    except jinja2.exceptions.TemplateSyntaxError as err:
+        print((f"ERROR ({err.__class__.__name__}) "
+               f"name={err.name}:{err.lineno}\n"
+               f"  {err}"),
+              file=sys.stderr
+        )
+        return 10
+
+    except jinja2.exceptions.TemplateNotFound as err:
+        print(f"ERROR ({err.__class__.__name__}) {err}", file=sys.stderr)
+        return 10
+
+    #except Exception as exc:
+    #    print(f"ERROR ({err.__class__.__name__}) {err}", file=sys.stderr)
 
 
 if __name__ == "__main__":

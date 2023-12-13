@@ -1,9 +1,29 @@
 #!/usr/bin/env python3
+"""
+
+Example:
+$ docserv-build-navigation  --product="sles" --docset="15-SP2" \
+    --stitched-config="/tmp/docserv_stitch_q7pjc_gp/productconfig_simplified_doc-suse-com.xml" \
+    --ui-languages="en-us de-de fr-fr pt-br ja-jp zh-cn es-es" \
+    --site-sections="main sbp trd smart" \
+    --default-site-section="main" \
+    --default-ui-language="en-us" \
+    --omit-lang-path="en-us" \
+    --cache-dir="/var/cache/docserv/docserv/doc-suse-com" \
+    --template-dir="/etc/docserv/template-doc-suse-com/" \
+    --output-dir="/tmp/docserv_navigation_zmgu11h6" \
+    --base-path="/" \
+    --fragment-dir="/etc/docserv/fragments-doc-suse-com/fragments" \
+    --fragment-l10n-dir="/etc/docserv/fragments-doc-suse-com/l10n"
+
+"""
+
 
 __version__ = "0.1.0"
 __author__ = "Tom Schraitle <tom@suse.de>"
 
 import argparse
+import os
 from pathlib import Path
 import re
 import sys

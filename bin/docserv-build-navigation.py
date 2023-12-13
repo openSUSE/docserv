@@ -31,6 +31,7 @@ import tempfile
 
 import jinja2
 
+
 PROG=Path(__file__)
 SCRIPTDIR=PROG.parent
 JAVA_FLAGS="-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=org.apache.xerces.parsers.XIncludeParserConfiguration"
@@ -40,6 +41,15 @@ POSSIBLE_LANGS = tuple(
 )
 TEMPLATE_DEFAULT=""
 TEMPLATE_PRODUCT=""
+
+#
+DS_SHARE_DIR = os.getenv('DOCSERV_SHARE_DIR', "/usr/share/docserv/")
+DS_CONFIG_DIR = os.getenv('DOCSERV_CONFIG_DIR', '/etc/config/docserv')
+DS_BIN_DIR = os.getenv('DOCSERV_BIN_DIR', '/usr/bin')
+
+
+# Our Jinja templates
+template_path="templates"
 # Where to place the JSON data files
 data_path='docserv/data'
 # Where to place the template's resource files (JS, CSS, images)
@@ -48,6 +58,12 @@ res_path='docserv/res/'
 fragment_path='docserv/fragments'
 #
 enable_ssi_fragments=0
+#
+all_stylesheet= f"{DS_SHARE_DIR}/build-navigation/list-all-products.xsl"
+#
+related_stylesheet=f"{DS_SHARE_DIR}/build-navigation/list-related-products.xsl"
+#
+stylesheet=f"{DS_SHARE_DIR}/build-navigation/build-navigation-json.xsl"
 
 
 class LanguageAction(argparse.Action):
@@ -185,13 +201,15 @@ def parse_cli(cliargs=None) -> argparse.Namespace:
 
     # Parsing the arguments:
     args = parser.parse_args(args=cliargs)
+
+    # Everything looks successful, lets prepare the environment:
     prepare(args)
 
     return args
 
 
 def prepare(args: argparse.Namespace):
-    """
+    """Prepare the environment
     """
     if args.fragment_dir:
         enable_ssi_fragments = 1
@@ -199,6 +217,8 @@ def prepare(args: argparse.Namespace):
     if not args.cache_dir.exists():
         args.cache_dir.mkdir(parents=True, exist_ok=True)
 
+    if not args.output_dir.exists():
+        args.output_dir.mkdir(parents=True, exist_ok=True)
 
 def main(cliargs=None):
     try:

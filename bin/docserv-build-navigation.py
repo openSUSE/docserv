@@ -1,7 +1,51 @@
 #!/usr/bin/env python3
 """
 
-Example:
+Create translations
+-------------------
+
+1. Make sure you have pybabel installed.
+2. Change to "templates" directory on docserv-config repo.
+   a) Create a directory structure inside templates:
+      $ mkdir -p translations/de/LC_MESSAGES
+3. Create a file babel.cfg with the following content
+   [jinja2: **.html.jinja2]
+   encoding = utf-8
+   ignore_tags = script,style
+   include_attrs = alt title summary
+   keyword = trans
+4. Run:
+   $ pybabel extract -F babel.cfg -o docserv.pot \
+     --copyright-holder="SUSE" --project=docserv \
+     *.html.jinja2
+5. Initialize the translation file (replace LANG with the language
+   you want to create):
+   $ pybabel init -i docserv.pot -D docserv -d translations -l LANG
+6. "Translate" the MO file in translations/LANG/LC_MESSAGES/docserv.po
+   Use lokalize
+7. Compile MO to PO:
+   $ pybabel compile -D docserv -d translations/ -l de
+   compiling catalog translations/de/LC_MESSAGES/docserv.po to translations/de/LC_MESSAGES/docserv.mo
+8. Repeat the last step with other languages.
+
+
+Updating translations
+---------------------
+
+1. Extract the new strings:
+   $ pybabel extract -F babel.cfg -o docserv.pot \
+     --copyright-holder="SUSE" --project=docserv \
+     *.html.jinja2
+2. Update the catalog translations:
+   $ pybabel update -d translations -D docserv -i docserv.pot
+   updating catalog translations/de/LC_MESSAGES/docserv.po based on docserv.pot
+   updating catalog translations/es/LC_MESSAGES/docserv.po based on docserv.pot
+   ...
+3. Compile PO to MO
+
+Example
+-------
+
 $ docserv-build-navigation  --product="sles" --docset="15-SP2" \
     --stitched-config="/tmp/docserv_stitch_q7pjc_gp/productconfig_simplified_doc-suse-com.xml" \
     --ui-languages="en-us de-de fr-fr pt-br ja-jp zh-cn es-es" \

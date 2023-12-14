@@ -270,7 +270,11 @@ def render(args: argparse.Namespace):
     """
     from babel.support import Translations
     def get_translations():
-        translations = Translations.load('translations', locales=['en'])
+        translations = Translations.load(
+            args.template_dir / 'translations',
+            locales=['en', 'de', 'fr', 'ja_JP'],
+            domain="docserv",
+        )
         return translations
 
     def install_translations(env):
@@ -292,6 +296,7 @@ def render(args: argparse.Namespace):
     )
     # Install translations into the environment
     # install_translations(env)
+    env.install_gettext_translations(get_translations())
 
     # print("Jinja", env, dir(env))
     template = env.get_template(f"section-{args.default_site_section}.supported.html.jinja2")

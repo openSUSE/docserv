@@ -295,20 +295,44 @@ def render(args: argparse.Namespace):
 
     # print("Jinja", env, dir(env))
     template = env.get_template(f"section-{args.default_site_section}.supported.html.jinja2")
+
+    if args.default_site_section == "main":
+        doclist = ["Subscription Management System",
+                   "SUSE Enterprise Storage",
+                   "SUSE Linux Enterprise Server",
+                   ]
+    elif args.default_site_section == "sbp":
+        doclist = ["Systems management",
+                   "Storage",
+                   "SAP applications on SUSE Linux Enterprise 15",
+                   "SAP applications on SUSE Linux Enterprise 12",
+                   "Linux server",
+                   "Linux desktop",
+                   "Containers and virtualization",
+                   "Cloud computing",
+                   ]
+    elif args.default_site_section == "trd":
+        doclist = ["Container Management", "Linux"]
+    else:
+        doclist = []
+
+
     return template.render(
         site=args.default_site_section,
         allsites=args.site_sections,
         product=args.product,
         docset=args.docset,
+        title=f"{args.product}-{args.docset}",
         lang=args.default_ui_language,
+        doclist=doclist,
     )
 
 
 def main(cliargs=None):
     try:
         args = parse_cli(cliargs)
-        print("> Script:", PROG)
-        print("> Directory:", SCRIPTDIR)
+        # print("> Script:", PROG)
+        # print("> Directory:", SCRIPTDIR)
         # print(args)
 
         # with tempfile.TemporaryDirectory(

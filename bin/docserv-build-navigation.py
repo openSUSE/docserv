@@ -325,6 +325,16 @@ def main(cliargs=None):
         print(f"> Written to {str(index)}")
         print("Done.")
 
+    except jinja2.exceptions.TemplateRuntimeError as err:
+        print((f"ERROR ({err.__class__.__name__}) "
+               # f"name={err.name}:{err.lineno}\n"
+               f"  {err}"),
+              file=sys.stderr
+        )
+        # print(dir(err))
+        print(dir(err.with_traceback))
+        return 10
+
 
     except jinja2.exceptions.TemplateSyntaxError as err:
         print((f"ERROR ({err.__class__.__name__}) "
@@ -332,11 +342,11 @@ def main(cliargs=None):
                f"  {err}"),
               file=sys.stderr
         )
-        return 10
+        return 100
 
     except jinja2.exceptions.TemplateNotFound as err:
         print(f"ERROR ({err.__class__.__name__}) {err}", file=sys.stderr)
-        return 10
+        return 400
 
     #except Exception as exc:
     #    print(f"ERROR ({err.__class__.__name__}) {err}", file=sys.stderr)

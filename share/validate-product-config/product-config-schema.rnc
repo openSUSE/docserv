@@ -257,6 +257,7 @@ ds.desc_default =
     attribute lang { ds.type.lang },
     ## Whether this is the default language (must be true for initial `<desc/>` element)
     attribute default { ds.true.enum },
+    ds.shortdesc?,
     ds.htmlblock+
   }
 
@@ -268,6 +269,15 @@ ds.desc_translation =
     ## Whether this is the default language (must be false for subsequent `<desc/>` elements)
     attribute default { ds.false.enum }?,
     ds.htmlblock*
+  }
+
+ds.shortdesc_text =
+  xsd:string { pattern = "[^\n]{1,70}" }
+
+ds.shortdesc =
+  ## A short description of the product
+  element title {
+    ds.shortdesc_text
   }
 
 ds.category =

@@ -1,0 +1,141 @@
+{#
+  Jinja base template
+
+  Available Variables
+  - lang: the natural language (en, de, ...) (default: "en")
+  - searchinput_size: Size of the input field (default: 80)
+  - searchinput_text: Default text of the input field (default: "Explore SUSE documentation...")
+  - searchinput_fa_class: Default class for the input field (default: "fa fa-search")
+
+  Available Blocks
+  - head_script: Adds several <script> tags
+  - head_meta: For <meta>
+  - head_link: Contains <link/> to different stylesheets or other resources
+  - head_title: Contains <title>
+  - head_style: Contains <style>
+  - header: Basically adds the <header> tag
+  - versionswitcher: TODO Probably not needed in the end?
+  - doc_products: Contains all tiles from the Product tab
+  - doc_categories: Contains all tiles from the Categories & Solution tab
+  - doc_techrefs: Contains all tiles from the Technical References tab
+  - doc_newest: Contains all tiles from the Newest tab
+  - doc_mostpopular: Contains all tiles from the Most Popular tab
+
+  Example CLI
+  $ jinja --data data.json base.html.j2
+
+  Author: Tom Schraitle 2024
+-#}
+{%- macro render_class(tab) -%}
+ {% if tab.get('class') %} class="{{ tab.class }}"{% endif %}
+{%- endmacro -%}
+<!DOCTYPE html>
+<html lang="{{ lang|default('en') }}" xml:lang="{{ lang|default('en') }}">
+  <head>
+    {% block head_script -%}
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-R3V0F11NK0"></script>
+    <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("js",new Date),gtag("config","G-R3V0F11NK0")</script>
+    <script defer="defer" src="/static/js/main.f5a6d462.js"></script>
+    {% endblock %}
+    {%- block head_meta -%}
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="theme-color" content="#000000"/>
+    <meta name="description" content="Web site created using create-react-app"/>
+    {%- endblock %}
+    {%- block head_link -%}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>
+    <link rel="manifest" href="/manifest.json"/>
+    {%- endblock head_link %}
+    {% block head_title -%}
+    <title>Doc Portal</title>
+    {%- endblock head_title %}
+    {%- block head_style %}
+    <style>
+    :is([id*='google_ads_iframe'],[id*='taboola-'],.taboolaHeight,.taboola-placeholder,#credential_picker_container,#credentials-picker-container,#credential_picker_iframe,[id*='google-one-tap-iframe'],#google-one-tap-popup-container,.google-one-tap-modal-div,#amp_floatingAdDiv,#ez-content-blocker-container) {display:none!important;min-height:0!important;height:0!important;}
+    </style>
+    {%- endblock head_style %}
+  </head>
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root">
+    <div class="App">
+      {% block header -%}
+        <header class="App-header">
+          <img src="/static/media/Header_SUSE.303050225dbfe798e250.png" alt="SUSE Header" class="header-image"/>
+        </header>
+      {%- endblock header %}
+    </div>
+    <div>
+    {% block versionswitcher -%}
+    <ul class="versionSwitcher"><li><a activeclassname="active" class="" href="/version1">Version 1</a></li><li><a activeclassname="active" class="" href="/version2">Version 2</a></li><li><a activeclassname="active" class="" href="/version3">Version 3</a></li><li><a activeclassname="active" class="" href="/version4">Version 4</a></li><li><a activeclassname="active" aria-current="page" class="active" href="/">Version 5</a></li><li><a activeclassname="active" class="" href="/indexPageGeneral">Index Page - General</a></li><li><a activeclassname="active" class="" href="/indexPageTRD">Index Page - TRD</a></li></ul>
+    {%- endblock versionswitcher %}
+    </div>
+  </div>
+  <div>
+  {% block main_container -%}
+  <div class="main-conatiner v4 v5">
+    {% block search -%}
+     <form method="get" action="/" class="formHeader standaloneSearch">
+       <input type="text" name="" id="search" class="searchInput"
+            size="{{ searchinput_size|default('80') }}"
+            placeholder="{{ searchinput_text|default('Explore SUSE documentation : Refine your search with filters') }}"/>
+       <button type="submit" value="Search"
+            title="{{ searchinput_title |default('Search') }}"
+            class="searchButton"><i class="{{ searchinput_fa_class|default('fa fa-search') }}"></i></button>
+     </form>
+    {%- endblock %}
+
+    {% block menu -%}
+     <ul class="menu-bar menu-bar-v2 menu-bar-v4">
+       {% for tab in menu.tabs -%}
+         <li><a{{ render_class(tab) }}>{{ tab.title|e }}</a>
+         {%- if tab.get("icons") -%}
+           <div style="display:inline">
+           {%- for icon in tab.icons -%}
+             <i title="{{ icon.title}}" class="{{ icon.class }}"></i>
+           {%- endfor -%}
+           </div>
+         {%- endif -%}
+         </li>
+       {%- else -%}
+         <li><em>no menues found</em></li>
+       {%- endfor %}
+     </ul>
+    {%- endblock menu %}
+  </div>
+  {%- endblock main_container %}
+
+  {% block doc_products -%}
+  <div id="products" class="productsContainerV2" style="display: flex;">
+  </div>
+  {%- endblock doc_products %}
+  {% block doc_products_buttons -%}
+  <button class="explore-list-button" style="display: flex;">Explore more products<i class="fa fa-solid fa-angle-down fa-2x"></i></button>
+  <button class="explore-list-button" style="display: none;">Show fewer products<i class="fa fa-solid fa-angle-up fa-2x"></i></button>
+  {%- endblock %}
+  {# ............... -#}
+  {% block doc_categories -%}
+  <div id="categories" class="categoriesContainerV2" style="display: none;">
+  </div>
+  {%- endblock doc_categories %}
+  {% block doc_categories_buttons -%}
+  <button class="explore-list-button" style="display: none;">Explore more solutions<i class="fa fa-solid fa-angle-down fa-2x"></i></button>
+  <button class="explore-list-button" style="display: none;">Show fewer solutions<i class="fa fa-solid fa-angle-up fa-2x"></i></button>
+  {%endblock doc_categories_buttons %}
+  {# ............... -#}
+  {% block doc_techrefs -%}
+  <div id="techrefs" class="techrefsContainerV2" style="display: none;">
+  </div>
+  {%- endblock doc_techrefs %}
+  {% block doc_newest -%}
+  <div id="newest" class="newestContainerV2" style="display: none;">
+  </div>
+  {%- endblock doc_newest %}
+  {% block doc_mostpopular -%}
+  <div id="mostpopular" class="newestContainerV2" style="display: none;">
+  </div>
+  {%- endblock doc_mostpopular %}
+  </div>
+ </body>
+</html>

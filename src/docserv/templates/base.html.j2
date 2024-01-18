@@ -6,6 +6,9 @@
   - searchinput_size: Size of the input field (default: 80)
   - searchinput_text: Default text of the input field (default: "Explore SUSE documentation...")
   - searchinput_fa_class: Default class for the input field (default: "fa fa-search")
+  - manifest_file: points to 'manifest.json' file (default: '/manifest.json')
+  - defer_file: points to a JS file (default: '/static/js/main.f5a6d462.js')
+  - header_logo_file: points to the SUSE logo (default: '/static/media/Header_SUSE.303050225dbfe798e250.png')
 
   Available Blocks
   - head_script: Adds several <script> tags
@@ -35,7 +38,7 @@
     {% block head_script -%}
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-R3V0F11NK0"></script>
     <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("js",new Date),gtag("config","G-R3V0F11NK0")</script>
-    <script defer="defer" src="/static/js/main.f5a6d462.js"></script>
+    <script defer="defer" src="{{ defer_file | default('/static/js/main.f5a6d462.js') }}"></script>
     {% endblock %}
     {%- block head_meta -%}
     <meta charset="utf-8"/>
@@ -45,7 +48,7 @@
     {%- endblock %}
     {%- block head_link -%}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>
-    <link rel="manifest" href="/manifest.json"/>
+    <link rel="manifest" href="{{ manifest_file|default('/manifest.json')}}"/>
     {%- endblock head_link %}
     {% block head_title -%}
     <title>Doc Portal</title>
@@ -62,7 +65,7 @@
     <div class="App">
       {% block header -%}
         <header class="App-header">
-          <img src="/static/media/Header_SUSE.303050225dbfe798e250.png" alt="SUSE Header" class="header-image"/>
+          <img src="{{ header_logo_file|default('/static/media/Header_SUSE.303050225dbfe798e250.png') }}" alt="SUSE Header" class="header-image"/>
         </header>
       {%- endblock header %}
     </div>
@@ -132,6 +135,7 @@
   <div id="newest" class="newestContainerV2" style="display: none;">
   </div>
   {%- endblock doc_newest %}
+  {# ............... -#}
   {% block doc_mostpopular -%}
   <div id="mostpopular" class="newestContainerV2" style="display: none;">
   </div>

@@ -1,2 +1,5 @@
 lxml
 pygit2
+Jinja2
+babel
+pybabel

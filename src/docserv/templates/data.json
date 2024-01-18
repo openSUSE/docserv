@@ -1,0 +1,36 @@
+{
+    "lang": "en",
+    "menu": {
+        "tabs": [
+            {"id": "products",
+             "title": "Products",
+             "class": "selectedTab",
+             "icons": [
+                {"title": "Sort by Popularity",
+                 "class": "fa fa-light fa-fire selectedSorting"},
+                {"title": "Sort A-Z",
+                 "class": "fa fa-sort-alpha-asc"},
+                {"title": "Sort Z-A",
+                 "class": "fa fa-sort-alpha-desc"}
+             ]
+             
+            },
+            {"id": "categories",
+             "title": "Categories & Solutions"
+            },
+            {"id": "techrefs",
+             "title": "Technical References"},
+            {"id": "newest",
+             "title": "Newest"},
+            {"id": "mostpopular",
+             "title": "Most Popular"}
+        ]
+    },
+    "tiles": {
+        "products": [],
+        "categories": [],
+        "techrefs": [],
+        "newest": [],
+        "mostpopular": []
+    }
+}

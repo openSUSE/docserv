@@ -272,7 +272,7 @@ ds.desc_translation =
   }
 
 ds.shortdesc_text =
-  xsd:string { pattern = "[^\n]{1,70}" }
+  xsd:string { pattern = "[^\n]{1,80}" }
 
 ds.shortdesc =
   ## A short description of the product

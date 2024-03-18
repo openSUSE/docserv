@@ -57,10 +57,23 @@ RPM builds are available in the openSUSE Build Service in the link:https://build
 
 ## Running {ds2} from the Git repository
 
-To use {ds2}, make sure that the dependencies listed above are installed and then set up a development environment:
+To use {ds2}, make sure that the dependencies listed above are installed. It's recommended to use a VM for the development environment.
+
+### Preparing the system
 
 . Make sure the Docker service is running: `systemctl start docker`
   (To run {ds2} as a regular user, make sure your user is part of the group `docker`.)
+
+. Create the user `docserv` and group `docserv` by user `root`:
+
+    # getent group docserv || groupadd --system docserv
+    # getent passwd docserv ||  useradd --home-dir=<DOCSERV_HOME> \
+        --system --gid docserv --no-create-home --shell /bin/bash docserv
+    # getent group docker || groupadd --system docker
+    # usermod -aG docker docserv
+
+
+### Setting up the development environment
 
 . `cd` to the local repository checkout
 

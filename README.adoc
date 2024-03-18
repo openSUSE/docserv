@@ -73,24 +73,55 @@ To use {ds2}, make sure that the dependencies listed above are installed. It's r
     # usermod -aG docker docserv
 
 
+### Preparing the output directories
+
+If you have already a `docserv.ini` config file, make sure the following sections and keys
+are defined and the directories exist:
+
+* `server.repo_dir` and `server.temp_repo_dir`
+* `target_<TARGET>.config_dir`
+* `target_<TARGET>.backup_path`
+* `target_<TARGET>.server_root_files`
+
+Also make sure to assign the user and group docserv to all the above directories. All
+directories need to be set to mode 0644 (rwxr-xr-x).
+
+
 ### Setting up the development environment
 
 . `cd` to the local repository checkout
 
-. Source the dev-mode.sh script: `source dev-mode.sh`
+. If needed, set the variable `DOCSERV_CONFIG_DIR` to the correct directory.
+  The other variables in the script are usually not needed.
+
+. Source the `dev-mode.sh` script:
+
+    $ source dev-mode.sh
 
 . Make sure that the right configuration (INI) directory is chosen (defaults to the configuration directory from this repository).
-To set a different one, use `export DOCSERV_CONFIG_DIR=/path/to/dir`.
+To set a different one, use:
 
-. Create a virtual environment with Python: `python3 -m venv .venv`
+    $ export DOCSERV_CONFIG_DIR=/path/to/dir
 
-. Activate the virtual environment: `source .venv/bin/activate`
+. Create a virtual environment with Python:
 
-. Update the pip Python package manager: `pip3 install -U pip setuptools`
+    $ python3 -m venv .venv
 
-. Install requirements via pip: `pip3 install -r requirements.txt`
+. Activate the virtual environment:
 
-. Install {ds2} with setuptools in develop mode: `python3 setup.py develop`
+    $ source .venv/bin/activate
+
+. Update the pip Python package manager:
+
+    $ pip3 install -U pip setuptools
+
+. Install requirements via pip:
+
+    $ pip3 install -r requirements.txt
+
+. Install {ds2} with setuptools in develop mode:
+
+    $ python3 setup.py develop
 
 
 ## Scripts delivered as part of {ds2}

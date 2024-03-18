@@ -283,42 +283,43 @@ class DocservConfig:
                 self.config['server']['max_threads'] = int(config['server']['max_threads'])
             self.config['targets'] = {}
             for section in config.sections():
+                secname = config[section]['name']
                 if not str(section).startswith("target_"):
                     continue
-                self.config['targets'][config[section]['name']] = {}
-                self.config['targets'][config[section]['name']]['name'] = config[section]['name']
-                self.config['targets'][config[section]['name']]['template_dir'] = join_conf_dir(config[section]['template_dir'])
-                self.config['targets'][config[section]['name']]['active'] = config[section]['active']
-                self.config['targets'][config[section]['name']]['draft'] = config[section]['draft']
-                self.config['targets'][config[section]['name']]['remarks'] = config[section]['remarks']
-                self.config['targets'][config[section]['name']]['meta'] = config[section]['meta']
-                self.config['targets'][config[section]['name']]['default_xslt_params'] = join_conf_dir(config[section]['default_xslt_params'])
-                self.config['targets'][config[section]['name']]['enable_target_sync'] = config[section]['enable_target_sync']
+                self.config['targets'][secname] = {}
+                self.config['targets'][secname]['name'] = name
+                self.config['targets'][secname]['template_dir'] = join_conf_dir(config[section]['template_dir'])
+                self.config['targets'][secname]['active'] = config[section]['active']
+                self.config['targets'][secname]['draft'] = config[section]['draft']
+                self.config['targets'][secname]['remarks'] = config[section]['remarks']
+                self.config['targets'][secname]['meta'] = config[section]['meta']
+                self.config['targets'][secname]['default_xslt_params'] = join_conf_dir(config[section]['default_xslt_params'])
+                self.config['targets'][secname]['enable_target_sync'] = config[section]['enable_target_sync']
                 if config[section]['enable_target_sync'] == 'yes':
-                    self.config['targets'][config[section]['name']]['target_path'] = config[section]['target_path']
-                self.config['targets'][config[section]['name']]['backup_path'] = join_conf_dir(config[section]['backup_path'])
-                self.config['targets'][config[section]['name']]['config_dir'] = join_conf_dir(config[section]['config_dir'])
-                self.config['targets'][config[section]['name']]['languages'] = config[section]['languages']
-                self.config['targets'][config[section]['name']]['default_lang'] = config[section]['default_lang']
-                self.config['targets'][config[section]['name']]['omit_default_lang_path'] = config[section]['omit_default_lang_path']
-                self.config['targets'][config[section]['name']]['internal'] = config[section]['internal']
-                self.config['targets'][config[section]['name']]['zip_formats'] = config[section]['zip_formats']
-                self.config['targets'][config[section]['name']]['server_base_path'] = config[section]['server_base_path']
-                self.config['targets'][config[section]['name']]['canonical_url_domain'] = config[section]['canonical_url_domain']
-                self.config['targets'][config[section]['name']]['server_root_files'] = join_conf_dir(config[section]['server_root_files'])
+                    self.config['targets'][secname]['target_path'] = config[section]['target_path']
+                self.config['targets'][secname]['backup_path'] = join_conf_dir(config[section]['backup_path'])
+                self.config['targets'][secname]['config_dir'] = join_conf_dir(config[section]['config_dir'])
+                self.config['targets'][secname]['languages'] = config[section]['languages']
+                self.config['targets'][secname]['default_lang'] = config[section]['default_lang']
+                self.config['targets'][secname]['omit_default_lang_path'] = config[section]['omit_default_lang_path']
+                self.config['targets'][secname]['internal'] = config[section]['internal']
+                self.config['targets'][secname]['zip_formats'] = config[section]['zip_formats']
+                self.config['targets'][secname]['server_base_path'] = config[section]['server_base_path']
+                self.config['targets'][secname]['canonical_url_domain'] = config[section]['canonical_url_domain']
+                self.config['targets'][secname]['server_root_files'] = join_conf_dir(config[section]['server_root_files'])
 
-                self.config['targets'][config[section]['name']]['enable_ssi_fragments'] = config[section]['enable_ssi_fragments']
+                self.config['targets'][secname]['enable_ssi_fragments'] = config[section]['enable_ssi_fragments']
                 if config[section]['enable_ssi_fragments'] == 'yes':
-                    self.config['targets'][config[section]['name']]['fragment_dir'] = join_conf_dir(config[section]['fragment_dir'])
-                    self.config['targets'][config[section]['name']]['fragment_l10n_dir'] = join_conf_dir(config[section]['fragment_l10n_dir'])
+                    self.config['targets'][secname]['fragment_dir'] = join_conf_dir(config[section]['fragment_dir'])
+                    self.config['targets'][secname]['fragment_l10n_dir'] = join_conf_dir(config[section]['fragment_l10n_dir'])
                 # FIXME: I guess this is not the prettiest way to handle
                 # optional values (but it works for now)
-                self.config['targets'][config[section]['name']]['build_container'] = False
+                self.config['targets'][secname]['build_container'] = False
                 if 'build_container' in list(config[section].keys()):
-                    self.config['targets'][config[section]['name']]['build_container'] = config[section]['build_container']
+                    self.config['targets'][secname]['build_container'] = config[section]['build_container']
 
-                self.config['targets'][config[section]['name']]['site_sections'] = config[section]['site_sections']
-                self.config['targets'][config[section]['name']]['default_site_section'] = config[section]['default_site_section']
+                self.config['targets'][secname]['site_sections'] = config[section]['site_sections']
+                self.config['targets'][secname]['default_site_section'] = config[section]['default_site_section']
 
         except KeyError as error:
             logger.warning(

@@ -325,6 +325,17 @@ class DocservConfig:
                 self.config['targets'][secname]['site_sections'] = sec['site_sections']
                 self.config['targets'][secname]['default_site_section'] = sec['default_site_section']
 
+                if "json_dir" in config[section]:
+                    self.config["targets"][secname]['json_dir'] = sec['json_dir']
+                else:
+                    # create a default if we don't have this key
+                    self.config["targets"][secname]['json_dir'] = f"/tmp/{secname}-json/"
+                if "json_bigfile" in config[section]:
+                    self.config["targets"][secname]['json_bigfile'] = sec['json_bigfile']
+                else:
+                    # create a default if we don't have this key
+                    self.config["targets"][secname]['json_bigfile'] = f"/tmp/{secname}-bigfile.json"
+
         except KeyError as error:
             logger.warning(
                 "Invalid configuration file, missing configuration key %s. Exiting.", error)

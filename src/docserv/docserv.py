@@ -393,6 +393,14 @@ class Docserv(DocservState, DocservConfig):
             logger.warning("Stitching STDOUT: %s", self.out.decode('utf-8'))
             logger.warning("Stitching STDERR: %s", self.err.decode('utf-8'))
 
+    def create_directories(self, target):
+        """Create some necessary directories
+
+        :param target: the target name from the INI file ([target_<NAME>].name)
+        """
+        json_dir = self.config['targets'][target]["json_dir"]
+        os.makedirs(json_dir, exist_ok=True)
+
     def start(self):
         """
         Create worker and REST API threads.
@@ -413,6 +421,7 @@ class Docserv(DocservState, DocservConfig):
             # Notably, the config dir can be different for different targets.
             for target in self.config['targets']:
                 self.stitchxml(target)
+                self.create_directories(target)
 
             thread_receive = threading.Thread(target=self.listen)
             thread_receive.start()

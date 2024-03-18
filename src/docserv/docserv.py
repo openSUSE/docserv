@@ -284,12 +284,14 @@ class DocservConfig:
             self.config['targets'] = {}
 
             for section in config.sections():
-                sec = config[section]
-                secname = sec['name']
                 if not str(section).startswith("target_"):
                     continue
+
+                sec = config[section]
+                secname = sec['name']
+
                 self.config['targets'][secname] = {}
-                self.config['targets'][secname]['name'] = secname
+                self.config['targets'][secname]['name'] = sec
                 self.config['targets'][secname]['template_dir'] = join_conf_dir(sec['template_dir'])
                 self.config['targets'][secname]['active'] = sec['active']
                 self.config['targets'][secname]['draft'] = sec['draft']

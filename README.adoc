@@ -33,9 +33,9 @@ High notes:
 RPM builds are available in the openSUSE Build Service in the link:https://build.opensuse.org/project/show/Documentation:Tools[`Documentation:Tools` repository].
 
 
-### openSUSE Leap 15.3
+### openSUSE Leap
 
-. `+++zypper ar --refresh https://download.opensuse.org/repositories/Documentation:/Tools/openSUSE_Leap_15.3/Documentation:Tools.repo+++`
+. `zypper ar --refresh https://download.opensuse.org/repositories/Documentation:/Tools/<VERSION>/Documentation:Tools.repo` (replace `<VERSION>` with `15.5` or anything higher)
 
 . `zypper in docserv`
 

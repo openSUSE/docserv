@@ -266,6 +266,9 @@ class DocservConfig:
         logger.info("Reading %s", config_path)
         config.read(config_path)
         self.config = {}
+
+        logger.info("Available sections in config: %s", config.sections())
+
         try:
             self.config['server'] = {}
             self.config['server']['name'] = config_file
@@ -340,6 +343,8 @@ class DocservConfig:
             logger.warning(
                 "Invalid configuration file, missing configuration key %s. Exiting.", error)
             sys.exit(1)
+
+        logger.info("Config completely parsed.")
 
 
 class Docserv(DocservState, DocservConfig):

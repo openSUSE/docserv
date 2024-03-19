@@ -111,6 +111,7 @@ class BuildInstructionHandler:
             for deliverable in self.deliverables.keys():
                 if self.deliverables[deliverable]['status'] == 'fail':
                     bi_overall_status = 'fail'
+                    item = self.deliverables[deliverable]
                     logger.debug("Deliverable failed: %s => %s",
                                  deliverable, item
                                  )
@@ -208,7 +209,7 @@ class BuildInstructionHandler:
                     commands[n]['cmd'] = "rsync -lr %s/ %s" % (self.tmp_dir_bi, backup_path)
                 else:
                     # recreate directory
-                    commands[n]['cmd'] = "mkdir -p %s" % (backup_docset_relative_path) 
+                    commands[n]['cmd'] = "mkdir -p %s" % (backup_docset_relative_path)
                     # copy zip archive to directory created above
                     n += 1
                     commands[n] = {}

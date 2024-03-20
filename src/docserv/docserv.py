@@ -17,6 +17,9 @@ from docserv.deliverable import Deliverable
 from docserv.functions import print_help
 from docserv.rest import RESTServer, ThreadedRESTServer
 
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
 
 class DocservState:
     config = {}
@@ -244,123 +247,120 @@ class DocservState:
             self.bih_queue.put(build_instruction['id'])
 
 
-class DocservConfig:
-    """
-    Class for handling the .ini configuration file.
-    """
+def parse_config(argv: list) -> dict:
+    """Parse INI configuration file"""
 
-    def parse_config(self, argv):
+    def join_conf_dir(path):
+        # Turn relative paths to absolute paths, depending on the
+        # location of the INI (or rather CONF_DIR which by its definition
+        # is the location of the INI).
+        return path if os.path.isabs(path) else os.path.join(CONF_DIR, path)
 
-        def join_conf_dir(path):
-            # Turn relative paths to absolute paths, depending on the
-            # location of the INI (or rather CONF_DIR which by its definition
-            # is the location of the INI).
-            return path if os.path.isabs(path) else os.path.join(CONF_DIR, path)
+    config = configparser()
+    if len(argv) == 1:
+        config_file = "my-site"
+    else:
+        config_file = argv[1]
+    config_path=os.path.join(CONF_DIR, config_file + '.ini')
+    logger.info("Reading %s", config_path)
+    config.read(config_path)
+    cfg = {}
+    cfg['targets'] = {}
+    cfg['server'] = {}
 
-        config = configparser()
-        if len(argv) == 1:
-            config_file = "my-site"
+    try:
+        cfg['server']['name'] = config_file
+        cfg['server']['loglevel'] = int(
+            config['server']['loglevel'])
+        cfg['server']['host'] = config['server']['host']
+        cfg['server']['port'] = int(config['server']['port'])
+        cfg['server']['enable_mail'] = config['server']['enable_mail']
+        cfg['server']['repo_dir'] = join_conf_dir(config['server']['repo_dir'])
+        cfg['server']['temp_repo_dir'] = join_conf_dir(config['server']['temp_repo_dir'])
+        cfg['server']['valid_languages'] = config['server']['valid_languages']
+        cfg['server']['watchdog_timer'] = int(config['server']['watchdog_timer'])
+        if config['server']['max_threads'] == 'max':
+            cfg['server']['max_threads'] = multiprocessing.cpu_count()
         else:
-            config_file = argv[1]
-        config_path=os.path.join(CONF_DIR, config_file + '.ini')
-        logger.info("Reading %s", config_path)
-        config.read(config_path)
-        self.config = {}
+            cfg['server']['max_threads'] = int(config['server']['max_threads'])
 
-        logger.info("Available sections in config: %s", config.sections())
+        for section in config.sections():
+            if not str(section).startswith("target_"):
+                continue
 
-        try:
-            self.config['server'] = {}
-            self.config['server']['name'] = config_file
-            self.config['server']['loglevel'] = int(
-                config['server']['loglevel'])
-            self.config['server']['host'] = config['server']['host']
-            self.config['server']['port'] = int(config['server']['port'])
-            self.config['server']['enable_mail'] = config['server']['enable_mail']
-            self.config['server']['repo_dir'] = join_conf_dir(config['server']['repo_dir'])
-            self.config['server']['temp_repo_dir'] = join_conf_dir(config['server']['temp_repo_dir'])
-            self.config['server']['valid_languages'] = config['server']['valid_languages']
-            if config['server']['max_threads'] == 'max':
-                self.config['server']['max_threads'] = multiprocessing.cpu_count()
+            sec = config[section]
+            secname = sec['name']
+
+            cfg['targets'][secname] = {}
+            cfg['targets'][secname]['name'] = sec
+            cfg['targets'][secname]['template_dir'] = join_conf_dir(sec['template_dir'])
+            cfg['targets'][secname]['active'] = sec['active']
+            cfg['targets'][secname]['draft'] = sec['draft']
+            cfg['targets'][secname]['remarks'] = sec['remarks']
+            cfg['targets'][secname]['meta'] = sec['meta']
+            cfg['targets'][secname]['default_xslt_params'] = join_conf_dir(sec['default_xslt_params'])
+            cfg['targets'][secname]['enable_target_sync'] = sec['enable_target_sync']
+            if sec['enable_target_sync'] == 'yes':
+                cfg['targets'][secname]['target_path'] = sec['target_path']
+            cfg['targets'][secname]['backup_path'] = join_conf_dir(sec['backup_path'])
+            cfg['targets'][secname]['config_dir'] = join_conf_dir(sec['config_dir'])
+            cfg['targets'][secname]['languages'] = sec['languages']
+            cfg['targets'][secname]['default_lang'] = sec['default_lang']
+            cfg['targets'][secname]['omit_default_lang_path'] = sec['omit_default_lang_path']
+            cfg['targets'][secname]['internal'] = sec['internal']
+            cfg['targets'][secname]['zip_formats'] = sec['zip_formats']
+            cfg['targets'][secname]['server_base_path'] = sec['server_base_path']
+            cfg['targets'][secname]['canonical_url_domain'] = sec['canonical_url_domain']
+            cfg['targets'][secname]['server_root_files'] = join_conf_dir(sec['server_root_files'])
+
+            cfg['targets'][secname]['enable_ssi_fragments'] = sec['enable_ssi_fragments']
+            if sec['enable_ssi_fragments'] == 'yes':
+                cfg['targets'][secname]['fragment_dir'] = join_conf_dir(sec['fragment_dir'])
+                cfg['targets'][secname]['fragment_l10n_dir'] = join_conf_dir(sec['fragment_l10n_dir'])
+            # FIXME: I guess this is not the prettiest way to handle
+            # optional values (but it works for now)
+            cfg['targets'][secname]['build_container'] = False
+            if 'build_container' in list(sec.keys()):
+                cfg['targets'][secname]['build_container'] = sec['build_container']
+
+            cfg['targets'][secname]['site_sections'] = sec['site_sections']
+            cfg['targets'][secname]['default_site_section'] = sec['default_site_section']
+
+            if "json_dir" in config[section]:
+                cfg["targets"][secname]['json_dir'] = sec['json_dir']
             else:
-                self.config['server']['max_threads'] = int(config['server']['max_threads'])
-            self.config['targets'] = {}
+                # create a default if we don't have this key
+                cfg["targets"][secname]['json_dir'] = f"/tmp/{secname}-json/"
+            if "json_bigfile" in config[section]:
+                cfg["targets"][secname]['json_bigfile'] = sec['json_bigfile']
+            else:
+                # create a default if we don't have this key
+                cfg["targets"][secname]['json_bigfile'] = f"/tmp/{secname}-bigfile.json"
 
-            for section in config.sections():
-                if not str(section).startswith("target_"):
-                    continue
+    except KeyError as error:
+        logger.warning(
+            "Invalid configuration file, missing configuration key %s. Exiting.", error)
+        sys.exit(1)
 
-                sec = config[section]
-                secname = sec['name']
-
-                self.config['targets'][secname] = {}
-                self.config['targets'][secname]['name'] = sec
-                self.config['targets'][secname]['template_dir'] = join_conf_dir(sec['template_dir'])
-                self.config['targets'][secname]['active'] = sec['active']
-                self.config['targets'][secname]['draft'] = sec['draft']
-                self.config['targets'][secname]['remarks'] = sec['remarks']
-                self.config['targets'][secname]['meta'] = sec['meta']
-                self.config['targets'][secname]['default_xslt_params'] = join_conf_dir(sec['default_xslt_params'])
-                self.config['targets'][secname]['enable_target_sync'] = sec['enable_target_sync']
-                if sec['enable_target_sync'] == 'yes':
-                    self.config['targets'][secname]['target_path'] = sec['target_path']
-                self.config['targets'][secname]['backup_path'] = join_conf_dir(sec['backup_path'])
-                self.config['targets'][secname]['config_dir'] = join_conf_dir(sec['config_dir'])
-                self.config['targets'][secname]['languages'] = sec['languages']
-                self.config['targets'][secname]['default_lang'] = sec['default_lang']
-                self.config['targets'][secname]['omit_default_lang_path'] = sec['omit_default_lang_path']
-                self.config['targets'][secname]['internal'] = sec['internal']
-                self.config['targets'][secname]['zip_formats'] = sec['zip_formats']
-                self.config['targets'][secname]['server_base_path'] = sec['server_base_path']
-                self.config['targets'][secname]['canonical_url_domain'] = sec['canonical_url_domain']
-                self.config['targets'][secname]['server_root_files'] = join_conf_dir(sec['server_root_files'])
-
-                self.config['targets'][secname]['enable_ssi_fragments'] = sec['enable_ssi_fragments']
-                if sec['enable_ssi_fragments'] == 'yes':
-                    self.config['targets'][secname]['fragment_dir'] = join_conf_dir(sec['fragment_dir'])
-                    self.config['targets'][secname]['fragment_l10n_dir'] = join_conf_dir(sec['fragment_l10n_dir'])
-                # FIXME: I guess this is not the prettiest way to handle
-                # optional values (but it works for now)
-                self.config['targets'][secname]['build_container'] = False
-                if 'build_container' in list(sec.keys()):
-                    self.config['targets'][secname]['build_container'] = sec['build_container']
-
-                self.config['targets'][secname]['site_sections'] = sec['site_sections']
-                self.config['targets'][secname]['default_site_section'] = sec['default_site_section']
-
-                if "json_dir" in config[section]:
-                    self.config["targets"][secname]['json_dir'] = sec['json_dir']
-                else:
-                    # create a default if we don't have this key
-                    self.config["targets"][secname]['json_dir'] = f"/tmp/{secname}-json/"
-                if "json_bigfile" in config[section]:
-                    self.config["targets"][secname]['json_bigfile'] = sec['json_bigfile']
-                else:
-                    # create a default if we don't have this key
-                    self.config["targets"][secname]['json_bigfile'] = f"/tmp/{secname}-bigfile.json"
-
-        except KeyError as error:
-            logger.warning(
-                "Invalid configuration file, missing configuration key %s. Exiting.", error)
-            sys.exit(1)
-
-        logger.info("Config completely parsed.")
+    logger.info("Finished reading config file")
+    return cfg
 
 
-class Docserv(DocservState, DocservConfig):
+class Docserv(DocservState):
     """
     This class creates worker threads and starts the REST API.
     """
     end_all = queue.Queue()
 
     def __init__(self, argv):
-        self.parse_config(argv)
+        self.config = parse_config(argv)
         LOGLEVELS = {0: logging.WARNING,
                      1: logging.INFO,
                      2: logging.DEBUG,
                      }
         logger.setLevel(LOGLEVELS[self.config['server']['loglevel']])
         self.load_state()
+        self.timer = None
 
     def stitchxml(self, target: str):
         """Stitch XML file used by target
@@ -405,6 +405,20 @@ class Docserv(DocservState, DocservConfig):
         """
         json_dir = self.config['targets'][target]["json_dir"]
         os.makedirs(json_dir, exist_ok=True)
+
+    def create_observer(self):
+        def on_any_event(event):
+            if self.timer:
+                self.timer.cancel()
+            self.timer = threading.Timer(5, self.create_json_bigfile)
+            self.timer.start()
+
+        self.event_handler = FileSystemEventHandler()
+        self.event_handler.on_any_event = on_any_event
+        self.observer = Observer()
+
+    def create_json_bigfile(self):
+        logger.info("Would create the JSON bigfile now...")
 
     def start(self):
         """

@@ -451,7 +451,8 @@ class Docserv(DocservState):
             # After starting docserv, make sure to stitch as the first thing,
             # this increases startup time but means that as long as the config
             # does not change, we don't have to do another complete validation
-            self.stitch_tmp_dir = os.makedirs("/tmp/docserv_stitch", exist_ok=True)
+            self.stitch_tmp_dir = "/tmp/docserv_stitch"
+            os.makedirs(self.stitch_tmp_dir, exist_ok=True)
 
             # Notably, the config dir can be different for different targets.
             for target in self.config['targets']:

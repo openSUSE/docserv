@@ -361,6 +361,7 @@ class Docserv(DocservState):
         logger.setLevel(LOGLEVELS[self.config['server']['loglevel']])
         self.load_state()
         self.timer = None
+        self.observer = []
 
     def stitchxml(self, target: str):
         """Stitch XML file used by target
@@ -368,7 +369,7 @@ class Docserv(DocservState):
         :param target: the target name from the INI file ([target_<NAME>].name)
         """
         stitch_tmp_file = os.path.join(self.stitch_tmp_dir,
-                                               f'productconfig_simplified_{target}.xml')
+                                       f'productconfig_simplified_{target}.xml')
                 # Largely copypasta from bih.py cuz I dunno how to share stuff
         logger.debug("Stitching XML config directory to %s", stitch_tmp_file)
         # Don't use --revalidate-only parameter: after starting we
@@ -406,16 +407,31 @@ class Docserv(DocservState):
         json_dir = self.config['targets'][target]["json_dir"]
         os.makedirs(json_dir, exist_ok=True)
 
-    def create_observer(self):
+    def worker_observer(self, target):
         def on_any_event(event):
             if self.timer:
                 self.timer.cancel()
-            self.timer = threading.Timer(5, self.create_json_bigfile)
+            self.timer = threading.Timer(self.config['server']['watchdog_timer'],
+                                         self.create_json_bigfile)
             self.timer.start()
 
         self.event_handler = FileSystemEventHandler()
         self.event_handler.on_any_event = on_any_event
-        self.observer = Observer()
+        observer = Observer()
+        json_dir = self.config['targets'][target]['json_dir']
+        observer.schedule(self.event_handler,
+                               path=json_dir,
+                               recursive=True)
+        self.observer.append(observer)
+        observer.start()
+        logger.debug("Observer for %r started", json_dir)
+
+        try:
+            while True:
+                time.sleep(0.1)
+        except KeyboardInterrupt:
+            observer.stop()
+            observer.join()
 
     def create_json_bigfile(self):
         logger.info("Would create the JSON bigfile now...")
@@ -435,27 +451,47 @@ class Docserv(DocservState):
             # After starting docserv, make sure to stitch as the first thing,
             # this increases startup time but means that as long as the config
             # does not change, we don't have to do another complete validation
-            self.stitch_tmp_dir = tempfile.mkdtemp(prefix='docserv_stitch_')
+            self.stitch_tmp_dir = os.makedirs("/tmp/docserv_stitch", exist_ok=True)
 
             # Notably, the config dir can be different for different targets.
             for target in self.config['targets']:
                 self.stitchxml(target)
                 self.create_directories(target)
 
-            thread_receive = threading.Thread(target=self.listen)
-            thread_receive.start()
             workers = []
-            for i in range(0, min([os.cpu_count(), self.config['server']['max_threads']])):
+
+            threads = threading.Thread(target=self.listen)
+            threads.start()
+            logger.debug("Create threads")
+            for i in range(0, min([os.cpu_count(),
+                                   self.config['server']['max_threads']])
+            ):
                 logger.info("Starting build thread %i", i)
-                worker = threading.Thread(target=self.worker, args=(i,))
+                worker = threading.Thread(target=self.worker,
+                                          name=f"Worker-{i}",
+                                          args=(i,))
                 worker.start()
                 workers.append(worker)
+
+            # Create individual observers for each target:
+            logger.debug("Create observer")
+            for idx, target in enumerate(self.config['targets']):
+                mt = threading.Thread(target=self.worker_observer,
+                                      name=f"Observer-{target}",
+                                      args=(target,)
+                                     )
+                workers.append(mt)
+                mt.start()
+
             # to have a clean shutdown, wait for all threads to finish
-            thread_receive.join()
+            threads.join()
+
         except KeyboardInterrupt:
             self.exit()
+
         for worker in workers:
             worker.join()
+
         self.rest.shutdown()
         self.save_state()
 

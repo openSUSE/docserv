@@ -17,6 +17,9 @@ from docserv.deliverable import Deliverable
 from docserv.functions import print_help
 from docserv.rest import RESTServer, ThreadedRESTServer
 
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
 
 class DocservState:
     config = {}
@@ -244,107 +247,194 @@ class DocservState:
             self.bih_queue.put(build_instruction['id'])
 
 
-class DocservConfig:
-    """
-    Class for handling the .ini configuration file.
-    """
+def parse_config(argv: list) -> dict:
+    """Parse INI configuration file"""
 
-    def parse_config(self, argv):
+    def join_conf_dir(path):
+        # Turn relative paths to absolute paths, depending on the
+        # location of the INI (or rather CONF_DIR which by its definition
+        # is the location of the INI).
+        return path if os.path.isabs(path) else os.path.join(CONF_DIR, path)
 
-        def join_conf_dir(path):
-            # Turn relative paths to absolute paths, depending on the
-            # location of the INI (or rather CONF_DIR which by its definition
-            # is the location of the INI).
-            return path if os.path.isabs(path) else os.path.join(CONF_DIR, path)
+    config = configparser()
+    if len(argv) == 1:
+        config_file = "my-site"
+    else:
+        config_file = argv[1]
+    config_path=os.path.join(CONF_DIR, config_file + '.ini')
+    logger.info("Reading %s", config_path)
+    config.read(config_path)
+    cfg = {}
+    cfg['targets'] = {}
+    cfg['server'] = {}
 
-        config = configparser()
-        if len(argv) == 1:
-            config_file = "my-site"
+    try:
+        cfg['server']['name'] = config_file
+        cfg['server']['loglevel'] = int(
+            config['server']['loglevel'])
+        cfg['server']['host'] = config['server']['host']
+        cfg['server']['port'] = int(config['server']['port'])
+        cfg['server']['enable_mail'] = config['server']['enable_mail']
+        cfg['server']['repo_dir'] = join_conf_dir(config['server']['repo_dir'])
+        cfg['server']['temp_repo_dir'] = join_conf_dir(config['server']['temp_repo_dir'])
+        cfg['server']['valid_languages'] = config['server']['valid_languages']
+        cfg['server']['watchdog_timer'] = int(config['server']['watchdog_timer'])
+        if config['server']['max_threads'] == 'max':
+            cfg['server']['max_threads'] = multiprocessing.cpu_count()
         else:
-            config_file = argv[1]
-        config_path=os.path.join(CONF_DIR, config_file + '.ini')
-        logger.info("Reading %s", config_path)
-        config.read(config_path)
-        self.config = {}
-        try:
-            self.config['server'] = {}
-            self.config['server']['name'] = config_file
-            self.config['server']['loglevel'] = int(
-                config['server']['loglevel'])
-            self.config['server']['host'] = config['server']['host']
-            self.config['server']['port'] = int(config['server']['port'])
-            self.config['server']['enable_mail'] = config['server']['enable_mail']
-            self.config['server']['repo_dir'] = join_conf_dir(config['server']['repo_dir'])
-            self.config['server']['temp_repo_dir'] = join_conf_dir(config['server']['temp_repo_dir'])
-            self.config['server']['valid_languages'] = config['server']['valid_languages']
-            if config['server']['max_threads'] == 'max':
-                self.config['server']['max_threads'] = multiprocessing.cpu_count()
+            cfg['server']['max_threads'] = int(config['server']['max_threads'])
+
+        for section in config.sections():
+            if not str(section).startswith("target_"):
+                continue
+
+            sec = config[section]
+            secname = sec['name']
+
+            cfg['targets'][secname] = {}
+            cfg['targets'][secname]['name'] = sec
+            cfg['targets'][secname]['template_dir'] = join_conf_dir(sec['template_dir'])
+            cfg['targets'][secname]['active'] = sec['active']
+            cfg['targets'][secname]['draft'] = sec['draft']
+            cfg['targets'][secname]['remarks'] = sec['remarks']
+            cfg['targets'][secname]['meta'] = sec['meta']
+            cfg['targets'][secname]['default_xslt_params'] = join_conf_dir(sec['default_xslt_params'])
+            cfg['targets'][secname]['enable_target_sync'] = sec['enable_target_sync']
+            if sec['enable_target_sync'] == 'yes':
+                cfg['targets'][secname]['target_path'] = sec['target_path']
+            cfg['targets'][secname]['backup_path'] = join_conf_dir(sec['backup_path'])
+            cfg['targets'][secname]['config_dir'] = join_conf_dir(sec['config_dir'])
+            cfg['targets'][secname]['languages'] = sec['languages']
+            cfg['targets'][secname]['default_lang'] = sec['default_lang']
+            cfg['targets'][secname]['omit_default_lang_path'] = sec['omit_default_lang_path']
+            cfg['targets'][secname]['internal'] = sec['internal']
+            cfg['targets'][secname]['zip_formats'] = sec['zip_formats']
+            cfg['targets'][secname]['server_base_path'] = sec['server_base_path']
+            cfg['targets'][secname]['canonical_url_domain'] = sec['canonical_url_domain']
+            cfg['targets'][secname]['server_root_files'] = join_conf_dir(sec['server_root_files'])
+
+            cfg['targets'][secname]['enable_ssi_fragments'] = sec['enable_ssi_fragments']
+            if sec['enable_ssi_fragments'] == 'yes':
+                cfg['targets'][secname]['fragment_dir'] = join_conf_dir(sec['fragment_dir'])
+                cfg['targets'][secname]['fragment_l10n_dir'] = join_conf_dir(sec['fragment_l10n_dir'])
+            # FIXME: I guess this is not the prettiest way to handle
+            # optional values (but it works for now)
+            cfg['targets'][secname]['build_container'] = False
+            if 'build_container' in list(sec.keys()):
+                cfg['targets'][secname]['build_container'] = sec['build_container']
+
+            cfg['targets'][secname]['site_sections'] = sec['site_sections']
+            cfg['targets'][secname]['default_site_section'] = sec['default_site_section']
+
+            if "json_dir" in config[section]:
+                cfg["targets"][secname]['json_dir'] = sec['json_dir']
             else:
-                self.config['server']['max_threads'] = int(config['server']['max_threads'])
-            self.config['targets'] = {}
+                # create a default if we don't have this key
+                cfg["targets"][secname]['json_dir'] = f"/tmp/{secname}-json/"
+            if "json_bigfile" in config[section]:
+                cfg["targets"][secname]['json_bigfile'] = sec['json_bigfile']
+            else:
+                # create a default if we don't have this key
+                cfg["targets"][secname]['json_bigfile'] = f"/tmp/{secname}-bigfile.json"
 
-            for section in config.sections():
-                if not str(section).startswith("target_"):
-                    continue
+    except KeyError as error:
+        logger.warning(
+            "Invalid configuration file, missing configuration key %s. Exiting.", error)
+        sys.exit(1)
 
-                sec = config[section]
-                secname = sec['name']
-
-                self.config['targets'][secname] = {}
-                self.config['targets'][secname]['name'] = sec
-                self.config['targets'][secname]['template_dir'] = join_conf_dir(sec['template_dir'])
-                self.config['targets'][secname]['active'] = sec['active']
-                self.config['targets'][secname]['draft'] = sec['draft']
-                self.config['targets'][secname]['remarks'] = sec['remarks']
-                self.config['targets'][secname]['meta'] = sec['meta']
-                self.config['targets'][secname]['default_xslt_params'] = join_conf_dir(sec['default_xslt_params'])
-                self.config['targets'][secname]['enable_target_sync'] = sec['enable_target_sync']
-                if sec['enable_target_sync'] == 'yes':
-                    self.config['targets'][secname]['target_path'] = sec['target_path']
-                self.config['targets'][secname]['backup_path'] = join_conf_dir(sec['backup_path'])
-                self.config['targets'][secname]['config_dir'] = join_conf_dir(sec['config_dir'])
-                self.config['targets'][secname]['languages'] = sec['languages']
-                self.config['targets'][secname]['default_lang'] = sec['default_lang']
-                self.config['targets'][secname]['omit_default_lang_path'] = sec['omit_default_lang_path']
-                self.config['targets'][secname]['internal'] = sec['internal']
-                self.config['targets'][secname]['zip_formats'] = sec['zip_formats']
-                self.config['targets'][secname]['server_base_path'] = sec['server_base_path']
-                self.config['targets'][secname]['canonical_url_domain'] = sec['canonical_url_domain']
-                self.config['targets'][secname]['server_root_files'] = join_conf_dir(sec['server_root_files'])
-
-                self.config['targets'][secname]['enable_ssi_fragments'] = sec['enable_ssi_fragments']
-                if sec['enable_ssi_fragments'] == 'yes':
-                    self.config['targets'][secname]['fragment_dir'] = join_conf_dir(sec['fragment_dir'])
-                    self.config['targets'][secname]['fragment_l10n_dir'] = join_conf_dir(sec['fragment_l10n_dir'])
-                # FIXME: I guess this is not the prettiest way to handle
-                # optional values (but it works for now)
-                self.config['targets'][secname]['build_container'] = False
-                if 'build_container' in list(sec.keys()):
-                    self.config['targets'][secname]['build_container'] = sec['build_container']
-
-                self.config['targets'][secname]['site_sections'] = sec['site_sections']
-                self.config['targets'][secname]['default_site_section'] = sec['default_site_section']
-
-        except KeyError as error:
-            logger.warning(
-                "Invalid configuration file, missing configuration key %s. Exiting.", error)
-            sys.exit(1)
+    logger.info("Finished reading config file")
+    return cfg
 
 
-class Docserv(DocservState, DocservConfig):
+class Docserv(DocservState):
     """
     This class creates worker threads and starts the REST API.
     """
     end_all = queue.Queue()
 
     def __init__(self, argv):
-        self.parse_config(argv)
+        self.config = parse_config(argv)
         LOGLEVELS = {0: logging.WARNING,
                      1: logging.INFO,
                      2: logging.DEBUG,
                      }
         logger.setLevel(LOGLEVELS[self.config['server']['loglevel']])
         self.load_state()
+        self.timer = None
+        self.observer = []
+
+    def stitchxml(self, target: str):
+        """Stitch XML file used by target
+
+        :param target: the target name from the INI file ([target_<NAME>].name)
+        """
+        stitch_tmp_file = os.path.join(self.stitch_tmp_dir,
+                                       f'productconfig_simplified_{target}.xml')
+                # Largely copypasta from bih.py cuz I dunno how to share stuff
+        logger.debug("Stitching XML config directory to %s", stitch_tmp_file)
+        # Don't use --revalidate-only parameter: after starting we
+        # really want to make sure that the config is alright.
+        cmd = ('%s --simplify '
+                '--valid-languages="%s" '
+                '--valid-site-sections="%s" '
+                '%s %s') % (
+            os.path.join(BIN_DIR, 'docserv-stitch'),
+            self.config['server']['valid_languages'],
+            self.config['targets'][target]['site_sections'],
+            self.config["targets"][target]['config_dir'],
+            stitch_tmp_file)
+        logger.debug("Stitching command: %s", cmd)
+        cmd = shlex.split(cmd)
+        s = subprocess.Popen(cmd,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+        self.out, self.err = s.communicate()
+        rc = int(s.returncode)
+        if rc == 0:
+            logger.debug("Stitching of %s successful",
+                            self.config['targets'][target]['config_dir'])
+        else:
+            logger.warning("Stitching of %s failed!",
+                            self.config['targets'][target]['config_dir'])
+            logger.warning("Stitching STDOUT: %s", self.out.decode('utf-8'))
+            logger.warning("Stitching STDERR: %s", self.err.decode('utf-8'))
+
+    def create_directories(self, target):
+        """Create some necessary directories
+
+        :param target: the target name from the INI file ([target_<NAME>].name)
+        """
+        json_dir = self.config['targets'][target]["json_dir"]
+        os.makedirs(json_dir, exist_ok=True)
+
+    def worker_observer(self, target):
+        def on_any_event(event):
+            if self.timer:
+                self.timer.cancel()
+            self.timer = threading.Timer(self.config['server']['watchdog_timer'],
+                                         self.create_json_bigfile)
+            self.timer.start()
+
+        self.event_handler = FileSystemEventHandler()
+        self.event_handler.on_any_event = on_any_event
+        observer = Observer()
+        json_dir = self.config['targets'][target]['json_dir']
+        observer.schedule(self.event_handler,
+                               path=json_dir,
+                               recursive=True)
+        self.observer.append(observer)
+        observer.start()
+        logger.debug("Observer for %r started", json_dir)
+
+        try:
+            while True:
+                time.sleep(0.1)
+        except KeyboardInterrupt:
+            observer.stop()
+            observer.join()
+
+    def create_json_bigfile(self):
+        logger.info("Would create the JSON bigfile now...")
 
     def start(self):
         """
@@ -361,57 +451,48 @@ class Docserv(DocservState, DocservConfig):
             # After starting docserv, make sure to stitch as the first thing,
             # this increases startup time but means that as long as the config
             # does not change, we don't have to do another complete validation
-            self.stitch_tmp_dir = tempfile.mkdtemp(prefix='docserv_stitch_')
+            self.stitch_tmp_dir = "/tmp/docserv_stitch"
+            os.makedirs(self.stitch_tmp_dir, exist_ok=True)
 
             # Notably, the config dir can be different for different targets.
-            # So, stitch for each.
             for target in self.config['targets']:
-                stitch_tmp_file = os.path.join(self.stitch_tmp_dir,
-                    ('productconfig_simplified_%s.xml' % target))
-                # Largely copypasta from bih.py cuz I dunno how to share stuff
-                logger.debug("Stitching XML config directory to %s",
-                             stitch_tmp_file)
-                # Don't use --revalidate-only parameter: after starting we
-                # really want to make sure that the config is alright.
-                cmd = ('%s --simplify '
-                       '--valid-languages="%s" '
-                       '--valid-site-sections="%s" '
-                       '%s %s') % (
-                    os.path.join(BIN_DIR, 'docserv-stitch'),
-                    self.config['server']['valid_languages'],
-                    self.config['targets'][target]['site_sections'],
-                    self.config["targets"][target]['config_dir'],
-                    stitch_tmp_file)
-                logger.debug("Stitching command: %s", cmd)
-                cmd = shlex.split(cmd)
-                s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE)
-                self.out, self.err = s.communicate()
-                rc = int(s.returncode)
-                if rc == 0:
-                    logger.debug("Stitching of %s successful",
-                                 self.config['targets'][target]['config_dir'])
-                else:
-                    logger.warning("Stitching of %s failed!",
-                                   self.config['targets'][target]['config_dir'])
-                    logger.warning("Stitching STDOUT: %s", self.out.decode('utf-8'))
-                    logger.warning("Stitching STDERR: %s", self.err.decode('utf-8'))
-                # End copypasta
+                self.stitchxml(target)
+                self.create_directories(target)
 
-            thread_receive = threading.Thread(target=self.listen)
-            thread_receive.start()
             workers = []
-            for i in range(0, min([os.cpu_count(), self.config['server']['max_threads']])):
+
+            threads = threading.Thread(target=self.listen)
+            threads.start()
+            logger.debug("Create threads")
+            for i in range(0, min([os.cpu_count(),
+                                   self.config['server']['max_threads']])
+            ):
                 logger.info("Starting build thread %i", i)
-                worker = threading.Thread(target=self.worker, args=(i,))
+                worker = threading.Thread(target=self.worker,
+                                          name=f"Worker-{i}",
+                                          args=(i,))
                 worker.start()
                 workers.append(worker)
+
+            # Create individual observers for each target:
+            logger.debug("Create observer")
+            for idx, target in enumerate(self.config['targets']):
+                mt = threading.Thread(target=self.worker_observer,
+                                      name=f"Observer-{target}",
+                                      args=(target,)
+                                     )
+                workers.append(mt)
+                mt.start()
+
             # to have a clean shutdown, wait for all threads to finish
-            thread_receive.join()
+            threads.join()
+
         except KeyboardInterrupt:
             self.exit()
+
         for worker in workers:
             worker.join()
+
         self.rest.shutdown()
         self.save_state()
 

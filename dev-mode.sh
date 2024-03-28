@@ -11,7 +11,7 @@ curdir=$(pwd)
 export DOCSERV_BIN_DIR="${DOCSERV_BIN_DIR:-$curdir/bin}"
 export DOCSERV_CACHE_DIR="${DOCSERV_CACHE_DIR:-$curdir/cache}"
 export DOCSERV_SHARE_DIR="${DOCSERV_SHARE_DIR:-$curdir/share}"
-export DOCSERV_CONFIG_DIR=${DOCSERV_CONFIG_DIR:-$curdir/config}
+export DOCSERV_CONFIG_DIR="${DOCSERV_CONFIG_DIR:-$curdir/config}"
 
 
 [[ -e $DOCSERV_CACHE_DIR ]] || mkdir -p $DOCSERV_CACHE_DIR

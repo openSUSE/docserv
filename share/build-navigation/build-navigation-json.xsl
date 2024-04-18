@@ -333,9 +333,7 @@
   "hide-productname": <xsl:value-of select="$hide-productname"/>,
   "lifecycle": "<xsl:value-of select="@lifecycle"/>",
   "description": [
-    <xsl:apply-templates select="ancestor::product/desc" mode="generate-docset-json">
-      <xsl:with-param name="node" select="."/>
-    </xsl:apply-templates>
+    <xsl:apply-templates select="ancestor::product/desc" mode="generate-docset-json"/>
   ],
   "category": [
     <xsl:apply-templates select="ancestor::product/category" mode="generate-docset-json">
@@ -353,8 +351,9 @@
   </xsl:template>
 
   <xsl:template match="desc" mode="generate-docset-json">
-    <xsl:param name="node" select="''"/>
+    <xsl:param name="node" select="."/>
     <xsl:variable name="this-lang" select="@lang"/>
+    <xsl:variable name="title" select="normalize-space($node/title)"/>
     <xsl:variable name="description">
       <xsl:choose>
         <xsl:when test="$node/overridedesc">
@@ -379,7 +378,7 @@
           </xsl:choose>
         </xsl:when>
         <xsl:otherwise>
-          <xsl:apply-templates select="text()|*" mode="escape-html"/>
+          <xsl:apply-templates select="*[not(self::title)]" mode="escape-html"/>
         </xsl:otherwise>
       </xsl:choose>
     </xsl:variable>
@@ -387,6 +386,7 @@
     {
       "lang": "<xsl:value-of select="$this-lang"/>",
       "default":  <xsl:call-template name="determine-default"/>,
+      "title": "<xsl:value-of select="$title"/>",
       "description": "<xsl:copy-of select="$description"/>"
     },
   </xsl:template>

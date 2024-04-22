@@ -93,7 +93,8 @@ spin() {
 }
 
 JOBS=25
-tmpoutfile="docserv-stitch-XXXX.xml"
+DATE=$(date +"%Y-%m-%d")
+tmpoutfile="docserv-stitch-${DATE}.xml"
 xmllint='xmllint'
 jing='jing'
 starlet='xmlstarlet'
@@ -250,7 +251,7 @@ function parsecli()
 
 ## --------
 parsecli $0 "$@"
-debug "Args:\n  input_dir=$input_dir,\n  output_file=$output_file"
+debug "Args:\n  input_dir=$input_dir\n  output_file=$output_file"
 
 # Sanity checks
 [[ ! -f $schema_file ]] && out "Schema $schema_file does not exist.$(readme_message)"
@@ -313,8 +314,11 @@ debug "Config validation was fine."
 debug "======================================="
 debug "Checking each config file..."
 
-tmpoutfile=$(mktemp --tmpdir=/tmp $tmpoutfile)
-TMPCONFIGDIR=$(mktemp -d --tmpdir=/tmp docserv-stitch-tmpdir-XXXX)
+# tmpoutfile=$(mktemp --tmpdir=/tmp $tmpoutfile)
+tmpoutfile="/tmp/$tmpoutfile"
+# TMPCONFIGDIR=$(mktemp -d --tmpdir=/tmp docserv-stitch-tmpdir-XXXX)
+TMPCONFIGDIR="/tmp/docserv-stitch-tmpdir-$DATE"
+mkdir /tmp/docserv-stitch-tmpdir-$DATE 2>/dev/null
 
 cat << EOF > "$tmpoutfile"
 <?xml version="1.0" encoding="UTF-8"?>

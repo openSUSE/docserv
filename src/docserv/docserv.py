@@ -1,3 +1,4 @@
+from datetime import datetime
 import hashlib
 import json
 import logging
@@ -229,9 +230,12 @@ class DocservState:
 
     def parse_build_instruction(self, thread_id):
         build_instruction = self.get_scheduled_build_instruction()
+        # logger.debug("parse_build_instruction: tmp_dir=%s", self.stitch_tmp_dir)
         if build_instruction is not None:
             myBIH = BuildInstructionHandler(
-                build_instruction, self.config, self.stitch_tmp_dir, self.gitLocks, self.gitLocksLock, thread_id)
+                build_instruction,
+                self.config,
+                self.stitch_tmp_dir, self.gitLocks, self.gitLocksLock, thread_id)
             # If the initialization failed, immediately delete the BuildInstructionHandler
             if myBIH.initialized == False:
                 self.abort_build_instruction(build_instruction['id'])
@@ -361,7 +365,10 @@ class Docserv(DocservState, DocservConfig):
             # After starting docserv, make sure to stitch as the first thing,
             # this increases startup time but means that as long as the config
             # does not change, we don't have to do another complete validation
-            self.stitch_tmp_dir = tempfile.mkdtemp(prefix='docserv_stitch_')
+            # self.stitch_tmp_dir = tempfile.mkdtemp(prefix='docserv_stitch_')
+            current_date = datetime.now().strftime('%Y-%m-%d')
+            self.stitch_tmp_dir = f"/tmp/docserv_stitch_{current_date}"
+            os.makedirs(self.stitch_tmp_dir, exist_ok=True)
 
             # Notably, the config dir can be different for different targets.
             # So, stitch for each.
@@ -403,7 +410,9 @@ class Docserv(DocservState, DocservConfig):
             workers = []
             for i in range(0, min([os.cpu_count(), self.config['server']['max_threads']])):
                 logger.info("Starting build thread %i", i)
-                worker = threading.Thread(target=self.worker, args=(i,))
+                worker = threading.Thread(target=self.worker,
+                                          name=f"worker-{i}",
+                                          args=(i,))
                 worker.start()
                 workers.append(worker)
             # to have a clean shutdown, wait for all threads to finish

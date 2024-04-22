@@ -1,2 +1,3 @@
 lxml
 pygit2
+Jinja2

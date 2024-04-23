@@ -208,7 +208,7 @@ class BuildInstructionHandler:
                     commands[n]['cmd'] = "rsync -lr %s/ %s" % (self.tmp_dir_bi, backup_path)
                 else:
                     # recreate directory
-                    commands[n]['cmd'] = "mkdir -p %s" % (backup_docset_relative_path) 
+                    commands[n]['cmd'] = "mkdir -p %s" % (backup_docset_relative_path)
                     # copy zip archive to directory created above
                     n += 1
                     commands[n] = {}
@@ -386,7 +386,8 @@ These are the details:
             )
         logger.debug("Stitching command: %s", cmd)
         cmd = shlex.split(cmd)
-        s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+        s = subprocess.Popen(cmd,
+                             stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
         self.out, self.err = s.communicate()
         rc = int(s.returncode)

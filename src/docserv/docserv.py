@@ -17,7 +17,7 @@ from docserv.bih import BuildInstructionHandler
 from docserv.deliverable import Deliverable
 from docserv.functions import print_help
 from docserv.rest import RESTServer, ThreadedRESTServer
-
+from docserv.navigation import init_jinja_template
 
 class DocservState:
     config = {}
@@ -297,6 +297,10 @@ class DocservConfig:
                 self.config['targets'][secname] = {}
                 self.config['targets'][secname]['name'] = sec
                 self.config['targets'][secname]['template_dir'] = join_conf_dir(sec['template_dir'])
+                self.config['targets'][secname]['jinja_template_dir'] = join_conf_dir(sec['jinja_template_dir'])
+                self.config['targets'][secname]['jinja_env'] = init_jinja_template(
+                    self.config['targets'][secname]['jinja_template_dir']
+                )
                 self.config['targets'][secname]['active'] = sec['active']
                 self.config['targets'][secname]['draft'] = sec['draft']
                 self.config['targets'][secname]['remarks'] = sec['remarks']
@@ -465,7 +469,7 @@ logger.setLevel(logging.INFO)
 
 ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(levelname)s [%(funcName)s]:  %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 

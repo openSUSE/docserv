@@ -8,13 +8,6 @@ import subprocess
 import tempfile
 import threading
 
-from docserv.deliverable import Deliverable
-from docserv.functions import feedback_message, resource_to_filename
-from docserv.log import logger
-from docserv.repolock import RepoLock
-from docserv.navigation import render_and_save
-from docserv.util import run
-
 from lxml import etree
 
 # Variables
@@ -22,6 +15,13 @@ BIN_DIR = os.getenv('DOCSERV_BIN_DIR', "/usr/bin/")
 CONF_DIR = os.getenv('DOCSERV_CONFIG_DIR', "/etc/docserv/")
 SHARE_DIR = os.getenv('DOCSERV_SHARE_DIR', "/usr/share/docserv/")
 CACHE_DIR = os.getenv('DOCSERV_CACHE_DIR', "/var/cache/docserv/")
+
+from .deliverable import Deliverable
+from .functions import feedback_message, resource_to_filename
+from .log import logger
+from .repolock import RepoLock
+from .navigation import render_and_save
+from .util import run
 
 
 class BuildInstructionHandler:

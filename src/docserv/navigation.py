@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from docserv.log import logger
+from .log import logger
 
 from lxml import etree
 from jinja2 import Environment, FileSystemLoader

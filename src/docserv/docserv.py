@@ -13,13 +13,13 @@ import tempfile
 import time
 from configparser import ConfigParser as configparser
 
-from docserv.bih import BuildInstructionHandler
-from docserv.deliverable import Deliverable
-from docserv.functions import print_help
-from docserv.log import logger
-from docserv.rest import RESTServer, ThreadedRESTServer
-from docserv.navigation import init_jinja_template
-from docserv.util import run
+from .bih import BuildInstructionHandler
+from .deliverable import Deliverable
+from .functions import print_help
+from .log import logger
+from .rest import RESTServer, ThreadedRESTServer
+from .navigation import init_jinja_template
+from .util import run
 
 
 class DocservState:

@@ -1,9 +1,12 @@
+import json
 from pathlib import Path
-
-from .log import logger
+import os.path
 
 from lxml import etree
 from jinja2 import Environment, FileSystemLoader
+
+from .common import BIN_DIR, CACHE_DIR, CONF_DIR, SHARE_DIR
+from .log import logger
 
 
 def init_jinja_template(path) -> Environment:
@@ -74,25 +77,43 @@ def build_site_section(bih, stitched_config):
 
 def render_and_save(env, template, output, bih) -> None:
     """Render a Jinja template and save the output to a file"""
+    servername = bih.config['server']['name']
     target = bih.build_instruction['target']
     product = bih.product
     docset = bih.docset
     lang = bih.lang
-    # jsondata = bih.config['targets'][target]['jinjacontext_home']
+    jsondata = bih.config['targets'][target]['jinjacontext_home']
     logger.debug("""Useful variables:
-    target: %s
-    product: %s
-    docset: %s
-    lang: %s
-    """, target, product, docset, lang)
-    # logger.debug("target config: %s", bih.config['targets'][target])
-    logger.debug("Jinja context: %s",
-                 bih.config['targets'][target].get("jinjacontext_home", "n/a")
-                 )
-    tmpl = env.get_template(template)
+    docserv config: %r
+    target: %r
+    product: %r
+    docset: %r
+    lang: %r
+    jsondata: %r
+    """, servername, target, product, docset, lang, jsondata)
 
-    # with open(output, "w") as fh:
-    #    fh.write(tmpl.render(context))
+    # logger.debug("configfile=%s target=%s", bih.config['server']['name'], target)
+    contextfile = os.path.join(CACHE_DIR,
+                               servername,
+                               target,
+                               jsondata
+                               )
+    logger.debug("Loading JSON context from %s", contextfile)
+    if not os.path.exists(contextfile):
+        logger.error("JSON context file for rending not found. Expected %s", contextfile)
+        context = {}
+        return
+
+    with open(contextfile, "r") as fh:
+        context = json.load(fh)
+    logger.debug("JSON context successfully loaded.")
+
+    logger.debug("contextfile=%s", contextfile)
+
+    output = "/tmp/index.html"
+    tmpl = env.get_template(template)
+    with open(output, "w") as fh:
+        fh.write(tmpl.render(context))
 
 
 def list_all_products(config: str):

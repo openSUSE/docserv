@@ -16,8 +16,11 @@ from configparser import ConfigParser as configparser
 from docserv.bih import BuildInstructionHandler
 from docserv.deliverable import Deliverable
 from docserv.functions import print_help
+from docserv.log import logger
 from docserv.rest import RESTServer, ThreadedRESTServer
 from docserv.navigation import init_jinja_template
+from docserv.util import run
+
 
 class DocservState:
     config = {}
@@ -301,6 +304,7 @@ class DocservConfig:
                 self.config['targets'][secname]['jinja_env'] = init_jinja_template(
                     self.config['targets'][secname]['jinja_template_dir']
                 )
+                self.config['targets'][secname]['jinjacontext_home'] = sec['jinjacontext_home']
                 self.config['targets'][secname]['active'] = sec['active']
                 self.config['targets'][secname]['draft'] = sec['draft']
                 self.config['targets'][secname]['remarks'] = sec['remarks']
@@ -394,11 +398,7 @@ class Docserv(DocservState, DocservConfig):
                     self.config["targets"][target]['config_dir'],
                     stitch_tmp_file)
                 logger.debug("Stitching command: %s", cmd)
-                cmd = shlex.split(cmd)
-                s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE)
-                self.out, self.err = s.communicate()
-                rc = int(s.returncode)
+                rc, self.out, self.err = run(cmd)
                 if rc == 0:
                     logger.debug("Stitching of %s successful",
                                  self.config['targets'][target]['config_dir'])
@@ -463,15 +463,6 @@ class Docserv(DocservState, DocservConfig):
         self.rest.serve_forever()
         return True
 
-
-logger = logging.getLogger('docserv')
-logger.setLevel(logging.INFO)
-
-ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s [%(funcName)s]:  %(message)s')
-ch.setFormatter(formatter)
-logger.addHandler(ch)
 
 BIN_DIR = os.getenv('DOCSERV_BIN_DIR', "/usr/bin/")
 CONF_DIR = os.getenv('DOCSERV_CONFIG_DIR', "/etc/docserv/")

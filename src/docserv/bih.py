@@ -11,11 +11,7 @@ import threading
 from lxml import etree
 
 # Variables
-BIN_DIR = os.getenv('DOCSERV_BIN_DIR', "/usr/bin/")
-CONF_DIR = os.getenv('DOCSERV_CONFIG_DIR', "/etc/docserv/")
-SHARE_DIR = os.getenv('DOCSERV_SHARE_DIR', "/usr/share/docserv/")
-CACHE_DIR = os.getenv('DOCSERV_CACHE_DIR', "/var/cache/docserv/")
-
+from .common import BIN_DIR, CACHE_DIR, CONF_DIR, SHARE_DIR
 from .deliverable import Deliverable
 from .functions import feedback_message, resource_to_filename
 from .log import logger

@@ -13,6 +13,7 @@ import tempfile
 import time
 from configparser import ConfigParser as configparser
 
+from .common import BIN_DIR, CACHE_DIR, CONF_DIR, SHARE_DIR
 from .bih import BuildInstructionHandler
 from .deliverable import Deliverable
 from .functions import print_help
@@ -462,12 +463,6 @@ class Docserv(DocservState, DocservConfig):
         self.rest = ThreadedRESTServer(server_address, RESTServer, self)
         self.rest.serve_forever()
         return True
-
-
-BIN_DIR = os.getenv('DOCSERV_BIN_DIR', "/usr/bin/")
-CONF_DIR = os.getenv('DOCSERV_CONFIG_DIR', "/etc/docserv/")
-SHARE_DIR = os.getenv('DOCSERV_SHARE_DIR', "/usr/share/docserv/")
-CACHE_DIR = os.getenv('DOCSERV_CACHE_DIR', "/var/cache/docserv/")
 
 
 def main():

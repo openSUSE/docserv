@@ -218,12 +218,13 @@ class BuildInstructionHandler:
                         self.config['targets'][target]['enable_ssi_fragments'] == "yes" else "",
                 )
                 """
+                cfg = self.config['targets'][target]
                 commands[n]['cmd'] = render_and_save  # (env, template, output, context)
                 commands[n]['args'] = (
                     # env
-                    self.config['targets'][target]['jinja_env'],
+                    cfg['jinja_env'],
                     # template name
-                    "inputTemplates/home.html.jinja",
+                    cfg['jinja_template_home'],
                     # output
                     tmp_dir_nav,
                     # context:

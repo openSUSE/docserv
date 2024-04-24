@@ -267,16 +267,17 @@ class DocservConfig:
 
         config = configparser()
         if len(argv) == 1:
-            config_file = "my-site"
+            self.config_file = "my-site"
         else:
-            config_file = argv[1]
-        config_path=os.path.join(CONF_DIR, config_file + '.ini')
+            self.config_file = argv[1]
+
+        config_path=os.path.join(CONF_DIR, self.config_file + '.ini')
         logger.info("Reading %s", config_path)
         config.read(config_path)
         self.config = {}
         try:
             self.config['server'] = {}
-            self.config['server']['name'] = config_file
+            self.config['server']['name'] = self.config_file
             self.config['server']['loglevel'] = int(
                 config['server']['loglevel'])
             self.config['server']['host'] = config['server']['host']
@@ -305,7 +306,14 @@ class DocservConfig:
                 self.config['targets'][secname]['jinja_env'] = init_jinja_template(
                     self.config['targets'][secname]['jinja_template_dir']
                 )
-                self.config['targets'][secname]['jinjacontext_home'] = sec['jinjacontext_home']
+                self.config['targets'][secname]['jinjacontext_home'] = sec['jinjacontext_home'].format(cachedir=os.path.join(CACHE_DIR,
+                               self.config['server']['name'],
+                               secname,
+                               )
+                )
+                self.config['targets'][secname]['jinja_template_home'] = sec['jinja_template_home']
+                self.config['targets'][secname]['jinja_template_index'] = sec['jinja_template_index']
+                #
                 self.config['targets'][secname]['active'] = sec['active']
                 self.config['targets'][secname]['draft'] = sec['draft']
                 self.config['targets'][secname]['remarks'] = sec['remarks']

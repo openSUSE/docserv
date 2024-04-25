@@ -226,8 +226,6 @@ class BuildInstructionHandler:
                 commands[n]['args'] = (
                     # env
                     cfg['jinja_env'],
-                    # template name
-                    cfg['jinja_template_home'],
                     # output dir
                     tmp_dir_nav,
                     # context:

@@ -79,8 +79,13 @@ def build_site_section(bih, stitched_config):
                        )
 
 
-def render_and_save(env, template: str, outputdir: str, bih) -> None:
-    """Render a Jinja template and save the output to a file"""
+def render_and_save(env, outputdir: str, bih) -> None:
+    """Render a Jinja template and save the output to a file
+
+    :param env: the Jinja environment
+    :param outputdir: the output directory where to store the rendered HTML files
+    :param bih: the instance of the BuildInstructionHandler
+    """
     # Replaces/extends docserv-build-navigation script
     servername = bih.config['server']['name']
     target = bih.build_instruction['target']
@@ -113,6 +118,8 @@ def render_and_save(env, template: str, outputdir: str, bih) -> None:
     site_sections, default_site_section
     )
 
+    # TODO: Maybe the templates could be stored before and then assigned here
+    # to avoid loading it over and over again
     workdata = {
         "products": {
             "meta": bih.config['targets'][target]['jinjacontext_home'],
@@ -143,9 +150,6 @@ def render_and_save(env, template: str, outputdir: str, bih) -> None:
         },
     }
 
-    # Load the Jinja template
-    tmpl = env.get_template(template)
-
     # Iterate over language and workdata keys:
     for lang, item in itertools.product(["en-us"], # TODO: all_langs,
                                   workdata.keys(),
@@ -161,6 +165,11 @@ def render_and_save(env, template: str, outputdir: str, bih) -> None:
             raise FileNotFoundError(
                 f"Expected JSON file {meta}, but I couldn't find it."
             )
+
+        # Load the Jinja template
+        # If the template is not found, an TemplateNotFound is raised
+        # TODO: Use lazy loading, see before
+        tmpl = env.get_template(template)
 
         logger.debug("Processing language %s/%s", item, lang)
         os.makedirs(f"{outputdir}/{lang}", exist_ok=True)

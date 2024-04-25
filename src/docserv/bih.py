@@ -228,7 +228,7 @@ class BuildInstructionHandler:
                     cfg['jinja_env'],
                     # template name
                     cfg['jinja_template_home'],
-                    # output
+                    # output dir
                     tmp_dir_nav,
                     # context:
                     self,

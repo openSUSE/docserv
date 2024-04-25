@@ -1,3 +1,4 @@
+import itertools
 import json
 import logging
 from pathlib import Path
@@ -78,45 +79,105 @@ def build_site_section(bih, stitched_config):
                        )
 
 
-def render_and_save(env, template, output, bih) -> None:
+def render_and_save(env, template: str, outputdir: str, bih) -> None:
     """Render a Jinja template and save the output to a file"""
+    # Replaces/extends docserv-build-navigation script
     servername = bih.config['server']['name']
     target = bih.build_instruction['target']
     product = bih.product
     docset = bih.docset
     lang = bih.lang
+    # Templates
+    indextmpl = bih.config['targets'][target]['jinja_template_index']
+    hometmpl = bih.config['targets'][target]['jinja_template_home']
+    # trdtmpl = bih.config['targets'][target]['jinja_template_trd']
+    # templatedir = bih.config['targets'][target]['jinja_template_dir']
+    #
     jsondata = bih.config['targets'][target]['jinjacontext_home']
+    site_sections = bih.config['targets'][target]['site_sections'].split()
+    default_site_section = bih.config['targets'][target]['default_site_section']
+    # If valid_languages contains more than one spaces, this doesn't hurt
+    all_langs = bih.config['server']['valid_languages'].split()
+    lifecycles = ["supported", "unsuppoted"]
     logger.debug("""Useful variables:
     docserv config: %r
     target: %r
     product: %r
     docset: %r
     lang: %r
+    outputdir: %r
     jsondata: %r
-    """, servername, target, product, docset, lang, jsondata)
+    site_sections: %r
+    default_site_section: %r
+    """, servername, target, product, docset, lang, outputdir, jsondata,
+    site_sections, default_site_section
+    )
 
-    # logger.debug("configfile=%s target=%s", bih.config['server']['name'], target)
-    contextfile = os.path.join(CACHE_DIR,
-                               servername,
-                               target,
-                               jsondata
-                               )
-    logger.debug("Loading JSON context from %s", contextfile)
-    if not os.path.exists(contextfile):
-        logger.error("JSON context file for rending not found. Expected %s", contextfile)
-        context = {}
-        return
+    workdata = {
+        "products": {
+            "meta": bih.config['targets'][target]['jinjacontext_home'],
+            "template": hometmpl,
+            "render-args": dict(),
+            "output": "homepage2.html",
+        },
 
-    with open(contextfile, "r") as fh:
-        context = json.load(fh)
-    logger.debug("JSON context successfully loaded.")
+        "smart": {
+            "meta": "smart_metadata.json",  # TODO: introduce a key in
+            "template": indextmpl,
+            "render-args": dict(dataSmartDocs=True),
+            "output": "SmartDocs.html",
+        },
 
-    logger.debug("contextfile=%s", contextfile)
+        "sbp": {
+            "meta": "sdb_metadata.json",
+            "template": indextmpl,
+            "render-args": dict(isSBP=True, category="Systems Management"),
+            "output": "systems-management.html",
+        },
 
-    output = "/tmp/index.html"
+        "trd-ibm": {
+            "meta": "trd_metadata.json",
+            "template": indextmpl, # TODO: use correct TRD template
+            "render-args": dict(isTRD=True, partner='IBM'),
+            "output": "IBM.html",
+        },
+    }
+
+    # Load the Jinja template
     tmpl = env.get_template(template)
-    with open(output, "w") as fh:
-        fh.write(tmpl.render(context))
+
+    # Iterate over language and workdata keys:
+    for lang, item in itertools.product(["en-us"], # TODO: all_langs,
+                                  workdata.keys(),
+                                  # site_sections,
+                                  # lifecycles,
+                                  ):
+        meta = os.path.join(CACHE_DIR, servername, target, workdata[item]["meta"])
+        template = workdata[item]["template"]
+        args: dict = workdata[item]["render-args"]
+        output = workdata[item]["output"]
+
+        if not os.path.exists(meta):
+            raise FileNotFoundError(
+                f"Expected JSON file {meta}, but I couldn't find it."
+            )
+
+        logger.debug("Processing language %s/%s", item, lang)
+        os.makedirs(f"{outputdir}/{lang}", exist_ok=True)
+
+        # Read JSON metadata
+        with open(meta, "r") as fh:
+            context = json.load(fh)
+            logger.debug("JSON context successfully loaded (%r)", meta)
+
+        # Render and save rendered HTML
+        output = os.path.join(outputdir, lang, output)
+        with open(output, "w") as fh:
+            content = tmpl.render(data=context, **args)
+            fh.write(content)
+            logger.debug("Wrote %s", output)
+
+    logger.debug("All languages and products are processed.")
 
 
 def list_all_products(config: str):

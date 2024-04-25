@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 import os.path
 
@@ -6,7 +7,9 @@ from lxml import etree
 from jinja2 import Environment, FileSystemLoader
 
 from .common import BIN_DIR, CACHE_DIR, CONF_DIR, SHARE_DIR
-from .log import logger
+
+
+logger = logging.getLogger(__name__)
 
 
 def init_jinja_template(path) -> Environment:

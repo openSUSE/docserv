@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import random
 import shlex
@@ -14,10 +15,12 @@ from lxml import etree
 from .common import BIN_DIR, CACHE_DIR, CONF_DIR, SHARE_DIR
 from .deliverable import Deliverable
 from .functions import feedback_message, resource_to_filename
-from .log import logger
+# from .log import logger
 from .repolock import RepoLock
 from .navigation import render_and_save
 from .util import run
+
+logger = logging.getLogger(__name__)
 
 
 class BuildInstructionHandler:

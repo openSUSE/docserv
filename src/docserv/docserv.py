@@ -2,6 +2,7 @@ from datetime import datetime
 import hashlib
 import json
 import logging
+from logging.config import fileConfig
 import multiprocessing
 import os
 import queue
@@ -13,15 +14,15 @@ import tempfile
 import time
 from configparser import ConfigParser as configparser
 
-from .common import BIN_DIR, CACHE_DIR, CONF_DIR, SHARE_DIR
+from .common import BIN_DIR, CACHE_DIR, CONF_DIR, DOCSERV_CODE_DIR, SHARE_DIR
 from .bih import BuildInstructionHandler
 from .deliverable import Deliverable
 from .functions import print_help
-from .log import logger
 from .rest import RESTServer, ThreadedRESTServer
 from .navigation import init_jinja_template
 from .util import run
 
+logger = logging.getLogger(__name__)
 
 class DocservState:
     config = {}
@@ -473,13 +474,44 @@ class Docserv(DocservState, DocservConfig):
         return True
 
 
+def read_logging(inifile: str):
+    "Read log INI file"
+    fileConfig(inifile, disable_existing_loggers=True)
+
+
 def main():
+    """Entry point for Docserv"""
     if "--help" in sys.argv or "-h" in sys.argv:
         print_help()
     else:
+        # First read/configure default logger
+        # If the user provides a different logging config, it will
+        # overwrite the default logger config
+        read_logging(os.path.join(DOCSERV_CODE_DIR, "logging.ini"))
+
+        # Try to extract the user logger config file (INI format)
+        loginifile = sys.argv[2:]
+        loginifile = None if not loginifile else loginifile[0]
+
+        if loginifile:
+            try:
+                read_logging(loginifile)
+                sys.argv.pop()
+
+            except FileNotFoundError as err:
+                # Used for Python >=3.12, we raise it again
+                raise
+
+            except KeyError:
+                # For Python <3.12, only KeyError is raised with
+                # KeyError: 'formatters'.
+                # Ignore the error and provide the correct message
+                raise FileNotFoundError(f"Could not find {loginifile}.")
+
+        logger.info("Starting Docserv...")
         docserv = Docserv(sys.argv)
         docserv.start()
-        sys.exit(0)
+        return 0
 
 
-main()
+# sys.exit(main())

@@ -115,6 +115,7 @@ class BuildInstructionHandler:
             for deliverable in self.deliverables.keys():
                 if self.deliverables[deliverable]['status'] == 'fail':
                     bi_overall_status = 'fail'
+                    item = self.deliverables[deliverable]
                     logger.debug("Deliverable failed: %s => %s",
                                  deliverable, item
                                  )

@@ -95,6 +95,56 @@ def list_all_products(config: str):
                )
 
 
+def relatedproducts(product, docset, stitched_config: str):
+    """Returns the dependencies of a specific product/docset
+    """
+    # Replaces list-related-products.xsl
+    # $xsltproc \
+    # --stringparam product "$relevant_product" \
+    # --stringparam docset "$relevant_docset" \
+    # --stringparam internal-mode "$internal_mode" \
+    # "$related_stylesheet" "$stitched_config" | \
+    # sort -u
+    related_stylesheet = f"{SHARE_DIR}/build-navigation/list-related-products.xsl"
+    xml = etree.parse(stitched_config)
+    # transform = etree.XSLT(related_stylesheet)
+    # params = {
+    #     "product": product,
+    #     "docset": docset,
+    #     "internal-mode": 'false',
+    # }
+    # result = transform(xml, **params)
+    # sort -u ?
+
+    #
+    result = []
+    foundproduct = xml.findall(f"product[@productid = '{product}']")
+    if not foundproduct:
+        logger.fatal("Product ID from %s does not exist", product)
+        return result
+    if len(foundproduct) > 1:
+        logger.fatal("Docserv config contains non-unique product/docset")
+        return result
+    founddocset = foundproduct[0].findall(f"docset[@setid = '{docset}']")
+    if not founddocset:
+        logger.fatal("Docset ID from %s does not exist within product=%s",
+                     docset, product)
+        return result
+
+    # Find all references that matches a ref with the same product/docset
+    for ref in xml.iterfind(f"//docset/internal/ref"
+                             f"[@product='{product}']"
+                             f"[@docset='{docset}']"
+    ):
+        result.append("{}/{}".format(
+            ref.xpath("ancestor::product/@productid")[0],
+            ref.xpath("ancestor::docset/@setid")[0]
+            )
+        )
+
+    return result
+
+
 def render_and_save(env, outputdir: str, bih) -> None:
     """Render a Jinja template and save the output to a file
 

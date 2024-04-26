@@ -79,6 +79,22 @@ def build_site_section(bih, stitched_config):
                        )
 
 
+def list_all_products(config: str):
+    """List all products and docsets
+
+    :param config: the stitched Docserv config
+    :yield: a string in the format "product/docset", for example
+      "sles-sap/trento"
+    """
+    # Replaces list-all-products.xsl
+    tree = etree.parse(config)
+    for dc in tree.iter("docset"):
+        yield (f"{dc.xpath('ancestor::product/@productid')[0]}"
+               "/"
+               f"{dc.attrib.get('setid', '')}"
+               )
+
+
 def render_and_save(env, outputdir: str, bih) -> None:
     """Render a Jinja template and save the output to a file
 
@@ -187,19 +203,3 @@ def render_and_save(env, outputdir: str, bih) -> None:
             logger.debug("Wrote %s", output)
 
     logger.debug("All languages and products are processed.")
-
-
-def list_all_products(config: str):
-    """List all products and docsets
-
-    :param config: the stitched Docserv config
-    :yield: a string in the format "product/docset", for example
-      "sles-sap/trento"
-    """
-    # Replaces list-all-products.xsl
-    tree = etree.parse(config)
-    for dc in tree.iter("docset"):
-        yield (f"{dc.xpath('ancestor::product/@productid')[0]}"
-               "/"
-               f"{dc.attrib.get('setid', '')}"
-               )

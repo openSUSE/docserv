@@ -39,7 +39,7 @@ def create_cache(cache_path, stitched_cache):
 
 
 def build_site_section(bih, stitched_config):
-    """
+    """Create a build navigation JSON
     """
     target = bih.build_instruction['target']
     product = bih.product
@@ -77,6 +77,8 @@ def build_site_section(bih, stitched_config):
                        product=product,
                        docset=docset,
                        )
+    # Maybe convert from bytes -> unicode?
+    return result
 
 
 def list_all_products(config: str):

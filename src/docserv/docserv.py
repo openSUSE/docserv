@@ -14,6 +14,8 @@ import tempfile
 import time
 from configparser import ConfigParser as configparser
 
+from jinja2 import TemplateNotFound
+
 from .common import BIN_DIR, CACHE_DIR, CONF_DIR, DOCSERV_CODE_DIR, SHARE_DIR
 from .bih import BuildInstructionHandler
 from .deliverable import Deliverable
@@ -21,6 +23,7 @@ from .functions import print_help
 from .rest import RESTServer, ThreadedRESTServer
 from .navigation import init_jinja_template
 from .util import run
+
 
 logger = logging.getLogger(__name__)
 
@@ -510,35 +513,46 @@ def main():
     """Entry point for Docserv"""
     if "--help" in sys.argv or "-h" in sys.argv:
         print_help()
-    else:
-        # First read/configure default logger
-        # If the user provides a different logging config, it will
-        # overwrite the default logger config
-        read_logging(os.path.join(DOCSERV_CODE_DIR, "logging.ini"))
+        return 1
 
-        # Try to extract the user logger config file (INI format)
-        loginifile = sys.argv[2:]
-        loginifile = None if not loginifile else loginifile[0]
+    # First read/configure default logger
+    # If the user provides a different logging config, it will
+    # overwrite the default logger config
+    read_logging(os.path.join(DOCSERV_CODE_DIR, "logging.ini"))
 
-        if loginifile:
-            try:
-                read_logging(loginifile)
-                sys.argv.pop()
+    # Try to extract the user logger config file (INI format)
+    loginifile = sys.argv[2:]
+    loginifile = None if not loginifile else loginifile[0]
 
-            except FileNotFoundError as err:
-                # Used for Python >=3.12, we raise it again
-                raise
+    if loginifile:
+        try:
+            read_logging(loginifile)
+            sys.argv.pop()
 
-            except KeyError:
-                # For Python <3.12, only KeyError is raised with
-                # KeyError: 'formatters'.
-                # Ignore the error and provide the correct message
-                raise FileNotFoundError(f"Could not find {loginifile}.")
+        except FileNotFoundError as err:
+            # Used for Python >=3.12, we raise it again
+            raise
 
-        logger.info("Starting Docserv...")
+        except KeyError:
+            # For Python <3.12, only KeyError is raised with
+            # KeyError: 'formatters'.
+            # Ignore the error and provide the correct message
+            raise FileNotFoundError(f"Could not find {loginifile}.")
+
+    logger.info("Starting Docserv...")
+    try:
         docserv = Docserv(sys.argv)
         docserv.start()
-        return 0
+    except FileNotFoundError as err:
+        logger.exception("Some resource couldn't be find", err)
+        return 100
+    except TemplateNotFound as err:
+        logger.exception("Jinja template error", err)
+        return 200
+    except KeyboardInterrupt:
+        logger.info("Docserv interrupted by user.")
+
+    return 0
 
 
 # sys.exit(main())

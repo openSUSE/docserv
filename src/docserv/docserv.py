@@ -16,7 +16,7 @@ from configparser import ConfigParser as configparser
 
 from jinja2 import TemplateNotFound
 
-from .common import BIN_DIR, CACHE_DIR, CONF_DIR, DOCSERV_CODE_DIR, SHARE_DIR
+from .common import BIN_DIR, CACHE_DIR, CONF_DIR, DOCSERV_CODE_DIR, SHARE_DIR, PROJECT_DIR
 from .bih import BuildInstructionHandler
 from .deliverable import Deliverable
 from .functions import print_help
@@ -219,7 +219,6 @@ class DocservState:
         Load status from JSON file.
         The JSON file usually resides in /var/cache/docserv/[SERVER_NAME].json
         """
-        logger.info("Reading previous state.")
         filepath = os.path.join(CACHE_DIR, self.config['server']['name'] + '.json')
         if os.path.isfile(filepath):
             file = open(filepath, "r")
@@ -233,6 +232,7 @@ class DocservState:
                 else:
                     self.past_builds[build_instruction['id']
                                      ] = build_instruction
+            logger.info("Read previous state %s", filepath)
             return True
         return False
 
@@ -277,7 +277,7 @@ class DocservConfig:
             servername = self.config['server']['name']
             return path.format(
                 # the project directory where to find the Docserv INI file
-                projectdir=os.path.dirname(self.config_path),
+                projectdir=PROJECT_DIR,
                 # The current name of the server (=docserv ini filename)
                 servername=servername,
                 # The current target name that is processed
@@ -551,6 +551,7 @@ def main():
         return 200
     except KeyboardInterrupt:
         logger.info("Docserv interrupted by user.")
+        # docserv.exit()
 
     return 0
 

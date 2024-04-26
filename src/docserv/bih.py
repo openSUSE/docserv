@@ -285,7 +285,7 @@ class BuildInstructionHandler:
             # build target directory
             n += 1
             commands[n] = {}
-            commands[n]['cmd'] = "echo rm -rf %s" % self.local_repo_build_dir
+            commands[n]['cmd'] = "rm -rf %s" % self.local_repo_build_dir
             commands[n]['execute_after_error'] = True
 
         # rsync local backup path with web server target path

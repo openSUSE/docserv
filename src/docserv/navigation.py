@@ -17,6 +17,7 @@ def init_jinja_template(path) -> Environment:
     """Initialize the Jinja templates"""
     env = Environment(loader=FileSystemLoader(path),
                       trim_blocks=True,
+                      lstrip_blocks=True,
                       # extensions=
                       )
     return env
@@ -160,9 +161,11 @@ def render_and_save(env, outputdir: str, bih) -> None:
     product = bih.product
     docset = bih.docset
     lang = bih.lang
-    # Templates
-    indextmpl = bih.config['targets'][target]['jinja_template_index']
-    hometmpl = bih.config['targets'][target]['jinja_template_home']
+    # Templates, could raise TemplateNotFound
+    indextmpl = env.get_template(bih.config['targets'][target]['jinja_template_index'])
+    hometmpl = env.get_template(bih.config['targets'][target]['jinja_template_home'])
+
+
     # trdtmpl = bih.config['targets'][target]['jinja_template_trd']
     # templatedir = bih.config['targets'][target]['jinja_template_dir']
     #
@@ -183,40 +186,82 @@ def render_and_save(env, outputdir: str, bih) -> None:
     site_sections: %r
     default_site_section: %r
     """, servername, target, product, docset, lang, outputdir, jsondata,
-    site_sections, default_site_section
+    site_sections, default_site_section,
     )
 
-    # TODO: Maybe the templates could be stored before and then assigned here
-    # to avoid loading it over and over again
+    # TODO: Somehow we need to create this data automatically
     workdata = {
-        "products": {
+        # This entry will be remove later
+        "": {
             "meta": bih.config['targets'][target]['jinjacontext_home'],
             "template": hometmpl,
             "render-args": dict(),
-            "output": "homepage2.html",
+            "output": "index.html",
         },
 
         "smart": {
             "meta": "smart_metadata.json",  # TODO: introduce a key in
             "template": indextmpl,
             "render-args": dict(dataSmartDocs=True),
-            "output": "SmartDocs.html",
+            "output": "index.html",
         },
 
         "sbp": {
             "meta": "sdb_metadata.json",
             "template": indextmpl,
             "render-args": dict(isSBP=True, category="Systems Management"),
-            "output": "systems-management.html",
+            "output": "index.html",
         },
 
-        "trd-ibm": {
+        "trd/ibm": {
             "meta": "trd_metadata.json",
-            "template": indextmpl, # TODO: use correct TRD template
+            "template": indextmpl,
             "render-args": dict(isTRD=True, partner='IBM'),
-            "output": "IBM.html",
+            "output": "index.html",
+        },
+        "trd/suse": {
+            "meta": "trd_metadata.json",
+            "template": indextmpl,
+            "render-args": dict(isTRD=True, partner='SUSE'),
+            "output": "index.html",
+        },
+        "trd/cisco": {
+            "meta": "trd_metadata.json",
+            "template": indextmpl,
+            "render-args": dict(isTRD=True, partner='SUSE'),
+            "output": "index.html",
         },
     }
+
+    def process(path:str, meta:str, template, args:dict, output:str):
+        """Process the Jinja rendering process
+        """
+        if not os.path.exists(meta):
+            raise FileNotFoundError(
+                f"Expected JSON file {meta}, but I couldn't find it."
+            )
+        os.makedirs(path, exist_ok=True)
+        # Read JSON metadata
+        with open(meta, "r") as fh:
+            context = json.load(fh)
+
+        logger.debug("JSON context successfully loaded (%r)", meta)
+        # Render and save rendered HTML
+        output = os.path.join(path, output)
+        with open(output, "w") as fh:
+            content = template.render(data=context, **args)
+            fh.write(content)
+        logger.debug("Wrote %s", output)
+
+
+    # Manually create the home page and remove it from the workdata dictionary
+    # home = workdata.pop("home")
+    # meta, template, args, output = (home["meta"],
+    #                                home["template"],
+    #                                home["render-args"],
+    #                                home["output"])
+    # process(outputdir, meta, template, args, output)
+
 
     # Iterate over language and workdata keys:
     for lang, item in itertools.product(["en-us"], # TODO: all_langs,
@@ -229,29 +274,10 @@ def render_and_save(env, outputdir: str, bih) -> None:
         args: dict = workdata[item]["render-args"]
         output = workdata[item]["output"]
 
-        if not os.path.exists(meta):
-            raise FileNotFoundError(
-                f"Expected JSON file {meta}, but I couldn't find it."
-            )
+        logger.debug("Processing language %s/%s", lang, item)
+        path = os.path.join(outputdir, lang, *(item.split("/")))
 
-        # Load the Jinja template
-        # If the template is not found, an TemplateNotFound is raised
-        # TODO: Use lazy loading, see before
-        tmpl = env.get_template(template)
+        process(path, meta, template, args, output)
 
-        logger.debug("Processing language %s/%s", item, lang)
-        os.makedirs(f"{outputdir}/{lang}", exist_ok=True)
-
-        # Read JSON metadata
-        with open(meta, "r") as fh:
-            context = json.load(fh)
-            logger.debug("JSON context successfully loaded (%r)", meta)
-
-        # Render and save rendered HTML
-        output = os.path.join(outputdir, lang, output)
-        with open(output, "w") as fh:
-            content = tmpl.render(data=context, **args)
-            fh.write(content)
-            logger.debug("Wrote %s", output)
 
     logger.debug("All languages and products are processed.")

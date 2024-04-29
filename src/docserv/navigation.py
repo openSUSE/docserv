@@ -3,6 +3,7 @@ import json
 import logging
 from pathlib import Path
 import os.path
+from typing import Any
 
 from lxml import etree
 from jinja2 import Environment, FileSystemLoader
@@ -165,7 +166,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
     indextmpl = env.get_template(bih.config['targets'][target]['jinja_template_index'])
     hometmpl = env.get_template(bih.config['targets'][target]['jinja_template_home'])
 
-
     # trdtmpl = bih.config['targets'][target]['jinja_template_trd']
     # templatedir = bih.config['targets'][target]['jinja_template_dir']
     #
@@ -189,49 +189,112 @@ def render_and_save(env, outputdir: str, bih) -> None:
     site_sections, default_site_section,
     )
 
+    # TODO: retrieve them from JSON
+    subitems = { # dict[str, list[tuple[str, dict]]]
+        # str:   list[tuple]
+        "smart": [('container', dict(dataSmartDocs=True)),
+                  ('deploy-upgrade', dict(dataSmartDocs=True)),
+                  ('micro-clouds', dict(dataSmartDocs=True)),
+                  ('network', dict(dataSmartDocs=True)),
+                  ('rancher', dict(dataSmartDocs=True)),
+                  ('security', dict(dataSmartDocs=True)),
+                  ('systems-management', dict(dataSmartDocs=True)),
+                  ('systemtuning-performance', dict(dataSmartDocs=True)),
+                  ('virtualization-cloud', dict(dataSmartDocs=True)),
+                  ],
+
+        "sbp": [('cloud-computing', dict(isSBP=True, category="Cloud Computing")),
+                ('container-virtualization', dict(isSBP=True, category="Container and Virtualization")),
+                ('deprecated', dict(isSBP=True, category="Deprecated")),
+                ('desktop-linux', dict(isSBP=True, category="Desktop and Linux")),
+                ('sap-12', dict(isSBP=True, category="SAP 12")),
+                ('sap-15', dict(isSBP=True, category="SAP 15")),
+                ('server-linux', dict(isSBP=True, category="Server and Linux")),
+                ('storage', dict(isSBP=True, category="Storage")),
+                ('systems-management', dict(isSBP=True, category="Systems Management")),
+                ],
+
+        "trd": [("ibm", dict(isTRD=True, partner="IBM")),
+                ("suse", dict(isTRD=True, partner="SUSE")),
+                ("cisco", dict(isTRD=True, partner="Cisco")),
+                ],
+    }
+
+
     # TODO: Somehow we need to create this data automatically
     workdata = {
         # This entry will be remove later
         "": {
             "meta": bih.config['targets'][target]['jinjacontext_home'],
             "template": hometmpl,
-            "render-args": dict(),
+            "render_args": dict(),
             "output": "index.html",
         },
 
+        # Smart Docs
         "smart": {
             "meta": "smart_metadata.json",  # TODO: introduce a key in
             "template": indextmpl,
-            "render-args": dict(dataSmartDocs=True),
+            "render_args": dict(dataSmartDocs=True),
             "output": "index.html",
         },
 
+        # SBP
         "sbp": {
             "meta": "sdb_metadata.json",
             "template": indextmpl,
-            "render-args": dict(isSBP=True, category="Systems Management"),
+            "render_args": dict(isSBP=True,),
             "output": "index.html",
         },
 
-        "trd/ibm": {
+        # TRD
+        "trd": {
             "meta": "trd_metadata.json",
             "template": indextmpl,
-            "render-args": dict(isTRD=True, partner='IBM'),
+            "render_args": dict(isTRD=True, ),
             "output": "index.html",
         },
-        "trd/suse": {
-            "meta": "trd_metadata.json",
-            "template": indextmpl,
-            "render-args": dict(isTRD=True, partner='SUSE'),
-            "output": "index.html",
-        },
-        "trd/cisco": {
-            "meta": "trd_metadata.json",
-            "template": indextmpl,
-            "render-args": dict(isTRD=True, partner='SUSE'),
-            "output": "index.html",
-        },
+        # "trd/ibm": {
+        #     "meta": "trd_metadata.json",
+        #     "template": indextmpl,
+        #     "render_args": dict(isTRD=True, partner='IBM'),
+        #     "output": "index.html",
+        # },
+        # "trd/suse": {
+        #     "meta": "trd_metadata.json",
+        #     "template": indextmpl,
+        #     "render_args": dict(isTRD=True, partner='SUSE'),
+        #     "output": "index.html",
+        # },
+        # "trd/cisco": {
+        #     "meta": "trd_metadata.json",
+        #     "template": indextmpl,
+        #     "render_args": dict(isTRD=True, partner='SUSE'),
+        #     "output": "index.html",
+        # },
     }
+
+    logger.debug("Iterating over subitems")
+    for item, categories in subitems.items():
+        logger.debug("Grabbed %s", item)
+        for cat, args in categories:
+            logger.debug("Handle subitem %s with args %s", cat, args)
+            meta = workdata[item]["meta"]
+            template = workdata[item]["template"]
+            merged_args = {}
+            # Merge the two dicts
+            merged_args.update(workdata[item]["render_args"])
+            merged_args.update(args)
+            output = "index.html"
+            workdata[f"{item}/{cat}"] = dict(
+                meta=meta,
+                template=template,
+                # "Protect" against None:
+                render_args=merged_args,  # {**render_args, **args}
+                output=output,
+            )
+
+    logger.debug("workdata dict %s", workdata)
 
     def process(path:str, meta:str, template, args:dict, output:str):
         """Process the Jinja rendering process
@@ -258,7 +321,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
     # home = workdata.pop("home")
     # meta, template, args, output = (home["meta"],
     #                                home["template"],
-    #                                home["render-args"],
+    #                                home["render_args"],
     #                                home["output"])
     # process(outputdir, meta, template, args, output)
 
@@ -271,7 +334,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                   ):
         meta = os.path.join(CACHE_DIR, servername, target, workdata[item]["meta"])
         template = workdata[item]["template"]
-        args: dict = workdata[item]["render-args"]
+        args: dict = workdata[item]["render_args"]
         output = workdata[item]["output"]
 
         logger.debug("Processing language %s/%s", lang, item)

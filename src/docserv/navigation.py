@@ -214,9 +214,23 @@ def render_and_save(env, outputdir: str, bih) -> None:
                 ('systems-management', dict(isSBP=True, category="Systems Management")),
                 ],
 
-        "trd": [("ibm", dict(isTRD=True, partner="IBM")),
-                ("suse", dict(isTRD=True, partner="SUSE")),
+        "trd": [
+                ("ampere", dict(isTRD=True, partner="Ampere")),
+                ("aws", dict(isTRD=True, partner="AWS")),
+                ("azure", dict(isTRD=True, partner="Azure")),
                 ("cisco", dict(isTRD=True, partner="Cisco")),
+                ("dell", dict(isTRD=True, partner="Dell")),
+                ("gcp", dict(isTRD=True, partner="GCP")),
+                ("hpe", dict(isTRD=True, partner="HPE")),
+                ("hpq", dict(isTRD=True, partner="HPQ")),
+                ("ibm", dict(isTRD=True, partner="IBM")),
+                ("jupiterlab", dict(isTRD=True, partner="JupiterLab")),
+                ("kubecost", dict(isTRD=True, partner="Kubecost")),
+                ("lenovo", dict(isTRD=True, partner="Lenovo")),
+                ("rancher", dict(isTRD=True, partner="Rancher")),
+                ("supermicro", dict(isTRD=True, partner="Supermicro")),
+                ("suse", dict(isTRD=True, partner="SUSE")),
+                ("wordpress", dict(isTRD=True, partner="WordPress")),
                 ],
     }
 

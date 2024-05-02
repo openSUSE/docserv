@@ -6,7 +6,8 @@ import os.path
 from typing import Any
 
 from lxml import etree
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, DebugUndefined
+from jinja2.exceptions import TemplateError, UndefinedError
 
 from .common import BIN_DIR, CACHE_DIR, CONF_DIR, SHARE_DIR
 
@@ -19,7 +20,8 @@ def init_jinja_template(path) -> Environment:
     env = Environment(loader=FileSystemLoader(path),
                       trim_blocks=True,
                       lstrip_blocks=True,
-                      # extensions=
+                      undefined=DebugUndefined,
+                      extensions=['jinja2.ext.debug']
                       )
     return env
 
@@ -150,13 +152,13 @@ def relatedproducts(product, docset, stitched_config: str):
 
 
 def render_and_save(env, outputdir: str, bih) -> None:
+    # Replaces/extends docserv-build-navigation script
     """Render a Jinja template and save the output to a file
 
     :param env: the Jinja environment
     :param outputdir: the output directory where to store the rendered HTML files
     :param bih: the instance of the BuildInstructionHandler
     """
-    # Replaces/extends docserv-build-navigation script
     servername = bih.config['server']['name']
     target = bih.build_instruction['target']
     product = bih.product
@@ -166,12 +168,9 @@ def render_and_save(env, outputdir: str, bih) -> None:
     indextmpl = env.get_template(bih.config['targets'][target]['jinja_template_index'])
     hometmpl = env.get_template(bih.config['targets'][target]['jinja_template_home'])
 
-    # trdtmpl = bih.config['targets'][target]['jinja_template_trd']
-    # templatedir = bih.config['targets'][target]['jinja_template_dir']
-    #
-    jsondata = bih.config['targets'][target]['jinjacontext_home']
-    site_sections = bih.config['targets'][target]['site_sections'].split()
-    default_site_section = bih.config['targets'][target]['default_site_section']
+    # jsondata = bih.config['targets'][target]['jinjacontext_home']
+    # site_sections = bih.config['targets'][target]['site_sections'].split()
+    # default_site_section = bih.config['targets'][target]['default_site_section']
     # If valid_languages contains more than one spaces, this doesn't hurt
     all_langs = bih.config['server']['valid_languages'].split()
     lifecycles = ["supported", "unsuppoted"]
@@ -182,28 +181,30 @@ def render_and_save(env, outputdir: str, bih) -> None:
     docset: %r
     lang: %r
     outputdir: %r
-    jsondata: %r
-    site_sections: %r
-    default_site_section: %r
-    """, servername, target, product, docset, lang, outputdir, jsondata,
-    site_sections, default_site_section,
+    """, servername, target, product, docset, lang, outputdir,
+    # jsondata,
+    # default_site_section,
     )
 
     # TODO: retrieve them from JSON
-    subitems = { # dict[str, list[tuple[str, dict]]]
+    subitems = { # dict[str, list[tuple[str, dict[str, Any]], ...]]
         # str:   list[tuple]
-        "smart": [('container', dict(dataSmartDocs=True)),
-                  ('deploy-upgrade', dict(dataSmartDocs=True)),
-                  ('micro-clouds', dict(dataSmartDocs=True)),
-                  ('network', dict(dataSmartDocs=True)),
-                  ('rancher', dict(dataSmartDocs=True)),
-                  ('security', dict(dataSmartDocs=True)),
-                  ('systems-management', dict(dataSmartDocs=True)),
-                  ('systemtuning-performance', dict(dataSmartDocs=True)),
-                  ('virtualization-cloud', dict(dataSmartDocs=True)),
-                  ],
+        # only smart/index.html needed
+        "smart": [
+                   ('container', dict(isSmartDocs=True)),
+                   ('deploy-upgrade', dict(dataSmartDocs=True)),
+                   ('micro-clouds', dict(dataSmartDocs=True)),
+                   ('network', dict(dataSmartDocs=True)),
+                   ('rancher', dict(dataSmartDocs=True)),
+                   ('security', dict(dataSmartDocs=True)),
+                   ('systems-management', dict(dataSmartDocs=True)),
+                   ('systemtuning-performance', dict(dataSmartDocs=True)),
+                   ('virtualization-cloud', dict(dataSmartDocs=True)),
+                   ],
 
-        "sbp": [('cloud-computing', dict(isSBP=True, category="Cloud Computing")),
+        # no sbp/index.html
+        "sbp": [
+                ('cloud-computing', dict(isSBP=True, category="Cloud")),
                 ('container-virtualization', dict(isSBP=True, category="Container and Virtualization")),
                 ('deprecated', dict(isSBP=True, category="Deprecated")),
                 ('desktop-linux', dict(isSBP=True, category="Desktop and Linux")),
@@ -214,6 +215,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
                 ('systems-management', dict(isSBP=True, category="Systems Management")),
                 ],
 
+        # no trd/index.html
         "trd": [
                 ("ampere", dict(isTRD=True, partner="Ampere")),
                 ("aws", dict(isTRD=True, partner="AWS")),
@@ -232,14 +234,19 @@ def render_and_save(env, outputdir: str, bih) -> None:
                 ("suse", dict(isTRD=True, partner="SUSE")),
                 ("wordpress", dict(isTRD=True, partner="WordPress")),
                 ],
+
+        # products
+        # "": [
+        #     ('')
+        # ]
     }
 
-
     # TODO: Somehow we need to create this data automatically
-    workdata = {
+    workdata: dict[str, dict[str, Any]] = {
         # This entry will be remove later
         "": {
-            "meta": bih.config['targets'][target]['jinjacontext_home'],
+            # bih.config['targets'][target]['jinjacontext_home'],
+            "meta": "homepage_docserv_bigfile.json",
             "template": hometmpl,
             "render_args": dict(),
             "output": "index.html",
@@ -253,39 +260,21 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "output": "index.html",
         },
 
-        # SBP
+        # SBP, top-level page will be removed later
         "sbp": {
-            "meta": "sdb_metadata.json",
+            "meta": "sbp_metadata.json",
             "template": indextmpl,
             "render_args": dict(isSBP=True,),
             "output": "index.html",
         },
 
-        # TRD
+        # TRD, top-level page will be removed later
         "trd": {
             "meta": "trd_metadata.json",
             "template": indextmpl,
             "render_args": dict(isTRD=True, ),
             "output": "index.html",
         },
-        # "trd/ibm": {
-        #     "meta": "trd_metadata.json",
-        #     "template": indextmpl,
-        #     "render_args": dict(isTRD=True, partner='IBM'),
-        #     "output": "index.html",
-        # },
-        # "trd/suse": {
-        #     "meta": "trd_metadata.json",
-        #     "template": indextmpl,
-        #     "render_args": dict(isTRD=True, partner='SUSE'),
-        #     "output": "index.html",
-        # },
-        # "trd/cisco": {
-        #     "meta": "trd_metadata.json",
-        #     "template": indextmpl,
-        #     "render_args": dict(isTRD=True, partner='SUSE'),
-        #     "output": "index.html",
-        # },
     }
 
     logger.debug("Iterating over subitems")
@@ -307,6 +296,10 @@ def render_and_save(env, outputdir: str, bih) -> None:
                 render_args=merged_args,  # {**render_args, **args}
                 output=output,
             )
+    # Remove the top-level entry for trd and sbp?
+    workdata.pop("trd")
+    workdata.pop("sbp")
+    workdata.pop("smart")
 
     logger.debug("workdata dict %s", workdata)
 
@@ -324,23 +317,27 @@ def render_and_save(env, outputdir: str, bih) -> None:
 
         logger.debug("JSON context successfully loaded (%r)", meta)
         # Render and save rendered HTML
+        logger.debug("Writing output %s with template %s and args=%s",
+                     output, template, args)
         output = os.path.join(path, output)
-        with open(output, "w") as fh:
-            content = template.render(data=context, **args)
-            fh.write(content)
-        logger.debug("Wrote %s", output)
+        try:
+            with open(output, "w") as fh:
+                content = template.render(data=context,
+                                          # assetpath="/myasset/",
+                                          debug=True,
+                                          **args)
+                fh.write(content)
+            logger.debug("Wrote %s with args=%s", output, args)
+
+        except UndefinedError as err:
+            logger.exception("Jinja undefined error", err)
+            raise
+        except TemplateError as err:
+            logger.exception("Jinja error", err)
+            raise
 
 
-    # Manually create the home page and remove it from the workdata dictionary
-    # home = workdata.pop("home")
-    # meta, template, args, output = (home["meta"],
-    #                                home["template"],
-    #                                home["render_args"],
-    #                                home["output"])
-    # process(outputdir, meta, template, args, output)
-
-
-    # Iterate over language and workdata keys:
+    # Iterate over language andD workdata keys:
     for lang, item in itertools.product(["en-us"], # TODO: all_langs,
                                   workdata.keys(),
                                   # site_sections,

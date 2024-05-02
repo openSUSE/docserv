@@ -188,31 +188,34 @@ def render_and_save(env, outputdir: str, bih) -> None:
 
     # TODO: retrieve them from JSON
     subitems = { # dict[str, list[tuple[str, dict[str, Any]], ...]]
+
         # str:   list[tuple]
         # only smart/index.html needed
-        "smart": [
-                   ('container', dict(isSmartDocs=True)),
-                   ('deploy-upgrade', dict(dataSmartDocs=True)),
-                   ('micro-clouds', dict(dataSmartDocs=True)),
-                   ('network', dict(dataSmartDocs=True)),
-                   ('rancher', dict(dataSmartDocs=True)),
-                   ('security', dict(dataSmartDocs=True)),
-                   ('systems-management', dict(dataSmartDocs=True)),
-                   ('systemtuning-performance', dict(dataSmartDocs=True)),
-                   ('virtualization-cloud', dict(dataSmartDocs=True)),
-                   ],
+        # "smart": [
+        #            ('container', dict(isSmartDocs=True)),
+        #            ('deploy-upgrade', dict(dataSmartDocs=True)),
+        #            ('micro-clouds', dict(dataSmartDocs=True)),
+        #            ('network', dict(dataSmartDocs=True)),
+        #            ('rancher', dict(dataSmartDocs=True)),
+        #            ('security', dict(dataSmartDocs=True)),
+        #            ('systems-management', dict(dataSmartDocs=True)),
+        #            ('systemtuning-performance', dict(dataSmartDocs=True)),
+        #            ('virtualization-cloud', dict(dataSmartDocs=True)),
+        #            ],
 
         # no sbp/index.html
         "sbp": [
                 ('cloud-computing', dict(isSBP=True, category="Cloud")),
                 ('container-virtualization', dict(isSBP=True, category="Container and Virtualization")),
-                ('deprecated', dict(isSBP=True, category="Deprecated")),
-                ('desktop-linux', dict(isSBP=True, category="Desktop and Linux")),
+                # ('deprecated', dict(isSBP=True, category="Deprecated")),
+                # ('desktop-linux', dict(isSBP=True, category="Desktop and Linux")),
                 ('sap-12', dict(isSBP=True, category="SAP 12")),
                 ('sap-15', dict(isSBP=True, category="SAP 15")),
-                ('server-linux', dict(isSBP=True, category="Server and Linux")),
+                # ('server-linux', dict(isSBP=True, category="Server and Linux")),
                 ('storage', dict(isSBP=True, category="Storage")),
                 ('systems-management', dict(isSBP=True, category="Systems Management")),
+                ('security', dict(isSBP=True, category="Security")),
+                ('tuning-performance', dict(isSBP=True, category="Tuning & Performance")),
                 ],
 
         # no trd/index.html
@@ -220,7 +223,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
                 ("ampere", dict(isTRD=True, partner="Ampere")),
                 ("aws", dict(isTRD=True, partner="AWS")),
                 ("azure", dict(isTRD=True, partner="Azure")),
-                ("cisco", dict(isTRD=True, partner="Cisco")),
+                ("cisco", dict(isTRD=True, partner="Cisco")), #
                 ("dell", dict(isTRD=True, partner="Dell")),
                 ("gcp", dict(isTRD=True, partner="GCP")),
                 ("hpe", dict(isTRD=True, partner="HPE")),
@@ -235,10 +238,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
                 ("wordpress", dict(isTRD=True, partner="WordPress")),
                 ],
 
-        # products
-        # "": [
-        #     ('')
-        # ]
     }
 
     # TODO: Somehow we need to create this data automatically
@@ -252,13 +251,13 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "output": "index.html",
         },
 
-        # Smart Docs
-        "smart": {
-            "meta": "smart_metadata.json",  # TODO: introduce a key in
-            "template": indextmpl,
-            "render_args": dict(dataSmartDocs=True),
-            "output": "index.html",
-        },
+        # Smart Docs are integrated in SLES16
+        # "smart": {
+        #     "meta": "smart_metadata.json",  # TODO: introduce a key in
+        #     "template": indextmpl,
+        #     "render_args": dict(dataSmartDocs=True),
+        #     "output": "index.html",
+        # },
 
         # SBP, top-level page will be removed later
         "sbp": {
@@ -275,6 +274,67 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "render_args": dict(isTRD=True, ),
             "output": "index.html",
         },
+
+        # Products
+        "sles-sap/15-SP5": {
+            "meta": "slesforsap_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise Server for SAP Applications",
+                                version="15 SP5"),
+            "output": "index.html",
+        },
+        "sles-sap/15-SP4": {
+            "meta": "slesforsap_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise Server for SAP Applications",
+                                version="15 SP4"),
+            "output": "index.html",
+        },
+        "sles-sap/15-SP3": {
+            "meta": "slesforsap_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise Server for SAP Applications",
+                                version="15 SP3"),
+            "output": "index.html",
+        },
+        "sles-sap/15-SP2": {
+            "meta": "slesforsap_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise Server for SAP Applications",
+                                version="15 SP2"),
+            "output": "index.html",
+        },
+        "sle-micro/5.5": {
+            "meta": "sle_micro_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise Micro",
+                                version="5.5",
+                            ),
+            "output": "index.html",
+        },
+        "sle-micro/5.4": {
+            "meta": "sle_micro_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise Micro",
+                                version="5.4",
+                            ),
+            "output": "index.html",
+        },
+        "sle16": {
+            "meta": "sle16_smart_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isSmartDocs=True,
+                                product="SUSE Linux Enterprise Micro",
+                                version="16",
+                            ),
+            "output": "index.html",
+        }
     }
 
     logger.debug("Iterating over subitems")
@@ -299,7 +359,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
     # Remove the top-level entry for trd and sbp?
     workdata.pop("trd")
     workdata.pop("sbp")
-    workdata.pop("smart")
+    # workdata.pop("smart")
 
     logger.debug("workdata dict %s", workdata)
 
@@ -324,7 +384,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
             with open(output, "w") as fh:
                 content = template.render(data=context,
                                           # assetpath="/myasset/",
-                                          debug=True,
+                                          # debug=True,
                                           **args)
                 fh.write(content)
             logger.debug("Wrote %s with args=%s", output, args)

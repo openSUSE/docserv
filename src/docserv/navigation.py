@@ -220,20 +220,20 @@ def render_and_save(env, outputdir: str, bih) -> None:
 
         # no trd/index.html
         "trd": [
-                ("ampere", dict(isTRD=True, partner="Ampere")),
-                ("aws", dict(isTRD=True, partner="AWS")),
-                ("azure", dict(isTRD=True, partner="Azure")),
-                ("cisco", dict(isTRD=True, partner="Cisco")), #
+                ("ampere", dict(isTRD=True, partner="Ampere")), # l
+                # ("aws", dict(isTRD=True, partner="AWS")),
+                # ("azure", dict(isTRD=True, partner="Azure")),
+                ("cisco", dict(isTRD=True, partner="Cisco")), # l
                 ("clastix", dict(isTRD=True, partner="Clastix")),
-                ("dell", dict(isTRD=True, partner="Dell Technologies")),
-                ("fortinet", dict(isTRD=True, partner="Fortinet")),
-                ("gcp", dict(isTRD=True, partner="GCP")),
-                ("hpe", dict(isTRD=True, partner="Hewlett Packard Enterprise")),
-                ("hpq", dict(isTRD=True, partner="HPQ")),
-                ("ibm", dict(isTRD=True, partner="IBM")),
-                ("jupiterlab", dict(isTRD=True, partner="JupiterLab")),
-                ("kubecost", dict(isTRD=True, partner="Kubecost")),
-                ("kubeflow", dict(isTRD=True, partner="Kubeflow")),
+                ("dell", dict(isTRD=True, partner="Dell Technologies")), # l
+                ("fortinet", dict(isTRD=True, partner="Fortinet")), # l
+                # ("gcp", dict(isTRD=True, partner="GCP")),
+                ("hpe", dict(isTRD=True, partner="Hewlett Packard Enterprise")), #
+                ("hpq", dict(isTRD=True, partner="HPQ")), # l
+                ("ibm", dict(isTRD=True, partner="IBM")), # l
+                ("jupiterlab", dict(isTRD=True, partner="JupiterLab")), # l
+                # ("kubecost", dict(isTRD=True, partner="Kubecost")), # l
+                ("kubeflow", dict(isTRD=True, partner="Kubeflow")), #
                 ("lenovo", dict(isTRD=True, partner="Lenovo")),
                 ("managed-service-provider", dict(isTRD=True, partner="Managed Service Provider")),
                 ("minio", dict(isTRD=True, partner="MinIO")),

@@ -227,11 +227,11 @@ def render_and_save(env, outputdir: str, bih) -> None:
                 # ("azure", dict(isTRD=True, partner="Azure")),
                 ("cisco", dict(isTRD=True, partner="Cisco")), # l
                 ("clastix", dict(isTRD=True, partner="Clastix")),
-                ("dell", dict(isTRD=True, partner="Dell Technologies")), # l
+                ("dell-technologies", dict(isTRD=True, partner="Dell Technologies")), # l
                 ("fortinet", dict(isTRD=True, partner="Fortinet")), # l
                 # ("gcp", dict(isTRD=True, partner="GCP")),
-                ("hpe", dict(isTRD=True, partner="Hewlett Packard Enterprise")), #
-                ("hpq", dict(isTRD=True, partner="HPQ")), # l
+                ("hewlett-packard-enterprise", dict(isTRD=True, partner="Hewlett Packard Enterprise")), #
+                ("hp", dict(isTRD=True, partner="HP")), # l
                 ("ibm", dict(isTRD=True, partner="IBM")), # l
                 ("jupiterlab", dict(isTRD=True, partner="JupiterLab")), # l
                 # ("kubecost", dict(isTRD=True, partner="Kubecost")), # l
@@ -239,7 +239,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
                 ("lenovo", dict(isTRD=True, partner="Lenovo")),
                 ("managed-service-provider", dict(isTRD=True, partner="Managed Service Provider")),
                 ("minio", dict(isTRD=True, partner="MinIO")),
-                ("nvidia", dict(isTRD=True, partner="nVIDIA")),
+                ("nvidia", dict(isTRD=True, partner="NVIDIA")),
                 ("ondat", dict(isTRD=True, partner="Ondat")),
                 ("rancher", dict(isTRD=True, partner="Rancher")),
                 ("supermicro", dict(isTRD=True, partner="Supermicro")),
@@ -318,14 +318,14 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 version="15 SP2"),
             "output": "index.html",
         },
-        "sles-sap/12-SP5": {
-            "meta": "slesforsap_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise Server for SAP Applications",
-                                version="12 SP5"),
-            "output": "index.html",
-        },
+        # "sles-sap/12-SP5": {
+        #     "meta": "slesforsap_metadata.json",
+        #     "template": indextmpl,
+        #     "render_args": dict(isProduct=True,
+        #                         product="SUSE Linux Enterprise Server for SAP Applications",
+        #                         version="12 SP5"),
+        #     "output": "index.html",
+        # },
         "sle-micro/5.5": {
             "meta": "sle_micro_metadata.json",
             "template": indextmpl,

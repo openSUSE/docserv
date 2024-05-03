@@ -210,9 +210,9 @@ def render_and_save(env, outputdir: str, bih) -> None:
                 # ('deprecated', dict(isSBP=True, category="Deprecated")),
                 # ('desktop-linux', dict(isSBP=True, category="Desktop and Linux")),
                 ('sap-12', dict(isSBP=True,
-                                category="SUSE Linux Enterprise Server for SAP Applications 12")),
+                                category="SAP applications on SUSE Linux Enterprise 12")),
                 ('sap-15', dict(isSBP=True,
-                                category="SUSE Linux Enterprise Server for SAP Applications 15")),
+                                category="SAP applications on SUSE Linux Enterprise 15")),
                 # ('server-linux', dict(isSBP=True, category="Server and Linux")),
                 ('storage', dict(isSBP=True, category="Storage")),
                 ('systems-management', dict(isSBP=True, category="Systems Management")),
@@ -402,7 +402,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
         try:
             with open(output, "w") as fh:
                 content = template.render(data=context,
-                                          # assetpath="/myasset/",
                                           # debug=True,
                                           **args)
                 fh.write(content)

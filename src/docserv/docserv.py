@@ -544,7 +544,7 @@ def main():
         docserv = Docserv(sys.argv)
         docserv.start()
     except FileNotFoundError as err:
-        logger.exception("Some resource couldn't be find", err)
+        logger.exception("Some resource couldn't be find %s", err)
         return 100
     except TemplateNotFound as err:
         logger.exception("Jinja template error %s", err)

@@ -547,7 +547,7 @@ def main():
         logger.exception("Some resource couldn't be find", err)
         return 100
     except TemplateNotFound as err:
-        logger.exception("Jinja template error", err)
+        logger.exception("Jinja template error %s", err)
         return 200
     except KeyboardInterrupt:
         logger.info("Docserv interrupted by user.")

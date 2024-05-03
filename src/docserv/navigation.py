@@ -262,15 +262,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "output": "index.html",
         },
 
-
-        # Smart Docs are integrated in SLES16
-        # "smart": {
-        #     "meta": "smart_metadata.json",  # TODO: introduce a key in
-        #     "template": indextmpl,
-        #     "render_args": dict(dataSmartDocs=True),
-        #     "output": "index.html",
-        # },
-
         # SBP, top-level page will be removed later
         "sbp": {
             "meta": "sbp_metadata.json",
@@ -320,14 +311,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 version="15 SP2"),
             "output": "index.html",
         },
-        # "sles-sap/12-SP5": {
-        #     "meta": "slesforsap_metadata.json",
-        #     "template": indextmpl,
-        #     "render_args": dict(isProduct=True,
-        #                         product="SUSE Linux Enterprise Server for SAP Applications",
-        #                         version="12 SP5"),
-        #     "output": "index.html",
-        # },
         "sle-micro/5.5": {
             "meta": "sle_micro_metadata.json",
             "template": indextmpl,

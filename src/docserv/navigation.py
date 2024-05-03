@@ -261,6 +261,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "output": "index.html",
         },
 
+
         # Smart Docs are integrated in SLES16
         # "smart": {
         #     "meta": "smart_metadata.json",  # TODO: introduce a key in
@@ -431,5 +432,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
 
         process(path, meta, template, args, output)
 
+    # Search
+    process(outputdir, meta, env.get_template("search.html.jinja"), {}, "search.html")
 
     logger.debug("All languages and products are processed.")

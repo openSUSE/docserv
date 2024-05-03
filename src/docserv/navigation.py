@@ -206,7 +206,8 @@ def render_and_save(env, outputdir: str, bih) -> None:
         # no sbp/index.html
         "sbp": [
                 ('cloud-computing', dict(isSBP=True, category="Cloud")),
-                ('container-virtualization', dict(isSBP=True, category="Container and Virtualization")),
+                ('container-virtualization', dict(isSBP=True,
+                                                  category="Containerization")),
                 # ('deprecated', dict(isSBP=True, category="Deprecated")),
                 # ('desktop-linux', dict(isSBP=True, category="Desktop and Linux")),
                 ('sap-12', dict(isSBP=True,

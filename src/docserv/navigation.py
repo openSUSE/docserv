@@ -278,7 +278,38 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "output": "index.html",
         },
 
-        # Products
+        # ---------------------
+        # Product Documentation
+        #
+        # Liberty
+        "liberty/7": {
+            "meta": "liberty_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Liberty Linux",
+                                version="7",
+                                ),
+            "output": "index.html",
+        },
+        "liberty/8": {
+            "meta": "liberty_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Liberty Linux",
+                                version="8",
+                                ),
+            "output": "index.html",
+        },
+        "liberty/9": {
+            "meta": "liberty_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Liberty Linux",
+                                version="9",
+                                ),
+            "output": "index.html",
+        },
+        # SLES for SAP
         "sles-sap/15-SP5": {
             "meta": "slesforsap_metadata.json",
             "template": indextmpl,
@@ -311,6 +342,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 version="15 SP2"),
             "output": "index.html",
         },
+        # SLE Micro
         "sle-micro/5.5": {
             "meta": "sle_micro_metadata.json",
             "template": indextmpl,
@@ -329,6 +361,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
                             ),
             "output": "index.html",
         },
+        # SLE16/Smart Docs
         "sle16": {
             "meta": "sle16_smart_metadata.json",
             "template": indextmpl,

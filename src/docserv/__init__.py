@@ -6,3 +6,6 @@ __version__ = "6.9"
 __maintainer__ = "SUSE Documentation Team"
 __email__ = "doc-team@suse.com"
 __status__ = "Production"
+
+import logging
+logging.getLogger(__package__).addHandler(logging.NullHandler())

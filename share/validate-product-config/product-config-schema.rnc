@@ -481,6 +481,13 @@ ds.subdir =
     ds.type.dirname
   }
 
+ds.partners =
+  ## A list of partners (usually for TRDs)
+  element partners {
+    ## An individual partner
+    element partner { text }+
+  }
+
 ds.deliverable =
   ## An individual DAPS-compatible document built on its own (default language)
   element deliverable {
@@ -506,7 +513,8 @@ ds.deliverable =
     ds.subdir?,
     ds.dc,
     ds.format+,
-    ds.param*
+    ds.param*,
+    ds.partners*
   }
 
 ds.deliverable_subdeliverable =

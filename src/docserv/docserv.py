@@ -1,6 +1,8 @@
+from datetime import datetime
 import hashlib
 import json
 import logging
+from logging.config import fileConfig
 import multiprocessing
 import os
 import queue
@@ -12,14 +14,18 @@ import tempfile
 import time
 from configparser import ConfigParser as configparser
 
-from docserv.bih import BuildInstructionHandler
-from docserv.deliverable import Deliverable
-from docserv.functions import print_help
-from docserv.rest import RESTServer, ThreadedRESTServer
+from jinja2 import TemplateNotFound
 
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
+from .common import BIN_DIR, CACHE_DIR, CONF_DIR, DOCSERV_CODE_DIR, SHARE_DIR, PROJECT_DIR
+from .bih import BuildInstructionHandler
+from .deliverable import Deliverable
+from .functions import print_help
+from .rest import RESTServer, ThreadedRESTServer
+from .navigation import init_jinja_template
+from .util import run
 
+
+logger = logging.getLogger(__name__)
 
 class DocservState:
     config = {}
@@ -213,7 +219,6 @@ class DocservState:
         Load status from JSON file.
         The JSON file usually resides in /var/cache/docserv/[SERVER_NAME].json
         """
-        logger.info("Reading previous state.")
         filepath = os.path.join(CACHE_DIR, self.config['server']['name'] + '.json')
         if os.path.isfile(filepath):
             file = open(filepath, "r")
@@ -227,14 +232,18 @@ class DocservState:
                 else:
                     self.past_builds[build_instruction['id']
                                      ] = build_instruction
+            logger.info("Read previous state %s", filepath)
             return True
         return False
 
     def parse_build_instruction(self, thread_id):
         build_instruction = self.get_scheduled_build_instruction()
+        # logger.debug("parse_build_instruction: tmp_dir=%s", self.stitch_tmp_dir)
         if build_instruction is not None:
             myBIH = BuildInstructionHandler(
-                build_instruction, self.config, self.stitch_tmp_dir, self.gitLocks, self.gitLocksLock, thread_id)
+                build_instruction,
+                self.config,
+                self.stitch_tmp_dir, self.gitLocks, self.gitLocksLock, thread_id)
             # If the initialization failed, immediately delete the BuildInstructionHandler
             if myBIH.initialized == False:
                 self.abort_build_instruction(build_instruction['id'])
@@ -247,194 +256,147 @@ class DocservState:
             self.bih_queue.put(build_instruction['id'])
 
 
-def parse_config(argv: list) -> dict:
-    """Parse INI configuration file"""
+class DocservConfig:
+    """
+    Class for handling the .ini configuration file.
+    """
 
-    def join_conf_dir(path):
-        # Turn relative paths to absolute paths, depending on the
-        # location of the INI (or rather CONF_DIR which by its definition
-        # is the location of the INI).
-        return path if os.path.isabs(path) else os.path.join(CONF_DIR, path)
+    def parse_config(self, argv):
+        """Parsing Docserv config file"""
+        logger.debug("Parsing Docserv file")
+        #def join_conf_dir(path):
+        #    # Turn relative paths to absolute paths, depending on the
+        #    # location of the INI (or rather CONF_DIR which by its definition
+        #    # is the location of the INI).
+        #    return path if os.path.isabs(path) else os.path.join(CONF_DIR, path)
 
-    config = configparser()
-    if len(argv) == 1:
-        config_file = "my-site"
-    else:
-        config_file = argv[1]
-    config_path=os.path.join(CONF_DIR, config_file + '.ini')
-    logger.info("Reading %s", config_path)
-    config.read(config_path)
-    cfg = {}
-    cfg['targets'] = {}
-    cfg['server'] = {}
 
-    try:
-        cfg['server']['name'] = config_file
-        cfg['server']['loglevel'] = int(
-            config['server']['loglevel'])
-        cfg['server']['host'] = config['server']['host']
-        cfg['server']['port'] = int(config['server']['port'])
-        cfg['server']['enable_mail'] = config['server']['enable_mail']
-        cfg['server']['repo_dir'] = join_conf_dir(config['server']['repo_dir'])
-        cfg['server']['temp_repo_dir'] = join_conf_dir(config['server']['temp_repo_dir'])
-        cfg['server']['valid_languages'] = config['server']['valid_languages']
-        cfg['server']['watchdog_timer'] = int(config['server']['watchdog_timer'])
-        if config['server']['max_threads'] == 'max':
-            cfg['server']['max_threads'] = multiprocessing.cpu_count()
+        def replace_placeholders(path: str, currenttargetname: str) -> str:
+            """Replace placeholder in curly brackets notation
+            """
+            servername = self.config['server']['name']
+            return path.format(
+                # the project directory where to find the Docserv INI file
+                projectdir=PROJECT_DIR,
+                # The current name of the server (=docserv ini filename)
+                servername=servername,
+                # The current target name that is processed
+                targetname=currenttargetname,
+                # the config directory
+                configdir=CONF_DIR,
+                # the cache directory
+                cachedir=CACHE_DIR,
+                # cache dir plus servername and targetname
+                fullcachedir=os.path.join(CACHE_DIR,
+                               servername,
+                               currenttargetname,
+                               ),
+                # The docserv directory where all source code is stored
+                codedir=DOCSERV_CODE_DIR,
+            )
+
+        config = configparser()
+        if len(argv) == 1:
+            self.config_file = "my-site"
         else:
-            cfg['server']['max_threads'] = int(config['server']['max_threads'])
+            self.config_file = argv[1]
 
-        for section in config.sections():
-            if not str(section).startswith("target_"):
-                continue
-
-            sec = config[section]
-            secname = sec['name']
-
-            cfg['targets'][secname] = {}
-            cfg['targets'][secname]['name'] = sec
-            cfg['targets'][secname]['template_dir'] = join_conf_dir(sec['template_dir'])
-            cfg['targets'][secname]['active'] = sec['active']
-            cfg['targets'][secname]['draft'] = sec['draft']
-            cfg['targets'][secname]['remarks'] = sec['remarks']
-            cfg['targets'][secname]['meta'] = sec['meta']
-            cfg['targets'][secname]['default_xslt_params'] = join_conf_dir(sec['default_xslt_params'])
-            cfg['targets'][secname]['enable_target_sync'] = sec['enable_target_sync']
-            if sec['enable_target_sync'] == 'yes':
-                cfg['targets'][secname]['target_path'] = sec['target_path']
-            cfg['targets'][secname]['backup_path'] = join_conf_dir(sec['backup_path'])
-            cfg['targets'][secname]['config_dir'] = join_conf_dir(sec['config_dir'])
-            cfg['targets'][secname]['languages'] = sec['languages']
-            cfg['targets'][secname]['default_lang'] = sec['default_lang']
-            cfg['targets'][secname]['omit_default_lang_path'] = sec['omit_default_lang_path']
-            cfg['targets'][secname]['internal'] = sec['internal']
-            cfg['targets'][secname]['zip_formats'] = sec['zip_formats']
-            cfg['targets'][secname]['server_base_path'] = sec['server_base_path']
-            cfg['targets'][secname]['canonical_url_domain'] = sec['canonical_url_domain']
-            cfg['targets'][secname]['server_root_files'] = join_conf_dir(sec['server_root_files'])
-
-            cfg['targets'][secname]['enable_ssi_fragments'] = sec['enable_ssi_fragments']
-            if sec['enable_ssi_fragments'] == 'yes':
-                cfg['targets'][secname]['fragment_dir'] = join_conf_dir(sec['fragment_dir'])
-                cfg['targets'][secname]['fragment_l10n_dir'] = join_conf_dir(sec['fragment_l10n_dir'])
-            # FIXME: I guess this is not the prettiest way to handle
-            # optional values (but it works for now)
-            cfg['targets'][secname]['build_container'] = False
-            if 'build_container' in list(sec.keys()):
-                cfg['targets'][secname]['build_container'] = sec['build_container']
-
-            cfg['targets'][secname]['site_sections'] = sec['site_sections']
-            cfg['targets'][secname]['default_site_section'] = sec['default_site_section']
-
-            if "json_dir" in config[section]:
-                cfg["targets"][secname]['json_dir'] = sec['json_dir']
+        self.config_path=os.path.join(CONF_DIR, self.config_file + '.ini')
+        logger.info("Reading Docserv INI %r...", self.config_path)
+        config.read(self.config_path)
+        self.config = {}
+        try:
+            self.config['server'] = {}
+            self.config['server']['name'] = self.config_file
+            self.config['server']['loglevel'] = int(
+                config['server']['loglevel'])
+            self.config['server']['host'] = config['server']['host']
+            self.config['server']['port'] = int(config['server']['port'])
+            self.config['server']['enable_mail'] = config['server']['enable_mail']
+            self.config['server']['repo_dir'] = replace_placeholders(config['server']['repo_dir'], "")
+            self.config['server']['temp_repo_dir'] = replace_placeholders(config['server']['temp_repo_dir'], "")
+            self.config['server']['valid_languages'] = config['server']['valid_languages']
+            if config['server']['max_threads'] == 'max':
+                self.config['server']['max_threads'] = multiprocessing.cpu_count()
             else:
-                # create a default if we don't have this key
-                cfg["targets"][secname]['json_dir'] = f"/tmp/{secname}-json/"
-            if "json_bigfile" in config[section]:
-                cfg["targets"][secname]['json_bigfile'] = sec['json_bigfile']
-            else:
-                # create a default if we don't have this key
-                cfg["targets"][secname]['json_bigfile'] = f"/tmp/{secname}-bigfile.json"
+                self.config['server']['max_threads'] = int(config['server']['max_threads'])
+            self.config['targets'] = {}
 
-    except KeyError as error:
-        logger.warning(
-            "Invalid configuration file, missing configuration key %s. Exiting.", error)
-        sys.exit(1)
+            for section in config.sections():
+                if not str(section).startswith("target_"):
+                    continue
 
-    logger.info("Finished reading config file")
-    return cfg
+                sec = config[section]
+                secname = sec['name']
+
+                self.config['targets'][secname] = {}
+                self.config['targets'][secname]['name'] = sec
+                self.config['targets'][secname]['template_dir'] = replace_placeholders(sec['template_dir'], secname)
+                # Jinja directories
+                self.config['targets'][secname]['jinja_template_dir'] = replace_placeholders(sec['jinja_template_dir'], secname)
+                self.config['targets'][secname]['jinja_env'] = init_jinja_template(
+                    self.config['targets'][secname]['jinja_template_dir']
+                )
+                self.config['targets'][secname]['jinjacontext_home'] = replace_placeholders(sec['jinjacontext_home'], secname)
+                # Jinja Templates
+                self.config['targets'][secname]['jinja_template_home'] = replace_placeholders(sec['jinja_template_home'], secname)
+                self.config['targets'][secname]['jinja_template_index'] = sec['jinja_template_index']
+                self.config['targets'][secname]['jinja_template_trd'] = sec['jinja_template_trd']
+                #
+                self.config['targets'][secname]['active'] = sec['active']
+                self.config['targets'][secname]['draft'] = sec['draft']
+                self.config['targets'][secname]['remarks'] = sec['remarks']
+                self.config['targets'][secname]['meta'] = sec['meta']
+                self.config['targets'][secname]['default_xslt_params'] = replace_placeholders(sec['default_xslt_params'], secname)
+                self.config['targets'][secname]['enable_target_sync'] = sec['enable_target_sync']
+                if sec['enable_target_sync'] == 'yes':
+                    self.config['targets'][secname]['target_path'] = sec['target_path']
+                self.config['targets'][secname]['backup_path'] = replace_placeholders(sec['backup_path'], secname)
+                self.config['targets'][secname]['config_dir'] = replace_placeholders(sec['config_dir'], secname)
+                self.config['targets'][secname]['languages'] = sec['languages']
+                self.config['targets'][secname]['default_lang'] = sec['default_lang']
+                self.config['targets'][secname]['omit_default_lang_path'] = sec['omit_default_lang_path']
+                self.config['targets'][secname]['internal'] = sec['internal']
+                self.config['targets'][secname]['zip_formats'] = sec['zip_formats']
+                self.config['targets'][secname]['server_base_path'] = sec['server_base_path']
+                self.config['targets'][secname]['canonical_url_domain'] = sec['canonical_url_domain']
+                self.config['targets'][secname]['server_root_files'] = replace_placeholders(sec['server_root_files'], secname)
+
+                self.config['targets'][secname]['enable_ssi_fragments'] = sec['enable_ssi_fragments']
+                if sec['enable_ssi_fragments'] == 'yes':
+                    self.config['targets'][secname]['fragment_dir'] = replace_placeholders(sec['fragment_dir'], secname)
+                    self.config['targets'][secname]['fragment_l10n_dir'] = replace_placeholders(sec['fragment_l10n_dir'], secname)
+                # FIXME: I guess this is not the prettiest way to handle
+                # optional values (but it works for now)
+                self.config['targets'][secname]['build_container'] = False
+                if 'build_container' in list(sec.keys()):
+                    self.config['targets'][secname]['build_container'] = sec['build_container']
+
+                self.config['targets'][secname]['site_sections'] = sec['site_sections']
+                self.config['targets'][secname]['default_site_section'] = sec['default_site_section']
+
+        except KeyError as error:
+            logger.warning(
+                "Invalid configuration file, missing configuration key %s. Exiting.", error)
+            sys.exit(1)
+
+        logger.debug("Successfully finished processing Docserv INI")
 
 
-class Docserv(DocservState):
+class Docserv(DocservState, DocservConfig):
     """
     This class creates worker threads and starts the REST API.
     """
     end_all = queue.Queue()
 
     def __init__(self, argv):
-        self.config = parse_config(argv)
+        self.parse_config(argv)
         LOGLEVELS = {0: logging.WARNING,
                      1: logging.INFO,
                      2: logging.DEBUG,
                      }
         logger.setLevel(LOGLEVELS[self.config['server']['loglevel']])
         self.load_state()
-        self.timer = None
-        self.observer = []
-
-    def stitchxml(self, target: str):
-        """Stitch XML file used by target
-
-        :param target: the target name from the INI file ([target_<NAME>].name)
-        """
-        stitch_tmp_file = os.path.join(self.stitch_tmp_dir,
-                                       f'productconfig_simplified_{target}.xml')
-                # Largely copypasta from bih.py cuz I dunno how to share stuff
-        logger.debug("Stitching XML config directory to %s", stitch_tmp_file)
-        # Don't use --revalidate-only parameter: after starting we
-        # really want to make sure that the config is alright.
-        cmd = ('%s --simplify '
-                '--valid-languages="%s" '
-                '--valid-site-sections="%s" '
-                '%s %s') % (
-            os.path.join(BIN_DIR, 'docserv-stitch'),
-            self.config['server']['valid_languages'],
-            self.config['targets'][target]['site_sections'],
-            self.config["targets"][target]['config_dir'],
-            stitch_tmp_file)
-        logger.debug("Stitching command: %s", cmd)
-        cmd = shlex.split(cmd)
-        s = subprocess.Popen(cmd,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        self.out, self.err = s.communicate()
-        rc = int(s.returncode)
-        if rc == 0:
-            logger.debug("Stitching of %s successful",
-                            self.config['targets'][target]['config_dir'])
-        else:
-            logger.warning("Stitching of %s failed!",
-                            self.config['targets'][target]['config_dir'])
-            logger.warning("Stitching STDOUT: %s", self.out.decode('utf-8'))
-            logger.warning("Stitching STDERR: %s", self.err.decode('utf-8'))
-
-    def create_directories(self, target):
-        """Create some necessary directories
-
-        :param target: the target name from the INI file ([target_<NAME>].name)
-        """
-        json_dir = self.config['targets'][target]["json_dir"]
-        os.makedirs(json_dir, exist_ok=True)
-
-    def worker_observer(self, target):
-        def on_any_event(event):
-            if self.timer:
-                self.timer.cancel()
-            self.timer = threading.Timer(self.config['server']['watchdog_timer'],
-                                         self.create_json_bigfile)
-            self.timer.start()
-
-        self.event_handler = FileSystemEventHandler()
-        self.event_handler.on_any_event = on_any_event
-        observer = Observer()
-        json_dir = self.config['targets'][target]['json_dir']
-        observer.schedule(self.event_handler,
-                               path=json_dir,
-                               recursive=True)
-        self.observer.append(observer)
-        observer.start()
-        logger.debug("Observer for %r started", json_dir)
-
-        try:
-            while True:
-                time.sleep(0.1)
-        except KeyboardInterrupt:
-            observer.stop()
-            observer.join()
-
-    def create_json_bigfile(self):
-        logger.info("Would create the JSON bigfile now...")
 
     def start(self):
         """
@@ -451,48 +413,58 @@ class Docserv(DocservState):
             # After starting docserv, make sure to stitch as the first thing,
             # this increases startup time but means that as long as the config
             # does not change, we don't have to do another complete validation
-            self.stitch_tmp_dir = "/tmp/docserv_stitch"
+            # self.stitch_tmp_dir = tempfile.mkdtemp(prefix='docserv_stitch_')
+            current_date = datetime.now().strftime('%Y-%m-%d')
+            self.stitch_tmp_dir = f"/tmp/docserv_stitch_{current_date}"
             os.makedirs(self.stitch_tmp_dir, exist_ok=True)
 
             # Notably, the config dir can be different for different targets.
+            # So, stitch for each.
             for target in self.config['targets']:
-                self.stitchxml(target)
-                self.create_directories(target)
+                stitch_tmp_file = os.path.join(self.stitch_tmp_dir,
+                    ('productconfig_simplified_%s.xml' % target))
+                # Largely copypasta from bih.py cuz I dunno how to share stuff
+                logger.debug("Stitching XML config directory to %s",
+                             stitch_tmp_file)
+                # Don't use --revalidate-only parameter: after starting we
+                # really want to make sure that the config is alright.
+                cmd = ('%s --simplify '
+                       '--valid-languages="%s" '
+                       '--valid-site-sections="%s" '
+                       '%s %s') % (
+                    os.path.join(BIN_DIR, 'docserv-stitch'),
+                    self.config['server']['valid_languages'],
+                    self.config['targets'][target]['site_sections'],
+                    self.config["targets"][target]['config_dir'],
+                    stitch_tmp_file)
+                logger.debug("Stitching command: %s", cmd)
+                rc, self.out, self.err = run(cmd)
+                if rc == 0:
+                    logger.debug("Stitching of %s successful",
+                                 self.config['targets'][target]['config_dir'])
+                else:
+                    logger.warning("Stitching of %s failed!",
+                                   self.config['targets'][target]['config_dir'])
+                    logger.warning("Stitching STDOUT: %s", self.out.decode('utf-8'))
+                    logger.warning("Stitching STDERR: %s", self.err.decode('utf-8'))
+                # End copypasta
 
+            thread_receive = threading.Thread(target=self.listen)
+            thread_receive.start()
             workers = []
-
-            threads = threading.Thread(target=self.listen)
-            threads.start()
-            logger.debug("Create threads")
-            for i in range(0, min([os.cpu_count(),
-                                   self.config['server']['max_threads']])
-            ):
+            for i in range(0, min([os.cpu_count(), self.config['server']['max_threads']])):
                 logger.info("Starting build thread %i", i)
                 worker = threading.Thread(target=self.worker,
-                                          name=f"Worker-{i}",
+                                          name=f"worker-{i}",
                                           args=(i,))
                 worker.start()
                 workers.append(worker)
-
-            # Create individual observers for each target:
-            logger.debug("Create observer")
-            for idx, target in enumerate(self.config['targets']):
-                mt = threading.Thread(target=self.worker_observer,
-                                      name=f"Observer-{target}",
-                                      args=(target,)
-                                     )
-                workers.append(mt)
-                mt.start()
-
             # to have a clean shutdown, wait for all threads to finish
-            threads.join()
-
+            thread_receive.join()
         except KeyboardInterrupt:
             self.exit()
-
         for worker in workers:
             worker.join()
-
         self.rest.shutdown()
         self.save_state()
 
@@ -532,28 +504,56 @@ class Docserv(DocservState):
         return True
 
 
-logger = logging.getLogger('docserv')
-logger.setLevel(logging.INFO)
-
-ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-ch.setFormatter(formatter)
-logger.addHandler(ch)
-
-BIN_DIR = os.getenv('DOCSERV_BIN_DIR', "/usr/bin/")
-CONF_DIR = os.getenv('DOCSERV_CONFIG_DIR', "/etc/docserv/")
-SHARE_DIR = os.getenv('DOCSERV_SHARE_DIR', "/usr/share/docserv/")
-CACHE_DIR = os.getenv('DOCSERV_CACHE_DIR', "/var/cache/docserv/")
+def read_logging(inifile: str):
+    "Read log INI file"
+    fileConfig(inifile, disable_existing_loggers=True)
 
 
 def main():
+    """Entry point for Docserv"""
     if "--help" in sys.argv or "-h" in sys.argv:
         print_help()
-    else:
+        return 1
+
+    # First read/configure default logger
+    # If the user provides a different logging config, it will
+    # overwrite the default logger config
+    read_logging(os.path.join(DOCSERV_CODE_DIR, "logging.ini"))
+
+    # Try to extract the user logger config file (INI format)
+    loginifile = sys.argv[2:]
+    loginifile = None if not loginifile else loginifile[0]
+
+    if loginifile:
+        try:
+            read_logging(loginifile)
+            sys.argv.pop()
+
+        except FileNotFoundError as err:
+            # Used for Python >=3.12, we raise it again
+            raise
+
+        except KeyError:
+            # For Python <3.12, only KeyError is raised with
+            # KeyError: 'formatters'.
+            # Ignore the error and provide the correct message
+            raise FileNotFoundError(f"Could not find {loginifile}.")
+
+    logger.info("Starting Docserv...")
+    try:
         docserv = Docserv(sys.argv)
         docserv.start()
-        sys.exit(0)
+    except FileNotFoundError as err:
+        logger.exception("Some resource couldn't be find %s", err)
+        return 100
+    except TemplateNotFound as err:
+        logger.exception("Jinja template error %s", err)
+        return 200
+    except KeyboardInterrupt:
+        logger.info("Docserv interrupted by user.")
+        # docserv.exit()
+
+    return 0
 
 
-main()
+# sys.exit(main())

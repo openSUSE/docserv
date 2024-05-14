@@ -459,7 +459,7 @@ These are the details:
         if len(tree.xpath(xpath)) > 0:
             self.title = tree.xpath('normalize-space(string(%s))' % xpath)
         else:
-            logger.warning("Could not extract a title via xpath: %s", xpath)
+            # logger.warning("Could not extract a title via xpath: %s", xpath)
             return False
 
         xpath = ("({XPS}/*[contains(local-name(.),'info')]/*[local-name(.)='subtitle'] |"
@@ -467,8 +467,8 @@ These are the details:
                  ).format(XPS=xpathstart)
         if len(tree.xpath(xpath)) > 0:
             self.subtitle = tree.xpath('normalize-space(string(%s))' % xpath)
-        else:
-            logger.debug("Could not extract a subtitle via xpath: %s", xpath)
+        # else:
+        #     logger.debug("Could not extract a subtitle via xpath: %s", xpath)
 
         productname = ''
         productnumber = ''

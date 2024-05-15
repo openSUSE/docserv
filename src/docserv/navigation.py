@@ -370,7 +370,18 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 version="16",
                             ),
             "output": "index.html",
-        }
+        },
+        # SUMA
+        "suma/4.3": {
+            "meta": "suma_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Manager",
+                                version="4.3",
+                            ),
+            "output": "index.html",
+        },
+
     }
 
     logger.debug("Iterating over subitems")

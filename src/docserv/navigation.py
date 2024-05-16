@@ -381,6 +381,16 @@ def render_and_save(env, outputdir: str, bih) -> None:
                             ),
             "output": "index.html",
         },
+        "suma/5.0": {
+            "meta": "suma_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Manager",
+                                version="5.0",
+                            ),
+            "output": "index.html",
+        },
+
 
     }
 

@@ -234,7 +234,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
                 ("hewlett-packard-enterprise", dict(isTRD=True, partner="Hewlett Packard Enterprise")), #
                 ("hp", dict(isTRD=True, partner="HP")), # l
                 ("ibm", dict(isTRD=True, partner="IBM")), # l
-                # ("jupyter", dict(isTRD=True, partner="Jupyter")), # l
+                ("jupyter", dict(isTRD=True, partner="Jupyter")), # l
                 # ("kubecost", dict(isTRD=True, partner="Kubecost")), # l
                 ("kubeflow", dict(isTRD=True, partner="Kubeflow")), #
                 ("lenovo", dict(isTRD=True, partner="Lenovo")),

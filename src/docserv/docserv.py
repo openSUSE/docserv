@@ -328,12 +328,16 @@ class DocservConfig:
 
                 sec = config[section]
                 secname = sec['name']
+                logger.debug("Found target=%s", secname)
 
                 self.config['targets'][secname] = {}
                 self.config['targets'][secname]['name'] = sec
                 self.config['targets'][secname]['template_dir'] = replace_placeholders(sec['template_dir'], secname)
                 # Jinja directories
-                self.config['targets'][secname]['jinja_template_dir'] = replace_placeholders(sec['jinja_template_dir'], secname)
+                jinja_template_dir = replace_placeholders(sec['jinja_template_dir'], secname)
+                self.config['targets'][secname]['jinja_template_dir'] = jinja_template_dir
+                logger.debug("  For target=%s using jinja_template_dir=%s", secname, jinja_template_dir)
+
                 self.config['targets'][secname]['jinja_env'] = init_jinja_template(
                     self.config['targets'][secname]['jinja_template_dir']
                 )
@@ -352,7 +356,9 @@ class DocservConfig:
                 if sec['enable_target_sync'] == 'yes':
                     self.config['targets'][secname]['target_path'] = sec['target_path']
                 self.config['targets'][secname]['backup_path'] = replace_placeholders(sec['backup_path'], secname)
-                self.config['targets'][secname]['config_dir'] = replace_placeholders(sec['config_dir'], secname)
+                config_dir = replace_placeholders(sec['config_dir'], secname)
+                self.config['targets'][secname]['config_dir'] = config_dir
+                logger.debug("  For target=%s using config_dir=%s", secname, config_dir)
                 self.config['targets'][secname]['languages'] = sec['languages']
                 self.config['targets'][secname]['default_lang'] = sec['default_lang']
                 self.config['targets'][secname]['omit_default_lang_path'] = sec['omit_default_lang_path']
@@ -360,7 +366,10 @@ class DocservConfig:
                 self.config['targets'][secname]['zip_formats'] = sec['zip_formats']
                 self.config['targets'][secname]['server_base_path'] = sec['server_base_path']
                 self.config['targets'][secname]['canonical_url_domain'] = sec['canonical_url_domain']
-                self.config['targets'][secname]['server_root_files'] = replace_placeholders(sec['server_root_files'], secname)
+                srfiles = replace_placeholders(sec['server_root_files'], secname)
+                self.config['targets'][secname]['server_root_files'] = srfiles
+                logger.debug("  For target=%s using server-root-files=%s", secname, srfiles)
+
 
                 self.config['targets'][secname]['enable_ssi_fragments'] = sec['enable_ssi_fragments']
                 if sec['enable_ssi_fragments'] == 'yes':

@@ -454,7 +454,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
 
 
     # Iterate over language andD workdata keys:
-    for lang, item in itertools.product(["en-us"], # TODO: all_langs,
+    for lang, item in itertools.product([lang], # TODO: all_langs,
                                   workdata.keys(),
                                   # site_sections,
                                   # lifecycles,
@@ -471,5 +471,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
 
     # Search
     process(outputdir, meta, env.get_template("search.html.jinja"), {}, "search.html")
+    process(os.path.join(outputdir, lang),
+            meta, env.get_template("search.html.jinja"), {}, "search.html")
 
     logger.debug("All languages and products are processed.")

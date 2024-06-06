@@ -390,6 +390,16 @@ def render_and_save(env, outputdir: str, bih) -> None:
                             ),
             "output": "index.html",
         },
+        # SLED
+        "sled/15-SP5": {
+            "meta": "sled_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise Desktop",
+                                version="15 SP5",
+                            ),
+            "output": "index.html",
+        },
         # SLES
         "sles/12-SP5": {
             "meta": "sles_metadata.json",

@@ -400,6 +400,42 @@ def render_and_save(env, outputdir: str, bih) -> None:
                             ),
             "output": "index.html",
         },
+        "sles/15-SP2": {
+            "meta": "sles_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise Server",
+                                version="15 SP2",
+                            ),
+            "output": "index.html",
+        },
+        "sles/15-SP3": {
+            "meta": "sles_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise Server",
+                                version="15 SP3",
+                            ),
+            "output": "index.html",
+        },
+        "sles/15-SP4": {
+            "meta": "sles_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise Server",
+                                version="15 SP4",
+                            ),
+            "output": "index.html",
+        },
+        "sles/15-SP5": {
+            "meta": "sles_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise Server",
+                                version="15 SP5",
+                            ),
+            "output": "index.html",
+        },
 
     }
 

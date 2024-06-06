@@ -390,7 +390,16 @@ def render_and_save(env, outputdir: str, bih) -> None:
                             ),
             "output": "index.html",
         },
-
+        # SLES
+        "sles/12-SP5": {
+            "meta": "sles_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise Server",
+                                version="12 SP5",
+                            ),
+            "output": "index.html",
+        },
 
     }
 

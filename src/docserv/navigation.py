@@ -454,6 +454,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 product="SUSE Edge",
                                 version="3.0",
                             ),
+            "output": "index.html",
         },
     }
 

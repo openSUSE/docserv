@@ -447,7 +447,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "output": "index.html",
         },
         # SUSE Edge
-        "edge/3.0": {
+        "suse-edge/3.0": {
             "meta": "edge_metadata.json",
             "template": indextmpl,
             "render_args": dict(isProduct=True,

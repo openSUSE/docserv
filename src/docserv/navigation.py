@@ -526,7 +526,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
         meta = os.path.join(CACHE_DIR, servername, target, workdata[item]["meta"])
         template = workdata[item]["template"]
         args: dict = workdata[item]["render_args"]
-        output = workdata[item]["output"]
+        output = workdata[item].get("output", "index.html")
 
         logger.debug("Processing language %s/%s", lang, item)
         path = os.path.join(outputdir, lang, *(item.split("/")))

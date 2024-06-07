@@ -456,6 +456,16 @@ def render_and_save(env, outputdir: str, bih) -> None:
                             ),
             "output": "index.html",
         },
+        # Rancher
+        "rancher/prime": {
+            "meta": "rancher_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="Rancher",
+                                version="Prime",
+                            ),
+            "output": "index.html",
+        }
     }
 
     logger.debug("Iterating over subitems")

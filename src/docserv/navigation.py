@@ -347,7 +347,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "template": indextmpl,
             "render_args": dict(isProduct=True,
                                 product="SUSE Linux Enterprise Server for SAP Applications",
-                                version="Trento Premium"),
+                                version="Trento"),
             "output": "index.html",
         },
         # SLE Micro

@@ -342,6 +342,14 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 version="15 SP2"),
             "output": "index.html",
         },
+        "sles-sap/trento": {
+            "meta": "slesforsap_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise Server for SAP Applications",
+                                version="Trento Premium"),
+            "output": "index.html",
+        },
         # SLE Micro
         "sle-micro/5.5": {
             "meta": "sle_micro_metadata.json",

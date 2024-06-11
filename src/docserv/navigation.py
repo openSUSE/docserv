@@ -259,7 +259,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "meta": "homepage_docserv_bigfile.json",
             "template": hometmpl,
             "render_args": dict(),
-            "output": "index.html",
         },
 
         # SBP, top-level page will be removed later
@@ -267,7 +266,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "meta": "sbp_metadata.json",
             "template": indextmpl,
             "render_args": dict(isSBP=True,),
-            "output": "index.html",
         },
 
         # TRD, top-level page will be removed later
@@ -275,7 +273,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "meta": "trd_metadata.json",
             "template": indextmpl,
             "render_args": dict(isTRD=True, ),
-            "output": "index.html",
         },
 
         # ---------------------
@@ -289,7 +286,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 product="SUSE Liberty Linux",
                                 version="7",
                                 ),
-            "output": "index.html",
         },
         "liberty/8": {
             "meta": "liberty_metadata.json",
@@ -298,7 +294,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 product="SUSE Liberty Linux",
                                 version="8",
                                 ),
-            "output": "index.html",
         },
         "liberty/9": {
             "meta": "liberty_metadata.json",
@@ -307,7 +302,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 product="SUSE Liberty Linux",
                                 version="9",
                                 ),
-            "output": "index.html",
         },
         # --- SLES for SAP
         "sles-sap/15-SP5": {
@@ -316,7 +310,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "render_args": dict(isProduct=True,
                                 product="SUSE Linux Enterprise Server for SAP Applications",
                                 version="15 SP5"),
-            "output": "index.html",
         },
         "sles-sap/15-SP4": {
             "meta": "slesforsap_metadata.json",
@@ -324,7 +317,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "render_args": dict(isProduct=True,
                                 product="SUSE Linux Enterprise Server for SAP Applications",
                                 version="15 SP4"),
-            "output": "index.html",
         },
         "sles-sap/15-SP3": {
             "meta": "slesforsap_metadata.json",
@@ -332,7 +324,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "render_args": dict(isProduct=True,
                                 product="SUSE Linux Enterprise Server for SAP Applications",
                                 version="15 SP3"),
-            "output": "index.html",
         },
         "sles-sap/15-SP2": {
             "meta": "slesforsap_metadata.json",
@@ -340,7 +331,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "render_args": dict(isProduct=True,
                                 product="SUSE Linux Enterprise Server for SAP Applications",
                                 version="15 SP2"),
-            "output": "index.html",
         },
         "sles-sap/trento": {
             "meta": "slesforsap_metadata.json",
@@ -348,7 +338,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "render_args": dict(isProduct=True,
                                 product="SUSE Linux Enterprise Server for SAP Applications",
                                 version="Trento"),
-            "output": "index.html",
         },
         # --- SLE Micro
         "sle-micro/5.5": {
@@ -358,7 +347,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 product="SUSE Linux Enterprise Micro",
                                 version="5.5",
                             ),
-            "output": "index.html",
         },
         "sle-micro/5.4": {
             "meta": "sle_micro_metadata.json",
@@ -367,7 +355,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 product="SUSE Linux Enterprise Micro",
                                 version="5.4",
                             ),
-            "output": "index.html",
         },
         # --- SLE16/Smart Docs
         "sle16": {
@@ -377,7 +364,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 product="SUSE Linux Enterprise Micro",
                                 version="16",
                             ),
-            "output": "index.html",
         },
         # --- SUMA
         "suma/4.3": {
@@ -387,7 +373,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 product="SUSE Manager",
                                 version="4.3",
                             ),
-            "output": "index.html",
         },
         "suma/5.0": {
             "meta": "suma_metadata.json",
@@ -396,7 +381,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 product="SUSE Manager",
                                 version="5.0",
                             ),
-            "output": "index.html",
         },
         # --- SLED
         "sled/15-SP5": {
@@ -406,7 +390,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 product="SUSE Linux Enterprise Desktop",
                                 version="15 SP5",
                             ),
-            "output": "index.html",
         },
         # --- SLES
         "sles/12-SP5": {
@@ -416,7 +399,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 product="SUSE Linux Enterprise Server",
                                 version="12 SP5",
                             ),
-            "output": "index.html",
         },
         "sles/15-SP2": {
             "meta": "sles_metadata.json",
@@ -425,7 +407,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 product="SUSE Linux Enterprise Server",
                                 version="15 SP2",
                             ),
-            "output": "index.html",
         },
         "sles/15-SP3": {
             "meta": "sles_metadata.json",
@@ -434,7 +415,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 product="SUSE Linux Enterprise Server",
                                 version="15 SP3",
                             ),
-            "output": "index.html",
         },
         "sles/15-SP4": {
             "meta": "sles_metadata.json",
@@ -443,7 +423,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 product="SUSE Linux Enterprise Server",
                                 version="15 SP4",
                             ),
-            "output": "index.html",
         },
         "sles/15-SP5": {
             "meta": "sles_metadata.json",
@@ -452,7 +431,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 product="SUSE Linux Enterprise Server",
                                 version="15 SP5",
                             ),
-            "output": "index.html",
         },
         # --- SUSE Edge
         "suse-edge/3.0": {
@@ -462,7 +440,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 product="SUSE Edge",
                                 version="3.0",
                             ),
-            "output": "index.html",
         },
         # --- Rancher
         "rancher/prime": {

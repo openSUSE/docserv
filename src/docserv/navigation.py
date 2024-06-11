@@ -281,7 +281,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
         # ---------------------
         # Product Documentation
         #
-        # Liberty
+        # --- Liberty
         "liberty/7": {
             "meta": "liberty_metadata.json",
             "template": indextmpl,
@@ -309,7 +309,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 ),
             "output": "index.html",
         },
-        # SLES for SAP
+        # --- SLES for SAP
         "sles-sap/15-SP5": {
             "meta": "slesforsap_metadata.json",
             "template": indextmpl,
@@ -350,7 +350,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 version="Trento"),
             "output": "index.html",
         },
-        # SLE Micro
+        # --- SLE Micro
         "sle-micro/5.5": {
             "meta": "sle_micro_metadata.json",
             "template": indextmpl,
@@ -369,7 +369,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
                             ),
             "output": "index.html",
         },
-        # SLE16/Smart Docs
+        # --- SLE16/Smart Docs
         "sle16": {
             "meta": "sle16_smart_metadata.json",
             "template": indextmpl,
@@ -379,7 +379,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
                             ),
             "output": "index.html",
         },
-        # SUMA
+        # --- SUMA
         "suma/4.3": {
             "meta": "suma_metadata.json",
             "template": indextmpl,
@@ -398,7 +398,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
                             ),
             "output": "index.html",
         },
-        # SLED
+        # --- SLED
         "sled/15-SP5": {
             "meta": "sled_metadata.json",
             "template": indextmpl,
@@ -408,7 +408,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
                             ),
             "output": "index.html",
         },
-        # SLES
+        # --- SLES
         "sles/12-SP5": {
             "meta": "sles_metadata.json",
             "template": indextmpl,
@@ -511,6 +511,47 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "render_args": dict(isProduct=True,
                                 product="RKE2",
                                 version="",
+                            ),
+        },
+        # --- SLE HA
+        "sle-ha/15-SP5": {
+            "meta": "sleha_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise High Availability",
+                                version="15 SP5",
+                            ),
+        },
+        "sle-ha/15-SP4": {
+            "meta": "sleha_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise High Availability",
+                                version="15 SP4",
+                            ),
+        },
+        "sle-ha/15-SP3": {
+            "meta": "sleha_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise High Availability",
+                                version="15 SP3",
+                            ),
+        },
+        "sle-ha/15-SP2": {
+            "meta": "sleha_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise High Availability",
+                                version="15 SP2",
+                            ),
+        },
+        "sle-ha/12-SP5": {
+            "meta": "sleha_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise High Availability",
+                                version="12 SP5",
                             ),
         },
     }

@@ -514,28 +514,12 @@ def render_and_save(env, outputdir: str, bih) -> None:
                             ),
         },
         # --- SLE HA
-        "sle-ha/12-SP5": {
+        "sle-ha/15-SP5": {
             "meta": "sleha_metadata.json",
             "template": indextmpl,
             "render_args": dict(isProduct=True,
                                 product="SUSE Linux Enterprise High Availability",
-                                version="12 SP5",
-                            ),
-        },
-        "sle-ha/15-SP2": {
-            "meta": "sleha_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise High Availability",
-                                version="15 SP2",
-                            ),
-        },
-        "sle-ha/15-SP3": {
-            "meta": "sleha_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise High Availability",
-                                version="15 SP3",
+                                version="15 SP5",
                             ),
         },
         "sle-ha/15-SP4": {
@@ -546,12 +530,28 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 version="15 SP4",
                             ),
         },
-        "sle-ha/15-SP5": {
+        "sle-ha/15-SP3": {
             "meta": "sleha_metadata.json",
             "template": indextmpl,
             "render_args": dict(isProduct=True,
                                 product="SUSE Linux Enterprise High Availability",
-                                version="15 SP5",
+                                version="15 SP3",
+                            ),
+        },
+        "sle-ha/15-SP2": {
+            "meta": "sleha_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise High Availability",
+                                version="15 SP2",
+                            ),
+        },
+        "sle-ha/12-SP5": {
+            "meta": "sleha_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise High Availability",
+                                version="12 SP5",
                             ),
         },
     }

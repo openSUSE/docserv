@@ -531,6 +531,31 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 version="12 SP5",
                             ),
         },
+        # --- SLE HPC
+        "sle-hpc/15-SP5": {
+            "meta": "slehpc_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise High Performance Computing",
+                                version="15 SP5",
+                            ),
+        },
+        "sle-hpc/15-SP4": {
+            "meta": "slehpc_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise High Performance Computing",
+                                version="15 SP4",
+                            ),
+        },
+        "sle-hpc/15-SP3": {
+            "meta": "slehpc_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise High Performance Computing",
+                                version="15 SP3",
+                            ),
+        },
     }
 
     logger.debug("Iterating over subitems")

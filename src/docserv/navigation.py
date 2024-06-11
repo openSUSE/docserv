@@ -454,7 +454,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
                             ),
             "output": "index.html",
         },
-        # SUSE Edge
+        # --- SUSE Edge
         "suse-edge/3.0": {
             "meta": "edge_metadata.json",
             "template": indextmpl,
@@ -464,7 +464,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
                             ),
             "output": "index.html",
         },
-        # Rancher
+        # --- Rancher
         "rancher/prime": {
             "meta": "rancher_metadata.json",
             "template": indextmpl,
@@ -472,8 +472,47 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 product="Rancher",
                                 version="Prime",
                             ),
-            "output": "index.html",
-        }
+        },
+        "rancher/harvester": {
+            "meta": "rancher_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="Harvester",
+                                version="1.3",
+                            ),
+        },
+        "rancher/neuvector": {
+            "meta": "rancher_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="NeuVector",
+                                version="5.3",
+                            ),
+        },
+        "rancher/k3s": {
+            "meta": "rancher_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="K3s",
+                                version="",
+                            ),
+        },
+        "rancher/rke": {
+            "meta": "rancher_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="RKE",
+                                version="",
+                            ),
+        },
+        "rancher/rke2": {
+            "meta": "rancher_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="RKE2",
+                                version="",
+                            ),
+        },
     }
 
     logger.debug("Iterating over subitems")

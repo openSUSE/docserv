@@ -556,6 +556,24 @@ def render_and_save(env, outputdir: str, bih) -> None:
                                 version="15 SP3",
                             ),
         },
+        # -- SLE RT
+        "sle-rt/15-SP5": {
+            "meta": "slert_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise Real Time",
+                                version="15 SP5",
+                            ),
+        },
+        "sle-rt/12-SP5": {
+            "meta": "slert_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(isProduct=True,
+                                product="SUSE Linux Enterprise Real Time",
+                                version="12 SP5",
+                            ),
+        },
+
     }
 
     logger.debug("Iterating over subitems")

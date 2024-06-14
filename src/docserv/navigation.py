@@ -448,8 +448,8 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "render_args": dict(
                 isProduct=True,
                 product="SUSE Rancher",
-                version="prime",
-                ),
+                version="Prime",
+                )
         },
         # "rancher/prime": {
         #     "meta": "rancher_metadata.json",

@@ -281,7 +281,9 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "render_args": dict(
                 # TODO:
                 isSmartDocs=True,
-                product="SUSE Rancher"),
+                product="SUSE Rancher",
+                # version="",
+                ),
         },
 
         # ---------------------
@@ -607,7 +609,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
     # Remove the top-level entry for trd and sbp?
     workdata.pop("trd")
     workdata.pop("sbp")
-    workdata.pop("rancher")
+    # workdata.pop("rancher")
 
     logger.debug("workdata dict %s", workdata)
 

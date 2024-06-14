@@ -275,6 +275,15 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "render_args": dict(isTRD=True, ),
         },
 
+        "rancher": {
+            "meta": "rancher_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(
+                # TODO:
+                isSmartDocs=True,
+                product="SUSE Rancher"),
+        },
+
         # ---------------------
         # Product Documentation
         #
@@ -442,54 +451,54 @@ def render_and_save(env, outputdir: str, bih) -> None:
                             ),
         },
         # --- Rancher
-        "rancher/prime": {
-            "meta": "rancher_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Rancher",
-                                version="Prime",
-                            ),
-        },
-        "rancher/harvester": {
-            "meta": "rancher_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Rancher",
-                                version="Harvester",
-                            ),
-        },
-        "rancher/neuvector": {
-            "meta": "rancher_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Rancher",
-                                version="NeuVector",
-                            ),
-        },
-        "rancher/k3s": {
-            "meta": "rancher_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Rancher",
-                                version="K3s",
-                            ),
-        },
-        "rancher/rke": {
-            "meta": "rancher_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Rancher",
-                                version="RKE",
-                            ),
-        },
-        "rancher/rke2": {
-            "meta": "rancher_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Rancher",
-                                version="RKE2",
-                            ),
-        },
+        # "rancher/prime": {
+        #     "meta": "rancher_metadata.json",
+        #     "template": indextmpl,
+        #     "render_args": dict(isProduct=True,
+        #                         product="SUSE Rancher",
+        #                         version="Prime",
+        #                     ),
+        # },
+        # "rancher/harvester": {
+        #     "meta": "rancher_metadata.json",
+        #     "template": indextmpl,
+        #     "render_args": dict(isProduct=True,
+        #                         product="SUSE Rancher",
+        #                         version="Harvester",
+        #                     ),
+        # },
+        # "rancher/neuvector": {
+        #     "meta": "rancher_metadata.json",
+        #     "template": indextmpl,
+        #     "render_args": dict(isProduct=True,
+        #                         product="SUSE Rancher",
+        #                         version="NeuVector",
+        #                     ),
+        # },
+        # "rancher/k3s": {
+        #     "meta": "rancher_metadata.json",
+        #     "template": indextmpl,
+        #     "render_args": dict(isProduct=True,
+        #                         product="SUSE Rancher",
+        #                         version="K3s",
+        #                     ),
+        # },
+        # "rancher/rke": {
+        #     "meta": "rancher_metadata.json",
+        #     "template": indextmpl,
+        #     "render_args": dict(isProduct=True,
+        #                         product="SUSE Rancher",
+        #                         version="RKE",
+        #                     ),
+        # },
+        # "rancher/rke2": {
+        #     "meta": "rancher_metadata.json",
+        #     "template": indextmpl,
+        #     "render_args": dict(isProduct=True,
+        #                         product="SUSE Rancher",
+        #                         version="RKE2",
+        #                     ),
+        # },
         # --- SLE HA
         "sle-ha/15-SP5": {
             "meta": "sleha_metadata.json",
@@ -598,7 +607,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
     # Remove the top-level entry for trd and sbp?
     workdata.pop("trd")
     workdata.pop("sbp")
-    # workdata.pop("smart")
+    workdata.pop("rancher")
 
     logger.debug("workdata dict %s", workdata)
 

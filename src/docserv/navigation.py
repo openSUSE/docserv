@@ -275,18 +275,6 @@ def render_and_save(env, outputdir: str, bih) -> None:
             "render_args": dict(isTRD=True, ),
         },
 
-        "rancher": {
-            "meta": "rancher_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(
-                # TODO:
-                isSmartDocs=True,
-                product="SUSE Rancher",
-                producttitle="SUSE Rancher",
-                # version="",
-                ),
-        },
-
         # ---------------------
         # Product Documentation
         #
@@ -454,6 +442,15 @@ def render_and_save(env, outputdir: str, bih) -> None:
                             ),
         },
         # --- Rancher
+        "rancher/prime": {
+            "meta": "rancher_metadata.json",
+            "template": indextmpl,
+            "render_args": dict(
+                isProduct=True,
+                product="SUSE Rancher",
+                version="prime",
+                ),
+        },
         # "rancher/prime": {
         #     "meta": "rancher_metadata.json",
         #     "template": indextmpl,

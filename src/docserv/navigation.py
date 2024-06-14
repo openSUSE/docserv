@@ -282,6 +282,7 @@ def render_and_save(env, outputdir: str, bih) -> None:
                 # TODO:
                 isSmartDocs=True,
                 product="SUSE Rancher",
+                producttitle="SUSE Rancher",
                 # version="",
                 ),
         },

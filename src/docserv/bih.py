@@ -661,6 +661,47 @@ These are the details:
         logger.debug("Valid build instruction: %s", build_instruction['id'])
         return True
 
+    def find_format(self, deliverable, dc) -> dict:
+        """
+        Find the format element for the requested DC file in the
+        deliverable section or in the default language (English).
+        If nothing is available, we default to HTML.
+        """
+        try:
+            build_formats = deliverable.find(".//format").attrib
+        except AttributeError:
+            # It's possible that some language/deliverable sections
+            # don't have format element. In that case, we look in the
+            # default language section and try to find the format for the
+            # requested DC file there.
+            # If that fails, we
+            defaultformat = deliverable.xpath(
+                    f"../language[@default='1']/deliverable[dc[. = '{dc}']]/format"
+            )
+            if self.lang.startswith('en'):
+                # If -- by accident -- the default language section doesn't
+                # contain a format element for the requested DC file, we
+                # set the default to HTML.
+                build_formats = {'html': '1',
+                                     'pdf': '0',
+                                     'epub': '0',
+                                     'single-html': '0'}
+            elif defaultformat:
+                # if we have a default language section, use all
+                # attributes from <format/>
+                build_formats = defaultformat[0].attrib
+            else:
+                logger.warning(("No format element found for deliverable."
+                                "%s: %s/%s/%s. "
+                                "Fallback to HTML only."
+                                ),
+                                dc, self.product, self.docset, self.lang)
+                build_formats = {'html': '1',
+                                 'pdf': '0',
+                                 'epub': '0',
+                                 'single-html': '0'}
+        return build_formats
+
     def generate_deliverables(self):
         """
         Iterate through deliverable elements in configuration and create
@@ -686,7 +727,8 @@ These are the details:
             self.product, self.docset, self.lang)
         for xml_deliverable in self.tree.findall(xpath):
             dc = xml_deliverable.find(".//dc").text
-            build_formats = xml_deliverable.find(".//format").attrib
+            build_formats = self.find_format(xml_deliverable, dc)
+
             try:
                 source_dir = os.path.join(
                     self.build_source_dir,

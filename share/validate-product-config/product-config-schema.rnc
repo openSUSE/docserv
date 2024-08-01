@@ -1,4 +1,7 @@
 # RELAX NG Schema for Docserv² product configuration
+namespace a = "http://relaxng.org/ns/compatibility/annotations/1.0"
+
+
 
 # BASICS
 
@@ -187,6 +190,10 @@ ds.htmlinlinecontent =
 }
 
 
+ds.gated.attr =
+  ## Is the content behind a paywall? (default "false")
+  [ a:defaultValue = "false" ] attribute gated { xsd:boolean }
+
 
 # ROOT
 
@@ -207,6 +214,7 @@ ds.product =
     attribute site-section { ds.type.alphanumeric }?,
     ## Whether to sort docsets of this product Z-A9-0 (`descending`, default) or 0-9A-Z (`ascending`)
     attribute docset-sort { "ascending" | "descending" }?,
+    ds.gated.attr?,
     ds.name,
     ds.sortname?,
     ds.acronym?,
@@ -331,6 +339,8 @@ ds.docset =
     ## * `hidden` for navigational pages not linked from the homepage
     ## * `disabled` to disable creation of a navigational page
     attribute navigation { "linked" | "hidden" | "disabled" }?,
+    #
+    ds.gated.attr?,
     # To allow for name changes between versions, as in the example of SUSE
     # Cloud -> SUSE OpenStack Cloud: optional ds.name here
     ds.name?,
@@ -510,6 +520,8 @@ ds.deliverable =
     ## * the order of values must be `title`, `subtitle`, `docset`/`product`
     ## Default: `title subtitle`
     attribute titleformat { ds.type.titleformat.build }?,
+    #
+    ds.gated.attr?,
     ds.subdir?,
     ds.dc,
     ds.format+,
@@ -671,6 +683,7 @@ ds.link =
     ## * the order of values must be `title`, `docset`
     ## Default: `title`
     attribute titleformat { ds.type.titleformat.link }?,
+    ds.gated.attr?,
     ds.linklanguage_default,
     ds.linklanguage_translation*
   }

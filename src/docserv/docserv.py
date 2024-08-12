@@ -6,8 +6,8 @@ from logging.config import fileConfig
 import multiprocessing
 import os
 import queue
-import shlex
-import subprocess
+
+
 import sys
 import threading
 import tempfile
@@ -22,7 +22,7 @@ from .deliverable import Deliverable
 from .functions import print_help
 from .rest import RESTServer, ThreadedRESTServer
 from .navigation import init_jinja_template
-from .util import run
+from .util import run, replace_placeholders
 
 
 logger = logging.getLogger(__name__)
@@ -270,31 +270,6 @@ class DocservConfig:
         #    # is the location of the INI).
         #    return path if os.path.isabs(path) else os.path.join(CONF_DIR, path)
 
-
-        def replace_placeholders(path: str, currenttargetname: str) -> str:
-            """Replace placeholder in curly brackets notation
-            """
-            servername = self.config['server']['name']
-            return path.format(
-                # the project directory where to find the Docserv INI file
-                projectdir=PROJECT_DIR,
-                # The current name of the server (=docserv ini filename)
-                servername=servername,
-                # The current target name that is processed
-                targetname=currenttargetname,
-                # the config directory
-                configdir=CONF_DIR,
-                # the cache directory
-                cachedir=CACHE_DIR,
-                # cache dir plus servername and targetname
-                fullcachedir=os.path.join(CACHE_DIR,
-                               servername,
-                               currenttargetname,
-                               ),
-                # The docserv directory where all source code is stored
-                codedir=DOCSERV_CODE_DIR,
-            )
-
         config = configparser()
         if len(argv) == 1:
             self.config_file = "my-site"
@@ -307,14 +282,20 @@ class DocservConfig:
         self.config = {}
         try:
             self.config['server'] = {}
-            self.config['server']['name'] = self.config_file
+            servername = self.config['server']['name'] = self.config_file
             self.config['server']['loglevel'] = int(
                 config['server']['loglevel'])
             self.config['server']['host'] = config['server']['host']
             self.config['server']['port'] = int(config['server']['port'])
             self.config['server']['enable_mail'] = config['server']['enable_mail']
-            self.config['server']['repo_dir'] = replace_placeholders(config['server']['repo_dir'], "")
-            self.config['server']['temp_repo_dir'] = replace_placeholders(config['server']['temp_repo_dir'], "")
+            self.config['server']['repo_dir'] = replace_placeholders(
+                config['server']['repo_dir'],
+                "",
+                servername)
+            self.config['server']['temp_repo_dir'] = replace_placeholders(
+                config['server']['temp_repo_dir'],
+                "",
+                servername)
             self.config['server']['valid_languages'] = config['server']['valid_languages']
             if config['server']['max_threads'] == 'max':
                 self.config['server']['max_threads'] = multiprocessing.cpu_count()
@@ -332,18 +313,30 @@ class DocservConfig:
 
                 self.config['targets'][secname] = {}
                 self.config['targets'][secname]['name'] = sec
-                self.config['targets'][secname]['template_dir'] = replace_placeholders(sec['template_dir'], secname)
+                self.config['targets'][secname]['template_dir'] = replace_placeholders(
+                    sec['template_dir'],
+                    secname,
+                    servername)
                 # Jinja directories
-                jinja_template_dir = replace_placeholders(sec['jinja_template_dir'], secname)
+                jinja_template_dir = replace_placeholders(
+                    sec['jinja_template_dir'],
+                    secname,
+                    servername)
                 self.config['targets'][secname]['jinja_template_dir'] = jinja_template_dir
                 logger.debug("  For target=%s using jinja_template_dir=%s", secname, jinja_template_dir)
 
                 self.config['targets'][secname]['jinja_env'] = init_jinja_template(
                     self.config['targets'][secname]['jinja_template_dir']
                 )
-                self.config['targets'][secname]['jinjacontext_home'] = replace_placeholders(sec['jinjacontext_home'], secname)
+                self.config['targets'][secname]['jinjacontext_home'] = replace_placeholders(
+                    sec['jinjacontext_home'],
+                    secname,
+                    servername)
                 # Jinja Templates
-                self.config['targets'][secname]['jinja_template_home'] = replace_placeholders(sec['jinja_template_home'], secname)
+                self.config['targets'][secname]['jinja_template_home'] = replace_placeholders(
+                    sec['jinja_template_home'],
+                    secname,
+                    servername)
                 self.config['targets'][secname]['jinja_template_index'] = sec['jinja_template_index']
                 self.config['targets'][secname]['jinja_template_trd'] = sec['jinja_template_trd']
                 #
@@ -351,12 +344,21 @@ class DocservConfig:
                 self.config['targets'][secname]['draft'] = sec['draft']
                 self.config['targets'][secname]['remarks'] = sec['remarks']
                 self.config['targets'][secname]['meta'] = sec['meta']
-                self.config['targets'][secname]['default_xslt_params'] = replace_placeholders(sec['default_xslt_params'], secname)
+                self.config['targets'][secname]['default_xslt_params'] = replace_placeholders(
+                    sec['default_xslt_params'],
+                    secname,
+                    servername)
                 self.config['targets'][secname]['enable_target_sync'] = sec['enable_target_sync']
                 if sec['enable_target_sync'] == 'yes':
                     self.config['targets'][secname]['target_path'] = sec['target_path']
-                self.config['targets'][secname]['backup_path'] = replace_placeholders(sec['backup_path'], secname)
-                config_dir = replace_placeholders(sec['config_dir'], secname)
+                self.config['targets'][secname]['backup_path'] = replace_placeholders(
+                    sec['backup_path'],
+                    secname,
+                    servername)
+                config_dir = replace_placeholders(
+                    sec['config_dir'],
+                    secname,
+                    servername)
                 self.config['targets'][secname]['config_dir'] = config_dir
                 logger.debug("  For target=%s using config_dir=%s", secname, config_dir)
                 self.config['targets'][secname]['languages'] = sec['languages']
@@ -366,15 +368,24 @@ class DocservConfig:
                 self.config['targets'][secname]['zip_formats'] = sec['zip_formats']
                 self.config['targets'][secname]['server_base_path'] = sec['server_base_path']
                 self.config['targets'][secname]['canonical_url_domain'] = sec['canonical_url_domain']
-                srfiles = replace_placeholders(sec['server_root_files'], secname)
+                srfiles = replace_placeholders(
+                    sec['server_root_files'],
+                    secname,
+                    servername)
                 self.config['targets'][secname]['server_root_files'] = srfiles
                 logger.debug("  For target=%s using server-root-files=%s", secname, srfiles)
 
 
                 self.config['targets'][secname]['enable_ssi_fragments'] = sec['enable_ssi_fragments']
                 if sec['enable_ssi_fragments'] == 'yes':
-                    self.config['targets'][secname]['fragment_dir'] = replace_placeholders(sec['fragment_dir'], secname)
-                    self.config['targets'][secname]['fragment_l10n_dir'] = replace_placeholders(sec['fragment_l10n_dir'], secname)
+                    self.config['targets'][secname]['fragment_dir'] = replace_placeholders(
+                        sec['fragment_dir'],
+                        secname,
+                        servername)
+                    self.config['targets'][secname]['fragment_l10n_dir'] = replace_placeholders(
+                        sec['fragment_l10n_dir'],
+                        secname,
+                        servername)
                 # FIXME: I guess this is not the prettiest way to handle
                 # optional values (but it works for now)
                 self.config['targets'][secname]['build_container'] = False

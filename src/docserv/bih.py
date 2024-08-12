@@ -607,16 +607,15 @@ These are the details:
         # the single-branch repo we clone at the end.
         self.git_lock.acquire()
         for i in range(0, n + 1):
-            cmd = shlex.split(commands[i]['cmd'])
-            logger.debug("Thread %i: %s", thread_id, commands[i]['cmd'])
-            s = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            out, err = s.communicate()
-            if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == int(s.returncode):
+            cmd = commands[i]['cmd']
+            logger.debug("Thread %i: %s", thread_id, cmd)
+            result, out, err = run(cmd)
+
+            if commands[i]['ret_val'] is not None and not commands[i]['ret_val'] == result:
                 logger.warning("Build failed! Unexpected return value %i for '%s'",
-                               s.returncode, commands[i]['cmd'])
-                self.mail(commands[i]['cmd'], out.decode(
-                    'utf-8'), err.decode('utf-8'))
+                               result, cmd,
+                               )
+                self.mail(cmd, out, err)
                 self.initialized = False
                 self.git_lock.release()
                 return False
@@ -628,12 +627,9 @@ These are the details:
         """
         Extract HEAD commit hash from branch.
         """
-        cmd = shlex.split("git -C "+self.local_repo_build_dir +
-                          " log --format=\"%H\" -n 1")
-        s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        self.build_instruction['commit'] = s.communicate()[
-            0].decode('utf-8').rstrip()
+        cmd = f"git -C {self.local_repo_build_dir} log --format=\"%H\" -n 1"
+        _, out, _ = run(cmd)
+        self.build_instruction['commit'] = out.rstrip()
         logger.debug("Current commit hash: %s",
                      self.build_instruction['commit'])
 
@@ -723,7 +719,7 @@ These are the details:
             pass
 
         logger.debug("Generating deliverables.")
-        xpath = "//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/deliverable" % (
+        xpath = ".//product[@productid='%s']/docset[@setid='%s']/builddocs/language[@lang='%s']/deliverable" % (
             self.product, self.docset, self.lang)
         for xml_deliverable in self.tree.findall(xpath):
             dc = xml_deliverable.find(".//dc").text

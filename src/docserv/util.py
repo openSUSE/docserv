@@ -3,6 +3,7 @@ import re
 import shlex
 import subprocess
 import os
+import typing as t
 
 from .common import BIN_DIR, CACHE_DIR, CONF_DIR, DOCSERV_CODE_DIR, SHARE_DIR, PROJECT_DIR
 
@@ -14,7 +15,7 @@ curly_pattern = re.compile(r"\{([a-zA-Z0-9._-]+)\}")
 logger = logging.getLogger(__name__)
 
 
-def run(command: str) -> tuple: # tuple[int, bytes, bytes]
+def run(command: str|list[str]) -> tuple[int, str, str]:
     """Run a command as subprocess
 
     :param command: the command to be executed
@@ -22,12 +23,15 @@ def run(command: str) -> tuple: # tuple[int, bytes, bytes]
              the output (bytes) and
              the error message (bytes)
     """
-    cmd = shlex.split(command)
-    s = subprocess.Popen(cmd,
+    if isinstance(command, str):
+        command = shlex.split(t.cast(str, command))
+    logger.debug("Running command: %s", command)
+    s = subprocess.Popen(command,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
     out, err = s.communicate()
-    return int(s.returncode), out.decode("utf-8"), err.decode("utf-8")
+
+    return int(s.returncode), out.decode("utf-8").rstrip(), err.decode("utf-8").rstrip()
 
 
 def replace_placeholders(path: str, currenttargetname: str, servername: str) -> str:
@@ -58,5 +62,5 @@ def replace_placeholders(path: str, currenttargetname: str, servername: str) -> 
     match = curly_pattern.search(path)
     if match:
         raise ValueError(f"Unknown placeholder {match.group(0)!r} in path {path!r}.")
-    logger.debug("Path after replacing placeholders: %s", path)
+    # logger.debug("Path after replacing placeholders: %s", path)
     return path

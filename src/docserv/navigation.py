@@ -42,47 +42,29 @@ def create_cache(cache_path, stitched_cache):
         fh.write(etree.tostring(outroot, encoding='unicode', pretty_print=True))
 
 
-def build_site_section(bih, stitched_config):
+def build_json_home(bih, stitched_config: str) -> None:
     """Create a build navigation JSON
     """
     target = bih.build_instruction['target']
-    product = bih.product
-    docset = bih.docset
-    lang = bih.lang
-    ui_languages = bih.config['server']['valid_languages']
-    site_sections = bih.config['targets'][target]['site_sections']
-    default_site_section =bih.config['targets'][target]['default_site_section']
-    cache_file = "TBD"
-    internal_mode = "false"
-    build_navigation_json = "build-navigation/build-navigation-json.xsl"
-    output_root = "TBD"
+    # product = bih.product
+    # docset = bih.docset
+    # lang = bih.lang
+    server_name = bih.config['server']['name']
+    target = bih.build_instruction['target']
+    homepage_json = os.path.join(SHARE_DIR, "homepage/homepage.xsl")
+    output = os.path.join(CACHE_DIR, server_name, target, "homepage.json")
 
-    # xsltproc \
-    # --stringparam "output_root" "$output_dir/$data_path/" \
-    # --stringparam "cache_file" "$cache_file" \
-    # --stringparam "internal_mode" "$internal_mode" \
-    # --stringparam "ui_languages" "$ui_languages" \
-    # --stringparam "site_sections" "$site_sections_deduped" \
-    # --stringparam "default_site_section" "$default_site_section" \
-    # --stringparam "product" "$this_product" \
-    # --stringparam "docset" "$this_docset" \
-    # "$build_navigation_json" \
-    # "$stitched_config"
-
+    logger.debug("Transforming stitch XML (%r) with (%r)...",
+                 stitched_config, homepage_json,
+                 )
     xml = etree.parse(stitched_config)
-    transform = etree.XSLT(build_navigation_json)
-    result = transform(xml,
-                       output_root=output_root,
-                       cache_file=cache_file,
-                       internal_mode=internal_mode,
-                       ui_languages=ui_languages,
-                       site_sections=site_sections,
-                       default_site_section=default_site_section,
-                       product=product,
-                       docset=docset,
-                       )
-    # Maybe convert from bytes -> unicode?
-    return result
+    transform = etree.XSLT(etree.parse(homepage_json))
+    result = transform(xml)
+    # Save result to file
+    with open(output, "w") as fh:
+        fh.write(str(result))
+    logger.debug("Wrote JSON to %r", output)
+    # return result
 
 
 def list_all_products(config: str):
@@ -186,6 +168,8 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
     # jsondata,
     # default_site_section,
     )
+
+    build_json_home(bih, stitched_config)
 
     # TODO: retrieve them from JSON
     subitems = { # dict[str, list[tuple[str, dict[str, Any]], ...]]

@@ -223,7 +223,7 @@ class BuildInstructionHandler:
                 )
                 """
                 cfg = self.config['targets'][target]
-                commands[n]['cmd'] = render_and_save  # (env, template, output, context)
+                commands[n]['cmd'] = render_and_save  # (env, template, output, context, stitched_config)
                 commands[n]['args'] = (
                     # env
                     cfg['jinja_env'],
@@ -231,6 +231,8 @@ class BuildInstructionHandler:
                     tmp_dir_nav,
                     # context:
                     self,
+                    # stitched_config
+                    self.stitch_tmp_file,
                 )
 
 

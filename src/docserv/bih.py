@@ -316,8 +316,15 @@ class BuildInstructionHandler:
 
             if callable(cmd):
                 # cmd is a function
-                args = commands[i].get('args', tuple())
-                previous_error = cmd(*args)
+                args = commands[i].get('args', None)
+                if args is None:
+                    previous_error = cmd()
+                elif isinstance(args, tuple):
+                    previous_error = cmd(*args)
+                elif isinstance(args, dict):
+                    previous_error = cmd(**args)
+                else:
+                    raise ValueError("Invalid type for args: %s" % type(args))
             else:
                 previous_error = self.call_command(cmd, execute_after_error)
 

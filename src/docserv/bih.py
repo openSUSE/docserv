@@ -274,7 +274,7 @@ class BuildInstructionHandler:
             # remove temp directory for navigation page
             n += 1
             commands[n] = {}
-            commands[n]['cmd'] = "echo rm -rf %s" % tmp_dir_nav
+            commands[n]['cmd'] = "rm -rf %s" % tmp_dir_nav
             commands[n]['execute_after_error'] = True
 
         if hasattr(self, 'tmp_bi_path'):

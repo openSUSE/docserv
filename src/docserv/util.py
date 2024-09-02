@@ -1,6 +1,7 @@
 import logging
 import re
 import shlex
+import shutil
 import subprocess
 import os
 import typing as t
@@ -64,3 +65,10 @@ def replace_placeholders(path: str, currenttargetname: str, servername: str) -> 
         raise ValueError(f"Unknown placeholder {match.group(0)!r} in path {path!r}.")
     # logger.debug("Path after replacing placeholders: %s", path)
     return path
+
+
+def removedir(path: str) -> None:
+    """Remove a directory and all its content
+    """
+    logger.debug("Removing directory: %s", path)
+    shutil.rmtree(path)

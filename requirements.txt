@@ -1,3 +1,4 @@
 lxml
 pygit2
 Jinja2
+cerberus

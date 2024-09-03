@@ -18,3 +18,6 @@ PROJECT_DIR = os.getenv('DOCSERV_PROJECT_DIR', "/tmp/docserv-devel")
 
 #: Contains the path to the Docserv source code
 DOCSERV_CODE_DIR = os.path.join(os.path.dirname(__file__))
+
+#: The file extension of the meta file
+META_FILE_EXT = ".meta"

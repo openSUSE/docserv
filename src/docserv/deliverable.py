@@ -7,8 +7,8 @@ import tempfile
 import time
 from lxml import etree
 
-from docserv.functions import feedback_message, parse_d2d_filelist, resource_to_filename
-from docserv.repolock import RepoLock
+from .functions import feedback_message, parse_d2d_filelist
+from .repolock import RepoLock
 
 logger = logging.getLogger('docserv')
 

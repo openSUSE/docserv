@@ -2,6 +2,7 @@ import hashlib
 import logging
 import os
 import shlex
+import shutil
 import subprocess
 import tempfile
 import time
@@ -9,6 +10,7 @@ from lxml import etree
 
 from .functions import feedback_message, parse_d2d_filelist
 from .repolock import RepoLock
+from .common import META_FILE_EXT
 
 logger = logging.getLogger('docserv')
 
@@ -207,6 +209,10 @@ class Deliverable:
             self.build_format,
             self.dc_file
         )
+        # Move .meta file to the correct location
+        commands[n]['post_cmd_hook'] = 'move_meta_file'
+        self.metafile = os.path.join(tmp_dir_docker, self.dc_file, META_FILE_EXT)
+
 
         # Create correct directory structure
         self.deliverable_relative_path = os.path.join(
@@ -553,6 +559,16 @@ These are the details:
             self.parent.deliverables[self.id]['title'] = self.title
             self.parent.deliverables[self.id]['path'] = self.path
         return command
+
+    def move_meta_file(self, command, thread_id):
+        """
+        Move the .meta file to the correct location.
+        """
+        basename = os.path.basename(self.metafile)
+        target = self.parent.build_instruction['target']
+        jsondir = self.parent.config['targets'][target]['jinja_context_dir']
+
+        shutil.move(self.metafile, os.path.join(jsondir, basename))
 
     def write_deliverable_cache(self, command, thread_id):
         """

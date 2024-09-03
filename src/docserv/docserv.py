@@ -318,6 +318,11 @@ class DocservConfig:
                     secname,
                     servername)
                 # Jinja directories
+                jinja_context_dir = replace_placeholders(
+                    sec['jinja_context_dir'],
+                    secname,
+                    servername)
+                self.config['targets'][secname]['jinja_context_dir'] = jinja_context_dir
                 jinja_template_dir = replace_placeholders(
                     sec['jinja_template_dir'],
                     secname,

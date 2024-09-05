@@ -488,7 +488,7 @@ These are the details:
             return False
 
         try:
-            xpath = "//product[@productid='%s']/maintainers/contact" % (
+            xpath = ".//product[@productid='%s']/maintainers/contact" % (
                 self.product)
             self.maintainers = []
             contacts = self.tree.findall(xpath)

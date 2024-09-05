@@ -211,7 +211,11 @@ class Deliverable:
         )
         # Move .meta file to the correct location
         commands[n]['post_cmd_hook'] = 'move_meta_file'
-        self.metafile = os.path.join(tmp_dir_docker, self.dc_file, META_FILE_EXT)
+        self.metafile = os.path.join(tmp_dir_docker,
+                                     f"{self.dc_file.rstrip('/')}{META_FILE_EXT}"
+                                     )
+        logger.debug("Preparing metafile from DC file=%s => %s",
+                     self.dc_file, self.metafile)
 
 
         # Create correct directory structure
@@ -399,7 +403,6 @@ These are the details:
             send_mail = True
         feedback_message(msg, subject, to, send_mail)
 
-
     def get_output_name_from_filelist(self, command, thread_id):
         """
         Get file name of output document, transform it for copying to
@@ -568,6 +571,8 @@ These are the details:
         target = self.parent.build_instruction['target']
         jsondir = self.parent.config['targets'][target]['jinja_context_dir']
 
+        logger.debug("Metafile: Moving %s to %s", self.metafile, os.path.join(jsondir, basename))
+
         shutil.move(self.metafile, os.path.join(jsondir, basename))
 
     def write_deliverable_cache(self, command, thread_id):
@@ -588,7 +593,9 @@ These are the details:
                               productid=self.parent.build_instruction['product'],
                               setid=self.parent.build_instruction['docset'],
                               dc=self.dc_file,
-                              cachedate=str(int(time.time())))
+                              cachedate=str(int(time.time())),
+                              # nsmap={}
+                              )
 
         etree.SubElement(root, "commit").text = self.parent.deliverables[self.id]['last_build_attempt_commit']
         etree.SubElement(root, "path", format=self.build_format).text = self.path

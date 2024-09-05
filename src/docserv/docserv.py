@@ -443,9 +443,14 @@ class Docserv(DocservState, DocservConfig):
             self.stitch_tmp_dir = f"/tmp/docserv_stitch_{current_date}"
             os.makedirs(self.stitch_tmp_dir, exist_ok=True)
 
+
             # Notably, the config dir can be different for different targets.
             # So, stitch for each.
             for target in self.config['targets']:
+                thisdir = self.config['targets'][target]['jinja_context_dir']
+                os.makedirs(thisdir, exist_ok=True)
+                logger.debug("Created directory %s", thisdir)
+
                 stitch_tmp_file = os.path.join(self.stitch_tmp_dir,
                     ('productconfig_simplified_%s.xml' % target))
                 # Largely copypasta from bih.py cuz I dunno how to share stuff

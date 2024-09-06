@@ -447,9 +447,19 @@ class Docserv(DocservState, DocservConfig):
             # Notably, the config dir can be different for different targets.
             # So, stitch for each.
             for target in self.config['targets']:
-                thisdir = self.config['targets'][target]['jinja_context_dir']
-                os.makedirs(thisdir, exist_ok=True)
-                logger.debug("Created directory %s", thisdir)
+                sec = self.config['targets'][target]
+                # Create directories if they don't exist
+                for item in ('jinja_context_dir',
+                             'jinja_template_dir',
+                             ):
+                    thisdir = sec.get(item)
+                    if thisdir is not None:
+                        # Could possible throw PermissionError:
+                        # [Errno 13] Permission denied
+                        os.makedirs(thisdir, exist_ok=True)
+                        logger.debug("Created directory %r", thisdir)
+                    else:
+                        logger.warning("Key %r not found", item)
 
                 stitch_tmp_file = os.path.join(self.stitch_tmp_dir,
                     ('productconfig_simplified_%s.xml' % target))

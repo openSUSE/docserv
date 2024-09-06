@@ -571,13 +571,14 @@ These are the details:
         target = self.parent.build_instruction['target']
         product = self.parent.build_instruction['product']
         docset = self.parent.build_instruction['docset']
+        lang = self.parent.build_instruction['lang']
         jinja_ctx_dir = self.parent.config['targets'][target]['jinja_context_dir']
 
         # If two different projects happen to contain the same DC filename,
         # one project overwrites the other.
-        # To mitigate this, we need to create subdirs {product}/{docset}
+        # To mitigate this, we need to create subdirs {lang}/{product}/{docset}
         # under jinja_ctx_dir.
-        partdir = os.path.join(jinja_ctx_dir, product, docset)
+        partdir = os.path.join(jinja_ctx_dir, lang, product, docset)
         os.makedirs(partdir, exist_ok=True)
         logger.debug("Created directory for metafile %s", partdir)
         logger.debug("Metafile: Moving %s to %s", self.metafile, os.path.join(partdir, basename))

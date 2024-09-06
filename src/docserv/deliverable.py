@@ -569,11 +569,20 @@ These are the details:
         """
         basename = os.path.basename(self.metafile)
         target = self.parent.build_instruction['target']
-        jsondir = self.parent.config['targets'][target]['jinja_context_dir']
+        product = self.parent.build_instruction['product']
+        docset = self.parent.build_instruction['docset']
+        jinja_ctx_dir = self.parent.config['targets'][target]['jinja_context_dir']
 
-        logger.debug("Metafile: Moving %s to %s", self.metafile, os.path.join(jsondir, basename))
+        # If two different projects happen to contain the same DC filename,
+        # one project overwrites the other.
+        # To mitigate this, we need to create subdirs {product}/{docset}
+        # under jinja_ctx_dir.
+        partdir = os.path.join(jinja_ctx_dir, product, docset)
+        os.makedirs(partdir, exist_ok=True)
+        logger.debug("Created directory for metafile %s", partdir)
+        logger.debug("Metafile: Moving %s to %s", self.metafile, os.path.join(partdir, basename))
 
-        shutil.move(self.metafile, os.path.join(jsondir, basename))
+        shutil.move(self.metafile, os.path.join(partdir, basename))
 
     def write_deliverable_cache(self, command, thread_id):
         """

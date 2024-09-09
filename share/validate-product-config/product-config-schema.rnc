@@ -335,6 +335,7 @@ ds.desc_translation =
     ## Language code (`la-ng` style) of this description
     ds.lang.attr,
     ds.default.false.attr?,
+    ds.shortdesc?,
     ds.htmlblock*
   }
 
@@ -553,8 +554,8 @@ ds.deliverable =
     ds.meta.attr?,
     ds.category.attr?,
     ds.titleformat.attr?,
-    #
     ds.gated.attr?,
+    #
     ds.subdir?,
     ds.dc,
     ds.format+,
@@ -569,6 +570,7 @@ ds.deliverable_subdeliverable =
     ds.draft.attr?,
     ds.meta.attr?,
     ds.subdir?,
+    ds.gated.attr?,
     ds.dc,
     ds.format+,
     ds.param*,
@@ -616,6 +618,7 @@ ds.subdeliverable =
 ds.deliverablerestricted =
   ## An individual DAPS-compatible document that is a DocBook set/book that includes articles/book (dependent languages)
   element deliverable {
+    ds.gated.attr?,
     ds.subdir?,
     ds.dc,
     ds.subdeliverablerestricted*

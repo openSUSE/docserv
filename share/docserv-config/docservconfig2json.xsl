@@ -14,21 +14,23 @@
   <xsl:output method="text"/>
   <xsl:strip-space elements="*"/>
 
-  <!-- Define a key that captures all docset elements in the document -->
-  <xsl:key name="all-docsets" match="docset" use="generate-id()"/>
+  <!-- Parameters -->
+  <xsl:param name="add-empty-docs" select="true()" />
 
 
   <xsl:template match="/docservconfig">
     <xsl:text>[&#10;</xsl:text>
-<!--    <xsl:apply-templates select="product/docset"/>-->
+    <!--  <xsl:apply-templates select="product/docset"/>-->
     <xsl:for-each select="product/docset">
-      <xsl:apply-templates select=".">
-        <xsl:with-param name="pos" select="position()"/>
-        <xsl:with-param name="last" select="last()"/>
-      </xsl:apply-templates>
+      <xsl:if test="@lifecycle = 'supported'">
+        <xsl:apply-templates select=".">
+          <xsl:with-param name="pos" select="position()"/>
+          <xsl:with-param name="last" select="last()"/>
+        </xsl:apply-templates>
+      </xsl:if>
     </xsl:for-each>
     <xsl:text>]&#10;</xsl:text>
-<!--    <xsl:text>}&#10;</xsl:text>-->
+    <!-- <xsl:text>}&#10;</xsl:text>-->
   </xsl:template>
 
   <!-- Ignored elements -->
@@ -47,7 +49,6 @@
     <xsl:apply-templates select="@setid"/>
     <xsl:apply-templates select="@lifecycle"/>
 
-    <xsl:variable name="next-docset-id" select="key('all-docsets', generate-id())/following-sibling::docset"/>
     <xsl:text>  "descriptions": [&#10;</xsl:text>
     <xsl:apply-templates select="$product/desc">
       <xsl:with-param name="docset" select="."/>
@@ -55,15 +56,24 @@
     <xsl:text>  ],&#10;</xsl:text>
 
     <xsl:text>  "documents": [</xsl:text>
-<!--    <xsl:apply-templates select="builddocs/language"/>-->
     <!-- This needs to be filled from daps metadata and docserv config -->
-    <xsl:text>    {&#10;</xsl:text>
-    <xsl:text>       "docs": [],&#10;</xsl:text>
-    <xsl:text>       "products": [],&#10;</xsl:text>
-    <xsl:text>       "docTypes": [],&#10;</xsl:text>
-    <xsl:text>       "isGated": false,&#10;</xsl:text>
-    <xsl:text>       "rank": "2"&#10;</xsl:text>
-    <xsl:text>    }&#10;</xsl:text>
+    <xsl:if test="$add-empty-docs">
+      <xsl:text>    {&#10;</xsl:text>
+      <xsl:text>       "docs": [&#10;</xsl:text>
+      <xsl:for-each select="builddocs/language/deliverable">
+        <xsl:apply-templates select=".">
+          <xsl:with-param name="pos" select="position()"/>
+          <xsl:with-param name="last" select="last()"/>
+        </xsl:apply-templates>
+      </xsl:for-each>
+      <xsl:text>       ],&#10;</xsl:text>
+      <xsl:text>       "tasks": [],&#10;</xsl:text>
+      <xsl:text>       "products": [],&#10;</xsl:text>
+      <xsl:text>       "docTypes": [],&#10;</xsl:text>
+      <xsl:text>       "isGated": false,&#10;</xsl:text>
+      <xsl:text>       "rank": "2"&#10;</xsl:text>
+      <xsl:text>    }&#10;</xsl:text>
+    </xsl:if>
     <xsl:text>  ],&#10;</xsl:text>
 
     <xsl:text>  "archives": [</xsl:text>
@@ -226,11 +236,63 @@
   </xsl:template>
 
 
-  <xsl:template match="builddocs/language">
-    <xsl:text>  {&#10;</xsl:text>
-    <xsl:text>  }</xsl:text>
-    <xsl:if test="following-sibling::language">,</xsl:if>
+  <xsl:template match="language"><!-- [@default='1' or @default='true'] -->
+    <xsl:param name="pos" select="0"/>
+    <xsl:param name="last" select="0"/>
+    <xsl:message>Found language</xsl:message>
+    <xsl:apply-templates select="deliverable" />
+    <xsl:if test="$pos != $last">,</xsl:if>
     <xsl:text>&#10;</xsl:text>
   </xsl:template>
 
+
+  <xsl:template match="deliverable">
+    <xsl:param name="pos" select="0" />
+    <xsl:param name="last" select="0" />
+    <xsl:variable name="thisdc" select="dc"/>
+    <xsl:variable name="parent" select="parent::*[1]"/>
+    <xsl:variable name="default">
+      <xsl:choose>
+        <xsl:when test="../@default = '1' or ../@default = 'true'">true</xsl:when>
+        <xsl:otherwise>false</xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
+    <xsl:variable name="lang" select="../@lang"/>
+
+    <xsl:text>    {&#10;</xsl:text>
+    <xsl:text>      "lang": </xsl:text>
+    <xsl:value-of select="concat('&quot;', $lang, '&quot;,&#10;')"/>
+    <xsl:text>      "default": </xsl:text>
+    <xsl:value-of select="concat($default, ',&#10;')"/>
+    <xsl:text>      "title": "",&#10;</xsl:text>
+    <xsl:text>      "subtitle": "",&#10;</xsl:text>
+    <xsl:text>      "description": "",&#10;</xsl:text>
+    <xsl:text>      "dcfile": </xsl:text>
+    <xsl:value-of select="concat('&quot;', dc, '&quot;,&#10;')" />
+    <xsl:text>      "formats": {</xsl:text>
+    <xsl:choose>
+      <xsl:when test="format">
+        <xsl:apply-templates select="format" />
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:apply-templates select="parent::*/parent::*/language[@default='1']/deliverable[dc=$thisdc]/format" />
+      </xsl:otherwise>
+    </xsl:choose>
+
+    <xsl:text>},&#10;</xsl:text>
+    <xsl:text>      "dateModified": ""&#10;</xsl:text>
+    <xsl:text>    }</xsl:text>
+    <xsl:if test="$pos != $last">,</xsl:if>
+    <xsl:text>&#10;</xsl:text>
+  </xsl:template>
+
+
+  <xsl:template match="format">
+    <xsl:for-each select="@*[. = '1' or . = 'true']">
+       <xsl:value-of select="concat('&quot;', name(.), '&quot;: &quot;&quot;')"/>
+       <xsl:if test="position() != last()">
+          <xsl:text>, </xsl:text>
+       </xsl:if>
+  </xsl:for-each>
+  </xsl:template>
 </xsl:stylesheet>

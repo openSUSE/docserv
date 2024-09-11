@@ -1,4 +1,5 @@
 # RELAX NG Schema for Docserv² product configuration
+namespace a = "http://relaxng.org/ns/compatibility/annotations/1.0"
 
 # BASICS
 
@@ -187,8 +188,76 @@ ds.htmlinlinecontent =
 }
 
 
+# Common attributes
+ds.gated.attr =
+  ## Is the content behind a paywall? (default "false")
+  [ a:defaultValue = "false" ] attribute gated { xsd:boolean }
 
-# ROOT
+ds.lang.attr =
+  ## Language code (`la-ng` style) of this description
+  attribute lang { ds.type.lang }
+
+ds.default.true.attr =
+    ## Whether this is the default language (must be true for initial `<desc/>` element)
+    attribute default { ds.true.enum }
+
+ds.default.false.attr =
+    ## Whether this is the default language (must be true for initial `<desc/>` element)
+    attribute default { ds.false.enum }
+
+ds.title.attr =
+    ## Localized title of description
+    attribute title { text }
+
+ds.titleformat.attr =
+  ## How to display the document title on the product version navigational page, a combination of the following values:
+  ## * `title`: title as extracted from the document
+  ## * `subtitle`: subtitle as extracted from the document (can be empty)
+  ## * `docset`: product and version number as classified in the Docserv² product configuration
+  ## * `product`: product and version number as extracted from the document (can be empty)
+  ## Note the following:
+  ## * `title` is mandatory
+  ## * `docset` and `product` are mutually exclusive.
+  ## * the order of values must be `title`, `subtitle`, `docset`/`product`
+  ## Default: `title subtitle`
+  attribute titleformat { ds.type.titleformat.build }
+
+
+ds.category.attr =
+  ## What category or categories to display this document under on the product version navigational page
+  attribute category { ds.type.idmulti }
+
+ds.includes-productname.attr =
+  ## * <version/> is a normal version (number) that is normally combined with a
+  ##   product name and shown in all situations. When @includes-productname=true is
+  ##   set for <version/>, we will always only display the <version/> text rather
+  ##   than displaying the product name alongside it.
+  ## * <listingversion/> is also a version (number), also normally combined with a
+  ##   product name. However, it is only ever shown on the home page's selection
+  ##   boxes, but not used within internal references or for product pages.
+  attribute includes-productname { xsd:boolean }
+
+ds.remarks.attr =
+  ## Enable DocBook remarks in this document (`daps ... --remarks`;
+  ## the default value varies depending on the site configuration)
+  attribute remarks { xsd:boolean }
+
+ds.draft.attr =
+  ## Enable DocBook draft watermark in this document (`daps ... --draft`;
+  ## the default value varies depending on the site configuration and product lifecycle)
+  attribute draft { xsd:boolean }
+
+ds.meta.attr =
+  ## Enable DocBook meta information in this document (`daps ... --meta`;
+  ## the default value varies depending on the site configuration)
+  attribute meta { xsd:boolean }
+
+ds.href.attr =
+  ## Target URL for the link (if the URL has no protocol prefix, the link is assumed
+  ## to be local to the current host and a `/` will be added automatically)
+  attribute href { xsd:anyURI }
+
+# --- ROOT ---
 
 ds.product =
   ## Product (or top-level category, root element)
@@ -207,6 +276,7 @@ ds.product =
     attribute site-section { ds.type.alphanumeric }?,
     ## Whether to sort docsets of this product Z-A9-0 (`descending`, default) or 0-9A-Z (`ascending`)
     attribute docset-sort { "ascending" | "descending" }?,
+    ds.gated.attr?,
     ds.name,
     ds.sortname?,
     ds.acronym?,
@@ -253,10 +323,8 @@ ds.contact =
 ds.desc_default =
   ## Description of product or top-level category (default language)
   element desc {
-    ## Language code (`la-ng` style) of this description
-    attribute lang { ds.type.lang },
-    ## Whether this is the default language (must be true for initial `<desc/>` element)
-    attribute default { ds.true.enum },
+    ds.lang.attr,
+    ds.default.true.attr,
     ds.shortdesc?,
     ds.htmlblock+
   }
@@ -265,9 +333,9 @@ ds.desc_translation =
   ## Description of product or top-level category (dependent languages)
   element desc {
     ## Language code (`la-ng` style) of this description
-    attribute lang { ds.type.lang },
-    ## Whether this is the default language (must be false for subsequent `<desc/>` elements)
-    attribute default { ds.false.enum }?,
+    ds.lang.attr,
+    ds.default.false.attr?,
+    ds.shortdesc?,
     ds.htmlblock*
   }
 
@@ -292,23 +360,17 @@ ds.category =
 ds.categorylanguage_default =
   ## Metadata for category displayed on product detail navigational page (default language, third-level category)
   element language {
-    ## Language code (`la-ng` style) of category metadata
-    attribute lang { ds.type.lang },
-    ## Whether this is the default language (must be true for initial `<language/>` element)
-    attribute default { ds.true.enum },
-    ## Localized title of description
-    attribute title { text },
+    ds.lang.attr,
+    ds.default.true.attr,
+    ds.title.attr,
     ds.htmlblock*
   }
 ds.categorylanguage_translation =
   ## Metadata for category displayed on product detail navigational page (dependent languages, third-level category)
   element language {
-    ## Language code (`la-ng` style) of category metadata
-    attribute lang { ds.type.lang },
-    ## Whether this is the default language (must be false for subsequent `<language/>` elements)
-    attribute default { ds.false.enum }?,
-    ## Localized title of description
-    attribute title { text },
+    ds.lang.attr,
+    ds.default.false.attr?,
+    ds.title.attr,
     ds.htmlblock*
   }
 
@@ -331,6 +393,8 @@ ds.docset =
     ## * `hidden` for navigational pages not linked from the homepage
     ## * `disabled` to disable creation of a navigational page
     attribute navigation { "linked" | "hidden" | "disabled" }?,
+    #
+    ds.gated.attr?,
     # To allow for name changes between versions, as in the example of SUSE
     # Cloud -> SUSE OpenStack Cloud: optional ds.name here
     ds.name?,
@@ -365,7 +429,7 @@ ds.version =
   ## User-visible version number (or name of second-level category)
   element version {
     ## Whether the version number name includes the product name (default: `false`)
-    attribute includes-productname { xsd:boolean }?,
+    ds.includes-productname.attr?,
     text
   }
 ds.canonical =
@@ -377,7 +441,7 @@ ds.listingversion =
   ## User-visible version number (or name of second-level category) displayed in homepage listing
   element listingversion {
     ## Whether the version number name includes the product name (default: `false`)
-    attribute includes-productname { xsd:boolean }?,
+    ds.includes-productname.attr?,
     text
   }
 
@@ -431,10 +495,8 @@ ds.buildcontainer =
 ds.language_default =
   ## Set of documents to build (default language, must list full set of documents available for product version)
   element language {
-    ## Language code (`la-ng` style) of documents to build in this context
-    attribute lang { ds.type.lang },
-    ## Whether this is the default language (must be true for initial `<language/>` element)
-    attribute default { ds.true.enum },
+    ds.lang.attr,
+    ds.default.true.attr,
     ds.branch,
     ds.subdir?,
     (
@@ -445,10 +507,8 @@ ds.language_default =
 ds.language_translation_list =
   ## Set of documents to build (dependent languages, lists a subset of documents available in the default language)
   element language {
-    ## Language code (`la-ng` style) of documents to build in this context
-    attribute lang { ds.type.lang },
-    ## Whether this is the default language (must be false for subsequent `<language/>` element)
-    attribute default { ds.false.enum }?,
+    ds.lang.attr,
+    ds.default.false.attr?,
     ## Documents to build for this language are a subset of documents available in the default language
     attribute translation-type { "list" },
     ds.branch?,
@@ -458,10 +518,8 @@ ds.language_translation_list =
 ds.language_translation_full =
   ## Set of documents to build (dependent languages, set of documents matches documents available in default language)
   element language {
-    ## Language code (`la-ng` style) of documents to build in this context
-    attribute lang { ds.type.lang },
-    ## Whether this is the default language (must be false for subsequent `<language/>` element)
-    attribute default { ds.false.enum }?,
+    ds.lang.attr,
+    ds.default.false.attr?,
     ## Documents to build for this language match the documents available in the default language
     attribute translation-type { "full" },
     ds.branch?,
@@ -491,25 +549,13 @@ ds.partners =
 ds.deliverable =
   ## An individual DAPS-compatible document built on its own (default language)
   element deliverable {
-    ## Enable DocBook remarks in this document (`daps ... --remarks`; the default value varies depending on the site configuration)
-    attribute remarks { xsd:boolean }?,
-    ## Enable DocBook draft watermark in this document (`daps ... --draft`; the default value varies depending on the site configuration and product lifecycle)
-    attribute draft { xsd:boolean }?,
-    ## Enable DocBook meta information in this document (`daps ... --meta`; the default value varies depending on the site configuration)
-    attribute meta { xsd:boolean }?,
-    ## What category or categories to display this document under on the product version navigational page
-    attribute category { ds.type.idmulti }?,
-    ## How to display the document title on the product version navigational page, a combination of the following values:
-    ## * `title`: title as extracted from the document
-    ## * `subtitle`: subtitle as extracted from the document (can be empty)
-    ## * `docset`: product and version number as classified in the Docserv² product configuration
-    ## * `product`: product and version number as extracted from the document (can be empty)
-    ## Note the following:
-    ## * `title` is mandatory
-    ## * `docset` and `product` are mutually exclusive.
-    ## * the order of values must be `title`, `subtitle`, `docset`/`product`
-    ## Default: `title subtitle`
-    attribute titleformat { ds.type.titleformat.build }?,
+    ds.remarks.attr?,
+    ds.draft.attr?,
+    ds.meta.attr?,
+    ds.category.attr?,
+    ds.titleformat.attr?,
+    ds.gated.attr?,
+    #
     ds.subdir?,
     ds.dc,
     ds.format+,
@@ -520,13 +566,11 @@ ds.deliverable =
 ds.deliverable_subdeliverable =
   ## An individual DAPS-compatible document that is a DocBook set/book that includes articles/book (default language)
   element deliverable {
-    ## Enable DocBook remarks in this document (`daps ... --remarks`; the default value varies depending on the site configuration)
-    attribute remarks { xsd:boolean }?,
-    ## Enable DocBook draft watermark in this document (`daps ... --draft`; the default value varies depending on the site configuration and product lifecycle)
-    attribute draft { xsd:boolean }?,
-    ## Enable DocBook meta information in this document (`daps ... --meta`; the default value varies depending on the site configuration)
-    attribute meta { xsd:boolean }?,
+    ds.remarks.attr?,
+    ds.draft.attr?,
+    ds.meta.attr?,
     ds.subdir?,
+    ds.gated.attr?,
     ds.dc,
     ds.format+,
     ds.param*,
@@ -566,24 +610,15 @@ ds.param =
 ds.subdeliverable =
   ## Individual document within a DocBook set as identified by their XML ID (default language)
   element subdeliverable {
-    attribute category { ds.type.idmulti }?,
-    ## How to display the document title on the product version navigational page, a combination of the following values:
-    ## * `title`: title as extracted from the document
-    ## * `subtitle`: subtitle as extracted from the document (can be empty)
-    ## * `docset`: product and version number as classified in the Docserv² product configuration
-    ## * `product`: product and version number as extracted from the document (can be empty)
-    ## Note the following:
-    ## * `title` is mandatory
-    ## * `docset` and `product` are mutually exclusive.
-    ## * the order of values must be `title`, `subtitle`, `docset`/`product`
-    ## Default: `title subtitle`
-    attribute titleformat { ds.type.titleformat.build }?,
+    ds.category.attr?,
+    ds.titleformat.attr?,
     ds.type.id
   }
 
 ds.deliverablerestricted =
   ## An individual DAPS-compatible document that is a DocBook set/book that includes articles/book (dependent languages)
   element deliverable {
+    ds.gated.attr?,
     ds.subdir?,
     ds.dc,
     ds.subdeliverablerestricted*
@@ -625,17 +660,7 @@ ds.ref =
            attribute dc { ds.type.id },
            ## Subdeliverable (DocBook/AsciiDoc ID) of referenced document
            attribute subdeliverable { ds.type.id }?,
-           ## How to display the document title on the product version navigational page, a combination of the following values:
-           ## * `title`: title as extracted from the document
-           ## * `subtitle`: subtitle as extracted from the document (can be empty)
-           ## * `docset`: product and version number as classified in the Docserv² product configuration
-           ## * `product`: product and version number as extracted from the document (can be empty)
-           ## Note the following:
-           ## * `title` is mandatory
-           ## * `docset` and `product` are mutually exclusive.
-           ## * the order of values must be `title`, `subtitle`, `docset`/`product`
-           ## Default: `title subtitle docset`
-           attribute titleformat { ds.type.titleformat.build }?) |
+           ds.titleformat.attr?) |
           (attribute link { ds.type.id },
            ## How to display the document title on the product version navigational page, a combination of the following values:
            ## * `title`: title as extracted from the document
@@ -648,7 +673,7 @@ ds.ref =
         )
       )
     ),
-    attribute category { ds.type.idmulti }?,
+    ds.category.attr?,
     empty
   }
 
@@ -662,7 +687,7 @@ ds.link =
   ## Collection of URLs for a single externally-hosted document in different languages and formats
   element link {
     attribute linkid { ds.type.id }?,
-    attribute category { ds.type.idmulti }?,
+    ds.category.attr?,
     ## How to display the document title on the product version navigational page, a combination of the following values:
     ## * `title`: title as extracted from the document
     ## * `docset`: product and version number as classified in the Docserv² product configuration
@@ -671,6 +696,7 @@ ds.link =
     ## * the order of values must be `title`, `docset`
     ## Default: `title`
     attribute titleformat { ds.type.titleformat.link }?,
+    ds.gated.attr?,
     ds.linklanguage_default,
     ds.linklanguage_translation*
   }
@@ -678,32 +704,26 @@ ds.link =
 ds.linklanguage_default =
   ## Collection of URLs for a single externally-hosted document in different formats (default language)
   element language {
-    ## Language code (`la-ng` style) of this link
-    attribute lang { ds.type.lang }?,
+    ds.lang.attr?,
     ## Whether this is the default language (must be `false` for initial `<language/>` element)
-    attribute default { ds.true.enum },
-    ## Localized title of the link
-    attribute title { text },
+    ds.default.true.attr,
+    ds.title.attr,
     ds.url+
   }
 
 ds.linklanguage_translation =
   ## Collection of URLs for a single externally-hosted document in different formats (dependent languages)
   element language {
-    ## Language code (`la-ng` style) of this link
-    attribute lang { ds.type.lang }?,
-    ## Whether this is the default language (must be `false` for subsequent `<language/>` elements)
-    attribute default { ds.false.enum }?,
-    ## Localized title of the link
-    attribute title { text },
+    ds.lang.attr?,
+    ds.default.false.attr?,
+    ds.title.attr,
     ds.url+
   }
 
 ds.url =
   ## URL of externally-hosted document
   element url {
-    ## Target URL for the link (if the URL has no protocol prefix, the link is assumed to be local to the current host and a `/` will be added automatically)
-    attribute href { xsd:anyURI },
+    ds.href.attr,
     ## Target file format of the link for display in the UI
     attribute format { "html" | "single-html" | "pdf" | "epub" | "zip" | "tar" | "other" },
     empty
@@ -854,8 +874,7 @@ ds.em =
 ds.a =
   ## Web link (HTML, inline)
   element a {
-    ## Target URL of the link
-    attribute href { xsd:anyURI },
+    ds.href.attr,
     ## Whether to open the link in a new tab/window (`_blank`)
     attribute target { "_blank" }?,
     ## Attributes of the link:

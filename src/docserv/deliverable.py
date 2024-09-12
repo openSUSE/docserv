@@ -598,6 +598,9 @@ These are the details:
         if self.parent.lifecycle == "unsupported":
             return command
 
+	# TODO: Call "daps metadata" and parse the output
+	# Add the tags <date>, <seo-title>, <seo-description>, <tasks>, and <series>
+
         root = etree.Element('document',
                               lang=self.parent.build_instruction['lang'],
                               productid=self.parent.build_instruction['product'],

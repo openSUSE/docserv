@@ -210,13 +210,12 @@ class Deliverable:
             self.build_format,
             self.dc_file
         )
-        # Move .meta file to the correct location
-        commands[n]['post_cmd_hook'] = 'move_meta_file'
+        # Define .meta file
         self.metafile = os.path.join(tmp_dir_docker,
-                                     f"{self.dc_file.rstrip('/')}{META_FILE_EXT}"
-                                     )
+                                      f"{self.dc_file.rstrip('/')}{META_FILE_EXT}"
+                                      )
         logger.debug("Preparing metafile from DC file=%s => %s",
-                     self.dc_file, self.metafile)
+                      self.dc_file, self.metafile)
 
 
         # Create correct directory structure
@@ -237,6 +236,11 @@ class Deliverable:
         commands[n] = {}
         commands[n]['cmd'] = "/usr/bin/mkdir -p %s" % (tmp_build_full_path)
 
+        n += 1
+        commands[n] = {}
+        # commands[n]['cmd'] =
+        commands[n]['post_cmd_hook'] = 'move_meta_file'
+
         # Copy wanted files to temp build instruction directory
         n += 1
         commands[n] = {}
@@ -251,6 +255,13 @@ class Deliverable:
             self.docset_relative_path,
             self.build_format,
         )
+        self.meta_cache_dir = os.path.join(
+            self.parent.deliverable_cache_base_dir,
+            self.parent.build_instruction['target'],
+            self.docset_relative_path,
+            "meta",
+        )
+
         n += 1
         commands[n] = {}
         commands[n]['cmd'] = "mkdir -p %s" % self.deliverable_cache_dir
@@ -557,23 +568,91 @@ These are the details:
         """
         Move the .meta file to the correct location.
         """
-        basename = os.path.basename(self.metafile)
-        target = self.parent.build_instruction['target']
-        product = self.parent.build_instruction['product']
-        docset = self.parent.build_instruction['docset']
-        lang = self.parent.build_instruction['lang']
-        jinja_ctx_dir = self.parent.config['targets'][target]['jinja_context_dir']
+        logger.debug("Metafile: Moving %s to %s",
+                     self.metafile,
+                     os.path.join(self.meta_cache_dir, f"{self.dc_file}.meta"))
 
-        # If two different projects happen to contain the same DC filename,
-        # one project overwrites the other.
-        # To mitigate this, we need to create subdirs {lang}/{product}/{docset}
-        # under jinja_ctx_dir.
-        partdir = os.path.join(jinja_ctx_dir, lang, product, docset)
-        os.makedirs(partdir, exist_ok=True)
-        logger.debug("Created directory for metafile %s", partdir)
-        logger.debug("Metafile: Moving %s to %s", self.metafile, os.path.join(partdir, basename))
+        target = os.path.join(self.meta_cache_dir, f"{self.dc_file}.meta")
 
-        shutil.move(self.metafile, os.path.join(partdir, basename))
+        if not os.path.exists(self.metafile):
+            logger.error("Metafile %s does not exist", self.metafile)
+            return False
+        else:
+            # Maybe the meta data is overwritten by the next build.
+            # If html was built and pdf is built next, the meta data is overwritten.
+            # It should not do any harm unless all builds are from the same build.
+            os.makedirs(self.meta_cache_dir, exist_ok=True)
+            shutil.move(self.metafile, target)
+            return True
+
+    def loadmeta(self) -> dict:
+        """Load a .meta file and return it as a dictionary
+
+        :return: The .meta file as a dictionary
+        """
+        metafile = os.path.join(self.meta_cache_dir, f"{self.dc_file}.meta")
+        metadata = {}
+
+        # Enrich the metadata from the path
+        # We split the path into parts and take the last four parts
+        # It contains these parts:
+        #  0        1       2         3
+        # ('en-us', 'sles', '15-SP6', 'DC-SLES-modules.meta')
+        # parts = metafile.parts[-4:]
+        #metadata["lang"] = parts[0]
+        #metadata["product"] = parts[1]
+        #metadata["docset"] = parts[2]
+        #metadata["dcfile"] = parts[3]
+
+        if not os.path.exists(metafile):
+            logger.warning("Metadata file %r does not exist", metafile)
+            return None
+
+        data = ""
+        with open(metafile, 'r') as fh:
+            data = fh.readlines()
+
+        if not data[0].startswith("# Metadata"):
+            raise ValueError(f"Invalid metadata file: {metafile}")
+        # Remove the comment line
+        data.pop(0)
+        for m in data:
+            try:
+                key, value = m.split("=")
+                value = value.strip()
+                if key == "productname":
+                    metadata.setdefault("productname", []).append(value)
+                else:
+                    metadata[key] = value
+            except ValueError as err:
+                logger.error("In %s:%s => %s", (metafile, m, err))
+                continue
+
+        if "task" in metadata:
+            metadata["task"] = metadata["task"].split(";")
+        return metadata
+
+    def create_metadata(self):
+        """
+        Call "daps metadata" and store the result in the cache directory.
+        """
+        metafile = os.path.join(self.meta_cache_dir, f"{self.dc_file}.meta")
+        cmd = shlex.split(f"daps -d {self.dc_file} metadata --output {metafile}")
+        logger.debug("Calling 'daps metadata' for %s", self.dc_file)
+        s = subprocess.Popen(cmd,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+        self.out, self.err = s.communicate()
+        if int(s.returncode) != 0:
+            logger.error("Failed to call 'daps metadata' for %s", self.dc_file)
+            logger.error("  stdout: %s", self.out.decode('utf-8'))
+            logger.error("  stderr: %s", self.err.decode('utf-8'))
+            return {}
+
+        logger.debug("Successfully called 'daps metadata' for %s", self.dc_file)
+        data = self.loadmeta(metafile)
+        logger.info("Received metadata for %s: %s", self.dc_file, data)
+        return data
 
     def write_deliverable_cache(self, command, thread_id):
         """
@@ -581,15 +660,15 @@ These are the details:
         including path and title. This is required for the
         'docserv-build-navigation' command.
         """
-
         # If the product is unsupported, we don't copy the output files as
         # such, we only copy a zip archive of the output files, thus we don't
         # need to worry about the document titles
         if self.parent.lifecycle == "unsupported":
             return command
 
-	# TODO: Call "daps metadata" and parse the output
-	# Add the tags <date>, <seo-title>, <seo-description>, <tasks>, and <series>
+        # Add the tags <date>, <seo-title>, <seo-description>, <tasks>, and <series>
+        # metadata = self.create_metadata()
+        metadata = self.loadmeta()
 
         root = etree.Element('document',
                               lang=self.parent.build_instruction['lang'],
@@ -597,7 +676,8 @@ These are the details:
                               setid=self.parent.build_instruction['docset'],
                               dc=self.dc_file,
                               cachedate=str(int(time.time())),
-                              # nsmap={}
+                              nsmap=None,
+                              attrib=None,
                               )
 
         etree.SubElement(root, "commit").text = self.parent.deliverables[self.id]['last_build_attempt_commit']
@@ -611,6 +691,31 @@ These are the details:
             title.attrib['subtitle'] = self.subtitle
         if self.product_from_document is not None:
             title.attrib['product-from-document'] = self.product_from_document
+
+        # Metadata from the .meta file
+        if metadata is not None:
+            logger.debug("Add metadata to deliverable cache: %s")
+            d = metadata.get("seo-title", "")
+            if d:
+                etree.SubElement(root, "seo-title").text = d
+
+            d = metadata.get("seo-description", "")
+            if d:
+                etree.SubElement(root, "seo-description").text = d
+
+            d = metadata.get("date", "")
+            if d:
+                 etree.SubElement(root, "date").text = d
+
+            d = metadata.get("tasks", [])
+            if d:
+                tasks = etree.SubElement(root, "tasks")
+                for task in d:
+                    etree.SubElement(tasks, "task").text = task
+
+            d = metadata.get("series", "")
+            if d:
+                etree.SubElement(root, "series").text = d
 
         for subdeliverable in self.subdeliverables:
             title = etree.SubElement(root, "title", hash=self.subdeliverable_info[subdeliverable]['hash'],

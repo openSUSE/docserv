@@ -306,6 +306,8 @@ class Deliverable:
         """
         Execute single commands and check return value.
         """
+        if 'cmd' not in command:
+            return True
         returncode, self.out, self.err = run(command['cmd'])
 
         if returncode != 0:
@@ -542,7 +544,7 @@ These are the details:
             result = self.execute(dchash, thread_id)
             if not result:
                 return False
-            self.subdeliverable_info[subdeliverable] = {'hash': self.out.decode('utf-8'),
+            self.subdeliverable_info[subdeliverable] = {'hash': self.out,
                                                         'title': subdeliverable_title,
                                                         'subtitle': subdeliverable_subtitle,
                                                         'product_from_document': subdeliverable_product_from_document}

@@ -11,6 +11,7 @@ from lxml import etree
 from .functions import feedback_message, parse_d2d_filelist
 from .repolock import RepoLock
 from .common import META_FILE_EXT
+from .util import run
 
 logger = logging.getLogger('docserv')
 
@@ -305,22 +306,9 @@ class Deliverable:
         """
         Execute single commands and check return value.
         """
-        cmd = shlex.split(command['cmd'])
-        logger.debug("Thread %i: %s" % (thread_id, command))
-        s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        self.out, self.err = s.communicate()
+        returncode, self.out, self.err = run(command['cmd'])
 
-        logging.debug("Command executed: %s => %s || %s", cmd, self.out, self.err)
-
-        if int(s.returncode) != 0:
-            self.failed_command = command['cmd']
-            logger.warning("Thread %i: Build failed! Unexpected return value %i for '%s'",
-                           thread_id, s.returncode, command['cmd'])
-            logger.warning("Thread %i STDOUT: %s", thread_id,
-                           self.out.decode('utf-8'))
-            logger.warning("Thread %i STDERR: %s", thread_id,
-                           self.err.decode('utf-8'))
+        if returncode != 0:
             self.mail()
             return False
         return True
@@ -503,7 +491,7 @@ These are the details:
         result = self.execute(dchash, thread_id)
         if not result:
             return False
-        self.dc_hash = self.out.decode('utf-8')
+        self.dc_hash = self.out
 
         self.subdeliverable_info = {}
         for subdeliverable in self.subdeliverables:

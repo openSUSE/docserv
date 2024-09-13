@@ -31,8 +31,16 @@ def run(command: str|list[str]) -> tuple[int, str, str]:
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
     out, err = s.communicate()
+    returncode = int(s.returncode)
+    out = out.decode("utf-8").rstrip()
+    err = err.decode("utf-8").rstrip()
 
-    return int(s.returncode), out.decode("utf-8").rstrip(), err.decode("utf-8").rstrip()
+    logger.debug("  Return code: %s", returncode)
+    logger.debug("  Output: %s", out)
+    if err:
+        logger.debug("  Error: %s", err)
+
+    return returncode, out, err
 
 
 def replace_placeholders(path: str, currenttargetname: str, servername: str) -> str:

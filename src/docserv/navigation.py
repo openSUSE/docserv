@@ -15,8 +15,9 @@ from .common import BIN_DIR, CACHE_DIR, CONF_DIR, SHARE_DIR
 logger = logging.getLogger(__name__)
 
 
-def init_jinja_template(path) -> Environment:
+def init_jinja_template(path: str) -> Environment:
     """Initialize the Jinja templates"""
+    logger.debug("Initializing Jinja2 environment with %r", path)
     env = Environment(loader=FileSystemLoader(path),
                       trim_blocks=True,
                       lstrip_blocks=True,
@@ -148,6 +149,10 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
     docset = bih.docset
     lang = bih.lang
     # Templates, could raise TemplateNotFound
+    # logger.debug("Target config: %s", bih.config['targets'][target])
+    logger.debug("Jinja_template_index=%s",
+                 bih.config['targets'][target]['jinja_template_index']
+    )
     indextmpl = env.get_template(bih.config['targets'][target]['jinja_template_index'])
     hometmpl = env.get_template(bih.config['targets'][target]['jinja_template_home'])
 

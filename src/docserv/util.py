@@ -36,9 +36,10 @@ def run(command: str|list[str]) -> tuple[int, str, str]:
     err = err.decode("utf-8").rstrip()
 
     logger.debug("  Return code: %s", returncode)
-    logger.debug("  Output: %s", out)
+    if out:
+        logger.debug("  stdout: %s", out)
     if err:
-        logger.debug("  Error: %s", err)
+        logger.debug("  stderr: %s", err)
 
     return returncode, out, err
 

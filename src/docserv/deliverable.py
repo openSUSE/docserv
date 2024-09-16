@@ -632,28 +632,6 @@ These are the details:
             metadata["task"] = metadata["task"].split(";")
         return metadata
 
-    def create_metadata(self):
-        """
-        Call "daps metadata" and store the result in the cache directory.
-        """
-        metafile = os.path.join(self.meta_cache_dir, f"{self.dc_file}.meta")
-        cmd = shlex.split(f"daps -d {self.dc_file} metadata --output {metafile}")
-        logger.debug("Calling 'daps metadata' for %s", self.dc_file)
-        s = subprocess.Popen(cmd,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        self.out, self.err = s.communicate()
-        if int(s.returncode) != 0:
-            logger.error("Failed to call 'daps metadata' for %s", self.dc_file)
-            logger.error("  stdout: %s", self.out.decode('utf-8'))
-            logger.error("  stderr: %s", self.err.decode('utf-8'))
-            return {}
-
-        logger.debug("Successfully called 'daps metadata' for %s", self.dc_file)
-        data = self.loadmeta(metafile)
-        logger.info("Received metadata for %s: %s", self.dc_file, data)
-        return data
-
     def write_deliverable_cache(self, command, thread_id):
         """
         Create an XML file that contains the deliverable information
@@ -667,7 +645,6 @@ These are the details:
             return command
 
         # Add the tags <date>, <seo-title>, <seo-description>, <tasks>, and <series>
-        # metadata = self.create_metadata()
         metadata = self.loadmeta()
 
         root = etree.Element('document',

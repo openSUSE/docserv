@@ -54,6 +54,14 @@
   <xsl:template match="docset">
     <xsl:param name="pos" select="0"/>
     <xsl:param name="last" select="0"/>
+    <xsl:variable name="hide-productname">
+      <xsl:choose>
+        <xsl:when test="not(@navigation) or @navigation='linked'">false</xsl:when>
+        <xsl:when test="@navigation = 'hidden'">true</xsl:when>
+        <!--<xsl:when test="@navigation = 'disabled'">"???"</xsl:when>-->
+        <xsl:otherwise>false</xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
     <xsl:variable name="product" select="parent::product"/>
     <xsl:variable name="name" select="$product/name"/>
     <xsl:variable name="next-product" select="count(parent::product/following-sibling::product)"/>
@@ -63,6 +71,10 @@
     <xsl:apply-templates select="$product/@productid"/>
     <xsl:apply-templates select="@setid"/>
     <xsl:apply-templates select="@lifecycle"/>
+    <xsl:if test="$hide-productname != ''">
+      <xsl:text>  "hide-productname": </xsl:text>
+      <xsl:value-of select="concat($hide-productname, ',&#10;')"/>
+    </xsl:if>
 
     <xsl:text>  "descriptions": [&#10;</xsl:text>
     <xsl:apply-templates select="$product/desc">

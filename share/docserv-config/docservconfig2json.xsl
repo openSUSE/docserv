@@ -95,10 +95,6 @@
     <!-- TODO -->
     <xsl:text>  ]&#10;</xsl:text>
     <xsl:text>  }</xsl:text>
-    <xsl:message>
-    pos=<xsl:value-of select="$pos"/>, last=<xsl:value-of select="$last"/> => <xsl:value-of select="$pos != $last"/>
-    next-product=<xsl:value-of select="$next-product"/>
-    </xsl:message>
     <xsl:choose>
       <xsl:when test="$next-product = 0"/>
       <xsl:when test="$pos &lt; $last">,</xsl:when>

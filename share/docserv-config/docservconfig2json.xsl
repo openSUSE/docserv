@@ -17,16 +17,15 @@
   <!-- Parameters -->
   <xsl:param name="add-empty-docs" select="true()" />
 
+  <xsl:variable name="all-docsets" select="count(//docset)"/>
+
 
   <xsl:template name="process-docset">
     <xsl:param name="nodes" select="."/>
 
     <xsl:for-each select="$nodes">
       <xsl:if test="@lifecycle = 'supported'">
-        <xsl:apply-templates select=".">
-          <xsl:with-param name="pos" select="position()"/>
-          <xsl:with-param name="last" select="last()"/>
-        </xsl:apply-templates>
+        <xsl:apply-templates select="."/>
       </xsl:if>
     </xsl:for-each>
   </xsl:template>
@@ -34,17 +33,19 @@
 
   <xsl:template match="/docservconfig|/positivedocservconfig">
     <xsl:text>[&#10;</xsl:text>
-    <xsl:call-template name="process-docset">
+    <!--<xsl:call-template name="process-docset">
       <xsl:with-param name="nodes" select="product/docset" />
-    </xsl:call-template>
+    </xsl:call-template>-->
+    <xsl:apply-templates select="product/docset[@lifecycle='supported']"/>
     <xsl:text>]&#10;</xsl:text>
   </xsl:template>
 
 
   <xsl:template match="/product">
-    <xsl:call-template name="process-docset">
+    <!--<xsl:call-template name="process-docset">
       <xsl:with-param name="nodes" select="docset" />
-    </xsl:call-template>
+    </xsl:call-template>-->
+    <xsl:apply-templates select="docset[@lifecycle='supported']"/>
   </xsl:template>
 
   <!-- Ignored elements -->
@@ -52,8 +53,9 @@
 
 
   <xsl:template match="docset">
-    <xsl:param name="pos" select="0"/>
-    <xsl:param name="last" select="0"/>
+    <xsl:variable name="pos">
+      <xsl:number count="docset" level="any"/>
+    </xsl:variable>
     <xsl:variable name="hide-productname">
       <xsl:choose>
         <xsl:when test="not(@navigation) or @navigation='linked'">false</xsl:when>
@@ -64,7 +66,11 @@
     </xsl:variable>
     <xsl:variable name="product" select="parent::product"/>
     <xsl:variable name="name" select="$product/name"/>
-    <xsl:variable name="next-product" select="count(parent::product/following-sibling::product)"/>
+
+    <xsl:message>
+  current docset: <xsl:value-of select="$pos"/>
+  all-docset:     <xsl:value-of select="$all-docsets"/>
+    </xsl:message>
 
     <xsl:text>  {&#10;</xsl:text>
     <xsl:apply-templates select="$name"/>
@@ -88,10 +94,7 @@
       <xsl:text>    {&#10;</xsl:text>
       <xsl:text>       "docs": [&#10;</xsl:text>
       <xsl:for-each select="builddocs/language/deliverable">
-        <xsl:apply-templates select=".">
-          <xsl:with-param name="pos" select="position()"/>
-          <xsl:with-param name="last" select="last()"/>
-        </xsl:apply-templates>
+        <xsl:apply-templates select="." />
       </xsl:for-each>
       <xsl:text>       ],&#10;</xsl:text>
       <xsl:text>       "tasks": [],&#10;</xsl:text>
@@ -108,8 +111,8 @@
     <xsl:text>  ]&#10;</xsl:text>
     <xsl:text>  }</xsl:text>
     <xsl:choose>
-      <xsl:when test="$next-product = 0"/>
-      <xsl:when test="$pos &lt; $last">,</xsl:when>
+<!--      <xsl:when test="$next-product = 0"/>-->
+      <xsl:when test="$pos &lt; $all-docsets">,</xsl:when>
       <xsl:otherwise/>
     </xsl:choose>
     <xsl:text>&#10;</xsl:text>

@@ -18,10 +18,10 @@
   <xsl:param name="add-empty-docs" select="true()" />
 
 
-  <xsl:template match="/docservconfig">
-    <xsl:text>[&#10;</xsl:text>
-    <!--  <xsl:apply-templates select="product/docset"/>-->
-    <xsl:for-each select="product/docset">
+  <xsl:template name="process-docset">
+    <xsl:param name="nodes" select="."/>
+
+    <xsl:for-each select="$nodes">
       <xsl:if test="@lifecycle = 'supported'">
         <xsl:apply-templates select=".">
           <xsl:with-param name="pos" select="position()"/>
@@ -29,8 +29,22 @@
         </xsl:apply-templates>
       </xsl:if>
     </xsl:for-each>
+  </xsl:template>
+
+
+  <xsl:template match="/docservconfig|/positivedocservconfig">
+    <xsl:text>[&#10;</xsl:text>
+    <xsl:call-template name="process-docset">
+      <xsl:with-param name="nodes" select="product/docset" />
+    </xsl:call-template>
     <xsl:text>]&#10;</xsl:text>
-    <!-- <xsl:text>}&#10;</xsl:text>-->
+  </xsl:template>
+
+
+  <xsl:template match="/product">
+    <xsl:call-template name="process-docset">
+      <xsl:with-param name="nodes" select="docset" />
+    </xsl:call-template>
   </xsl:template>
 
   <!-- Ignored elements -->
@@ -42,6 +56,7 @@
     <xsl:param name="last" select="0"/>
     <xsl:variable name="product" select="parent::product"/>
     <xsl:variable name="name" select="$product/name"/>
+    <xsl:variable name="next-product" select="count(parent::product/following-sibling::product)"/>
 
     <xsl:text>  {&#10;</xsl:text>
     <xsl:apply-templates select="$name"/>
@@ -80,7 +95,15 @@
     <!-- TODO -->
     <xsl:text>  ]&#10;</xsl:text>
     <xsl:text>  }</xsl:text>
-    <xsl:if test="$pos != $last">,</xsl:if>
+    <xsl:message>
+    pos=<xsl:value-of select="$pos"/>, last=<xsl:value-of select="$last"/> => <xsl:value-of select="$pos != $last"/>
+    next-product=<xsl:value-of select="$next-product"/>
+    </xsl:message>
+    <xsl:choose>
+      <xsl:when test="$next-product = 0"/>
+      <xsl:when test="$pos &lt; $last">,</xsl:when>
+      <xsl:otherwise/>
+    </xsl:choose>
     <xsl:text>&#10;</xsl:text>
   </xsl:template>
 

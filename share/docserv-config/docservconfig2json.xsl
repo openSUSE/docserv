@@ -29,7 +29,7 @@
   </xsl:template>
 
 
-  <xsl:template match="/product">
+  <xsl:template match="/*/product|/product">
     <xsl:variable name="name">
       <xsl:apply-templates select="name"/>
     </xsl:variable>
@@ -38,7 +38,7 @@
       <xsl:apply-templates select="@productid"/>
     </xsl:variable>
 
-    <xsl:apply-templates select="docset[@lifecycle='supported']" >
+    <xsl:message>Found product <xsl:value-of select="@productid"/></xsl:message>
     <xsl:apply-templates select="docset[@lifecycle=$lifecycle]" >
       <xsl:with-param name="name" select="$name"/>
       <xsl:with-param name="productid" select="$productid"/>
@@ -251,7 +251,7 @@
   </xsl:template>
 
   <xsl:template match="language[@default='1' or @default='true']">
-    <xsl:message>      Found <xsl:value-of
+    <xsl:message>  Found <xsl:value-of
       select="count(deliverable)"/> deliverable(s)</xsl:message>
     <xsl:apply-templates select="deliverable"/>
   </xsl:template>
@@ -306,12 +306,14 @@
       <xsl:with-param name="node" select=".."/>
       <xsl:with-param name="thisdc" select="$thisdc"/>
     </xsl:call-template>
+    <!-- If we find the same DC file for other languages, process them in the
+         same entry
+    -->
     <xsl:if test="$other-delis">
       <xsl:text>,&#10;</xsl:text>
-      <xsl:message>  Found languages: <xsl:for-each select="$other-delis"><xsl:value-of select="current()/../@lang"/>, </xsl:for-each></xsl:message>
+      <xsl:message>  Found languages for <xsl:value-of select="$thisdc"/>: <xsl:for-each select="$other-delis"><xsl:value-of select="current()/../@lang"/>, </xsl:for-each></xsl:message>
       <xsl:for-each select="$other-delis">
         <xsl:variable name="node" select="current()"/>
-<!--        <xsl:message>      Found translation <xsl:value-of select="$node/../@lang"/></xsl:message>-->
         <xsl:call-template name="process-dc">
           <xsl:with-param name="node" select="$node"/>
           <xsl:with-param name="thisdc" select="$thisdc"/>

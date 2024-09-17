@@ -329,6 +329,12 @@ class DocservConfig:
                     servername)
                 self.config['targets'][secname]['jinja_template_dir'] = jinja_template_dir
                 logger.debug("  For target=%s using jinja_template_dir=%s", secname, jinja_template_dir)
+                json_dir = replace_placeholders(
+                    sec['json_dir'],
+                    secname,
+                    servername)
+                self.config['targets'][secname]['json_dir'] = json_dir
+
 
                 self.config['targets'][secname]['jinja_env'] = init_jinja_template(
                     self.config['targets'][secname]['jinja_template_dir']

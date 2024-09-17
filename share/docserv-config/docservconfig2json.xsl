@@ -17,6 +17,7 @@
   <!-- Parameters -->
   <xsl:param name="add-empty-docs" select="true()" />
   <xsl:param name="tag-sep"><xsl:text>\n</xsl:text></xsl:param>
+  <xsl:param name="lifecycle">supported</xsl:param>
 
   <!-- The output directory to use. Always add a trailing "/"!! -->
   <xsl:param name="outputdir"><xsl:text>./</xsl:text></xsl:param>
@@ -38,6 +39,7 @@
     </xsl:variable>
 
     <xsl:apply-templates select="docset[@lifecycle='supported']" >
+    <xsl:apply-templates select="docset[@lifecycle=$lifecycle]" >
       <xsl:with-param name="name" select="$name"/>
       <xsl:with-param name="productid" select="$productid"/>
     </xsl:apply-templates>

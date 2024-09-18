@@ -43,7 +43,7 @@ def create_cache(cache_path, stitched_cache):
         fh.write(etree.tostring(outroot, encoding='unicode', pretty_print=True))
 
 
-def build_json_home(bih, stitched_config: str) -> None:
+def build_json_home(bih, stitched_config: str) -> tuple[str, str]:
     """Create a build navigation JSON
     """
     target = bih.build_instruction['target']
@@ -65,7 +65,7 @@ def build_json_home(bih, stitched_config: str) -> None:
     with open(output, "w") as fh:
         fh.write(str(result))
     logger.debug("Wrote JSON to %r", output)
-    # return result
+    return output, result
 
 
 def list_all_products(config: str):
@@ -183,11 +183,9 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
     data_path = "docserv/data"
     for p in list_all_products(stitched_config):
         fulldir = os.path.join(backup_path, data_path, p, lang, p)
-        logger.debug("Creating directory %s", fulldir)
-        os.makedirs(fulldir, exist_ok=True)
-
-    # TODO: create a cache.xml
-    build_json_home(bih, stitched_config)
+        if not os.path.exists(fulldir):
+            logger.debug("Creating directory %s", fulldir)
+            os.makedirs(fulldir, exist_ok=True)
 
     #
     workdata: dict[str, dict[str, Any]] = {
@@ -316,11 +314,34 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
     args = workdata[product]["render_args"]
 
     process(path, jsonfile, template, args, "index.html")
-    logger.debug("Done with index page for %s/%s/%s", lang, product, docset)
+
+    # TODO: create a cache.xml?
+    # homepagejson, result = build_json_home(bih, stitched_config)
+
+    homepagejsonfile = os.path.join(json_dir, "homepage.json")
+    if not os.path.exists(homepagejsonfile):
+        logger.error("Homepage JSON metadata file %r does not exist", homepagejsonfile)
+        return
+
+    path = os.path.join(outputdir)
+    process(path,
+            homepagejsonfile,
+            workdata[""]["template"],
+            workdata[""]["render_args"],
+            "index.html")
+
+    for homepagelang in ("en-us",):
+        path = os.path.join(outputdir, homepagelang)
+        process(path,
+                homepagejsonfile,
+                workdata[""]["template"],
+                workdata[""]["render_args"],
+                "index.html")
+        logger.debug("Wrote homepage index.html for %s", homepagelang)
 
     # Search
     #process(outputdir, meta, env.get_template("search.html.jinja"), {}, "search.html")
     #process(os.path.join(outputdir, lang),
     #        meta, env.get_template("search.html.jinja"), {}, "search.html")
 
-    # logger.debug("All languages and products are processed.")
+    logger.debug("Done with index page for %s/%s/%s", lang, product, docset)

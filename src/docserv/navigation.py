@@ -148,17 +148,22 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
     product = bih.product
     docset = bih.docset
     lang = bih.lang
-    # Templates, could raise TemplateNotFound
-    # logger.debug("Target config: %s", bih.config['targets'][target])
-    logger.debug("Jinja_template_index=%s",
-                 bih.config['targets'][target]['jinja_template_index']
-    )
-    indextmpl = env.get_template(bih.config['targets'][target]['jinja_template_index'])
-    hometmpl = env.get_template(bih.config['targets'][target]['jinja_template_home'])
+    targetconfig = bih.config['targets'][target]
+    json_dir = targetconfig['json_dir']
+    json_i18n_dir = targetconfig['json_i18n_dir']
 
-    # jsondata = bih.config['targets'][target]['jinjacontext_home']
-    # site_sections = bih.config['targets'][target]['site_sections'].split()
-    # default_site_section = bih.config['targets'][target]['default_site_section']
+    backup_path = targetconfig['backup_path']
+    # Templates, could raise TemplateNotFound
+    # logger.debug("Target config: %s", targetconfig)
+    logger.debug("Jinja_template_index=%s",
+                 targetconfig['jinja_template_index']
+    )
+    indextmpl = env.get_template(targetconfig['jinja_template_index'])
+    hometmpl = env.get_template(targetconfig['jinja_template_home'])
+
+    # jsondata = targetconfig['jinjacontext_home']
+    # site_sections = targetconfig['site_sections'].split()
+    # default_site_section = targetconfig['default_site_section']
     # If valid_languages contains more than one spaces, this doesn't hurt
     all_langs = bih.config['server']['valid_languages'].split()
     lifecycles = ["supported", "unsuppoted"]
@@ -168,436 +173,85 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
     product: %r
     docset: %r
     lang: %r
+    json_dir: %r
     outputdir: %r
-    """, servername, target, product, docset, lang, outputdir,
+    """, servername, target, product, docset, lang, json_dir, outputdir,
     # jsondata,
     # default_site_section,
     )
 
+    data_path = "docserv/data"
+    for p in list_all_products(stitched_config):
+        fulldir = os.path.join(backup_path, data_path, p, lang, p)
+        logger.debug("Creating directory %s", fulldir)
+        os.makedirs(fulldir, exist_ok=True)
+
+    # TODO: create a cache.xml
     build_json_home(bih, stitched_config)
 
-    # TODO: retrieve them from JSON
-    subitems = { # dict[str, list[tuple[str, dict[str, Any]], ...]]
-
-        # str:   list[tuple]
-        # only smart/index.html needed
-        # "smart": [
-        #            ('container', dict(isSmartDocs=True)),
-        #            ('deploy-upgrade', dict(dataSmartDocs=True)),
-        #            ('micro-clouds', dict(dataSmartDocs=True)),
-        #            ('network', dict(dataSmartDocs=True)),
-        #            ('rancher', dict(dataSmartDocs=True)),
-        #            ('security', dict(dataSmartDocs=True)),
-        #            ('systems-management', dict(dataSmartDocs=True)),
-        #            ('systemtuning-performance', dict(dataSmartDocs=True)),
-        #            ('virtualization-cloud', dict(dataSmartDocs=True)),
-        #            ],
-
-        # no sbp/index.html
-        "sbp": [
-                ('cloud-computing', dict(isSBP=True, category="Cloud")),
-                ('container-virtualization', dict(isSBP=True,
-                                                  category="Containerization")),
-                # ('deprecated', dict(isSBP=True, category="Deprecated")),
-                # ('desktop-linux', dict(isSBP=True, category="Desktop and Linux")),
-                ('sap-12', dict(isSBP=True,
-                                category="SAP applications on SUSE Linux Enterprise 12")),
-                ('sap-15', dict(isSBP=True,
-                                category="SAP applications on SUSE Linux Enterprise 15")),
-                # ('server-linux', dict(isSBP=True, category="Server and Linux")),
-                ('storage', dict(isSBP=True, category="Storage")),
-                ('systems-management', dict(isSBP=True, category="Systems Management")),
-                ('security', dict(isSBP=True, category="Security")),
-                ('tuning-performance', dict(isSBP=True, category="Tuning & Performance")),
-                ],
-
-        # no trd/index.html
-        "trd": [
-                ("ampere", dict(isTRD=True, partner="Ampere")), # l
-                # ("aws", dict(isTRD=True, partner="AWS")),
-                # ("azure", dict(isTRD=True, partner="Azure")),
-                ("cisco", dict(isTRD=True, partner="Cisco")), # l
-                ("clastix", dict(isTRD=True, partner="Clastix")),
-                ("dell-technologies", dict(isTRD=True, partner="Dell Technologies")), # l
-                ("fortinet", dict(isTRD=True, partner="Fortinet")), # l
-                # ("gcp", dict(isTRD=True, partner="GCP")),
-                ("hewlett-packard-enterprise", dict(isTRD=True, partner="Hewlett Packard Enterprise")), #
-                ("hp", dict(isTRD=True, partner="HP")), # l
-                ("ibm", dict(isTRD=True, partner="IBM")), # l
-                ("jupyter", dict(isTRD=True, partner="Jupyter")), # l
-                # ("kubecost", dict(isTRD=True, partner="Kubecost")), # l
-                ("kubeflow", dict(isTRD=True, partner="Kubeflow")), #
-                ("lenovo", dict(isTRD=True, partner="Lenovo")),
-                ("managed-service-provider", dict(isTRD=True, partner="Managed Service Provider")),
-                ("minio", dict(isTRD=True, partner="MinIO")),
-                ("nvidia", dict(isTRD=True, partner="NVIDIA")),
-                ("ondat", dict(isTRD=True, partner="Ondat")),
-                ("rancher", dict(isTRD=True, partner="Rancher")),
-                ("supermicro", dict(isTRD=True, partner="Supermicro")),
-                ("suse", dict(isTRD=True, partner="SUSE")),
-                ("veeam", dict(isTRD=True, partner="Veeam")),
-                ("wordpress", dict(isTRD=True, partner="WordPress")),
-                ],
-
-    }
-
-    # TODO: Somehow we need to create this data automatically
+    #
     workdata: dict[str, dict[str, Any]] = {
-        # This entry will be remove later
         "": {
-            # bih.config['targets'][target]['jinjacontext_home'],
-            "meta": "homepage_docserv_bigfile.json",
+            # targetconfig['jinjacontext_home'],
+            "meta": "homepage.json",
             "template": hometmpl,
-            "render_args": dict(),
+            "render_args": {},
         },
 
-        # SBP, top-level page will be removed later
+        # Our products
         "sbp": {
-            "meta": "sbp_metadata.json",
+            # "meta": "sbp_metadata.json",
             "template": indextmpl,
             "render_args": dict(isSBP=True,),
         },
-
-        # TRD, top-level page will be removed later
+        "sles": {
+             "render_args": {"isProduct": True},
+             "template": indextmpl,},
+        "sled": {
+             "render_args": {"isProduct": True},
+             "template": indextmpl,},
+        "sles-sap": {
+             "render_args": {"isProduct": True},
+             "template": indextmpl,},
+        "sle-ha": {
+             "render_args": {"isProduct": True},
+             "template": indextmpl,},
+        "sle-hpc": {
+             "render_args": {"isProduct": True},
+             "template": indextmpl,},
+        "sle-rt": {
+             "render_args": {"isProduct": True},
+             "template": indextmpl,},
+        "sle-micro": {
+             "render_args": {"isProduct": True},
+             "template": indextmpl,},
+        "suma": {
+             "render_args": {"isProduct": True},
+             "template": indextmpl,},
+        "liberty": {
+             "render_args": {"isProduct": True},
+             "template": indextmpl,},
+        "sle-ha": {
+             "render_args": {"isProduct": True},
+             "template": indextmpl,},
+        "suse-edge": {
+             "render_args": {"isProduct": True},
+             "template": indextmpl,},
+        "rancher": {
+             "render_args": {"isProduct": True},
+             "template": indextmpl,},
+        "sle16": {
+             "render_args": {"isProduct": True},
+             "template": indextmpl,},
+        "smart": {
+              "render_args": {"isSmartDocs": True},
+              "template": indextmpl,},
         "trd": {
             "meta": "trd_metadata.json",
             "template": indextmpl,
-            "render_args": dict(isTRD=True, ),
+            "render_args": {"isTRD": True,},
         },
-
-        # ---------------------
-        # Product Documentation
-        #
-        # --- Liberty
-        "liberty/7": {
-            "meta": "liberty_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Liberty Linux",
-                                version="7",
-                                ),
-        },
-        "liberty/8": {
-            "meta": "liberty_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Liberty Linux",
-                                version="8",
-                                ),
-        },
-        "liberty/9": {
-            "meta": "liberty_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Liberty Linux",
-                                version="9",
-                                ),
-        },
-        # --- SLES for SAP
-        "sles-sap/15-SP5": {
-            "meta": "slesforsap_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise Server for SAP Applications",
-                                version="15 SP5"),
-        },
-        "sles-sap/15-SP4": {
-            "meta": "slesforsap_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise Server for SAP Applications",
-                                version="15 SP4"),
-        },
-        "sles-sap/15-SP3": {
-            "meta": "slesforsap_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise Server for SAP Applications",
-                                version="15 SP3"),
-        },
-        "sles-sap/15-SP2": {
-            "meta": "slesforsap_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise Server for SAP Applications",
-                                version="15 SP2"),
-        },
-        "sles-sap/trento": {
-            "meta": "slesforsap_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise Server for SAP Applications",
-                                version="Trento"),
-        },
-        # --- SLE Micro
-        "sle-micro/5.5": {
-            "meta": "sle_micro_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise Micro",
-                                version="5.5",
-                            ),
-        },
-        "sle-micro/5.4": {
-            "meta": "sle_micro_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise Micro",
-                                version="5.4",
-                            ),
-        },
-        # --- SLE16/Smart Docs
-        "sle16": {
-            "meta": "sle16_smart_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isSmartDocs=True,
-                                product="SUSE Linux Enterprise Micro",
-                                version="16",
-                            ),
-        },
-        # --- SUMA
-        "suma/4.3": {
-            "meta": "suma_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Manager",
-                                version="4.3",
-                            ),
-        },
-        "suma/5.0": {
-            "meta": "suma_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Manager",
-                                version="5.0",
-                            ),
-        },
-        # --- SLED
-        "sled/15-SP5": {
-            "meta": "sled_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise Desktop",
-                                version="15 SP5",
-                            ),
-        },
-        # --- SLES
-        "sles/12-SP5": {
-            "meta": "sles_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise Server",
-                                version="12 SP5",
-                            ),
-        },
-        "sles/15-SP2": {
-            "meta": "sles_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise Server",
-                                version="15 SP2",
-                            ),
-        },
-        "sles/15-SP3": {
-            "meta": "sles_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise Server",
-                                version="15 SP3",
-                            ),
-        },
-        "sles/15-SP4": {
-            "meta": "sles_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise Server",
-                                version="15 SP4",
-                            ),
-        },
-        "sles/15-SP5": {
-            "meta": "sles_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise Server",
-                                version="15 SP5",
-                            ),
-        },
-        # --- SUSE Edge
-        "suse-edge/3.0": {
-            "meta": "edge_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Edge",
-                                version="3.0",
-                            ),
-        },
-        # --- Rancher
-        "rancher/prime": {
-            "meta": "rancher_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(
-                isProduct=True,
-                product="SUSE Rancher",
-                version="Prime",
-                )
-        },
-        # "rancher/prime": {
-        #     "meta": "rancher_metadata.json",
-        #     "template": indextmpl,
-        #     "render_args": dict(isProduct=True,
-        #                         product="SUSE Rancher",
-        #                         version="Prime",
-        #                     ),
-        # },
-        # "rancher/harvester": {
-        #     "meta": "rancher_metadata.json",
-        #     "template": indextmpl,
-        #     "render_args": dict(isProduct=True,
-        #                         product="SUSE Rancher",
-        #                         version="Harvester",
-        #                     ),
-        # },
-        # "rancher/neuvector": {
-        #     "meta": "rancher_metadata.json",
-        #     "template": indextmpl,
-        #     "render_args": dict(isProduct=True,
-        #                         product="SUSE Rancher",
-        #                         version="NeuVector",
-        #                     ),
-        # },
-        # "rancher/k3s": {
-        #     "meta": "rancher_metadata.json",
-        #     "template": indextmpl,
-        #     "render_args": dict(isProduct=True,
-        #                         product="SUSE Rancher",
-        #                         version="K3s",
-        #                     ),
-        # },
-        # "rancher/rke": {
-        #     "meta": "rancher_metadata.json",
-        #     "template": indextmpl,
-        #     "render_args": dict(isProduct=True,
-        #                         product="SUSE Rancher",
-        #                         version="RKE",
-        #                     ),
-        # },
-        # "rancher/rke2": {
-        #     "meta": "rancher_metadata.json",
-        #     "template": indextmpl,
-        #     "render_args": dict(isProduct=True,
-        #                         product="SUSE Rancher",
-        #                         version="RKE2",
-        #                     ),
-        # },
-        # --- SLE HA
-        "sle-ha/15-SP5": {
-            "meta": "sleha_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise High Availability",
-                                version="15 SP5",
-                            ),
-        },
-        "sle-ha/15-SP4": {
-            "meta": "sleha_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise High Availability",
-                                version="15 SP4",
-                            ),
-        },
-        "sle-ha/15-SP3": {
-            "meta": "sleha_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise High Availability",
-                                version="15 SP3",
-                            ),
-        },
-        "sle-ha/15-SP2": {
-            "meta": "sleha_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise High Availability",
-                                version="15 SP2",
-                            ),
-        },
-        "sle-ha/12-SP5": {
-            "meta": "sleha_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise High Availability",
-                                version="12 SP5",
-                            ),
-        },
-        # --- SLE HPC
-        "sle-hpc/15-SP5": {
-            "meta": "slehpc_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise High Performance Computing",
-                                version="15 SP5",
-                            ),
-        },
-        "sle-hpc/15-SP4": {
-            "meta": "slehpc_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise High Performance Computing",
-                                version="15 SP4",
-                            ),
-        },
-        "sle-hpc/15-SP3": {
-            "meta": "slehpc_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise High Performance Computing",
-                                version="15 SP3",
-                            ),
-        },
-        # -- SLE RT
-        "sle-rt/15-SP5": {
-            "meta": "slert_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise Real Time",
-                                version="15 SP5",
-                            ),
-        },
-        "sle-rt/12-SP5": {
-            "meta": "slert_metadata.json",
-            "template": indextmpl,
-            "render_args": dict(isProduct=True,
-                                product="SUSE Linux Enterprise Real Time",
-                                version="12 SP5",
-                            ),
-        },
-
     }
-
-    logger.debug("Iterating over subitems")
-    for item, categories in subitems.items():
-        logger.debug("Grabbed %s", item)
-        for cat, args in categories:
-            logger.debug("Handle subitem %s with args %s", cat, args)
-            meta = workdata[item]["meta"]
-            template = workdata[item]["template"]
-            merged_args = {}
-            # Merge the two dicts
-            merged_args.update(workdata[item]["render_args"])
-            merged_args.update(args)
-            output = "index.html"
-            workdata[f"{item}/{cat}"] = dict(
-                meta=meta,
-                template=template,
-                # "Protect" against None:
-                render_args=merged_args,  # {**render_args, **args}
-                output=output,
-            )
-    # Remove the top-level entry for trd and sbp?
-    workdata.pop("trd")
-    workdata.pop("sbp")
-    # workdata.pop("rancher")
 
     logger.debug("workdata dict %s", workdata)
 
@@ -614,6 +268,22 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
             context = json.load(fh)
 
         logger.debug("JSON context successfully loaded (%r)", meta)
+        transfile = os.path.join(json_i18n_dir, f"{lang.replace('-', '_')}.json")
+        if not os.path.exists(transfile):
+            logger.error("Translation file %r does not exist", transfile)
+            logger.warning("Using default translation file en_us.json")
+            transfile = os.path.join(json_i18n_dir,"en_us.json")
+
+        try:
+            with open(transfile, "r") as fh:
+                transdata = json.load(fh)
+        except FileNotFoundError as err:
+            logger.error("Translation file %r does not exist", transfile)
+            transdata = {}
+        except json.JSONDecodeError as err:
+            logger.error("Error decoding JSON file %r", transfile)
+            transdata = {}
+
         # Render and save rendered HTML
         logger.debug("Writing output %s with template %s and args=%s",
                      output, template, args)
@@ -622,6 +292,8 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
             with open(output, "w") as fh:
                 content = template.render(data=context,
                                           # debug=True,
+                                          translations=transdata,
+                                          lang=lang.replace("_", "-"),
                                           **args)
                 fh.write(content)
             logger.debug("Wrote %s with args=%s", output, args)
@@ -633,26 +305,22 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
             logger.exception("Jinja error", err)
             raise
 
+    logger.debug("Going to render index page for %s/%s/%s", lang, product, docset)
+    jsonfile = os.path.join(json_dir, product, f"{docset}.json")
+    if not os.path.exists(jsonfile):
+        logger.error("JSON metadata file %r does not exist", jsonfile)
+        logger.error("Cannot render index page for %s/%s", product, docset)
+        return
+    path = os.path.join(outputdir, lang, product, docset)
+    template = workdata[product]["template"]
+    args = workdata[product]["render_args"]
 
-    # Iterate over language andD workdata keys:
-    for lang, item in itertools.product([lang], # TODO: all_langs,
-                                  workdata.keys(),
-                                  # site_sections,
-                                  # lifecycles,
-                                  ):
-        meta = os.path.join(CACHE_DIR, servername, target, workdata[item]["meta"])
-        template = workdata[item]["template"]
-        args: dict = workdata[item]["render_args"]
-        output = workdata[item].get("output", "index.html")
-
-        logger.debug("Processing language %s/%s", lang, item)
-        path = os.path.join(outputdir, lang, *(item.split("/")))
-
-        process(path, meta, template, args, output)
+    process(path, jsonfile, template, args, "index.html")
+    logger.debug("Done with index page for %s/%s/%s", lang, product, docset)
 
     # Search
-    process(outputdir, meta, env.get_template("search.html.jinja"), {}, "search.html")
-    process(os.path.join(outputdir, lang),
-            meta, env.get_template("search.html.jinja"), {}, "search.html")
+    #process(outputdir, meta, env.get_template("search.html.jinja"), {}, "search.html")
+    #process(os.path.join(outputdir, lang),
+    #        meta, env.get_template("search.html.jinja"), {}, "search.html")
 
-    logger.debug("All languages and products are processed.")
+    # logger.debug("All languages and products are processed.")

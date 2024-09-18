@@ -23,6 +23,7 @@ from .functions import print_help
 from .rest import RESTServer, ThreadedRESTServer
 from .navigation import init_jinja_template
 from .util import run, replace_placeholders
+from . import __version__
 
 
 logger = logging.getLogger(__name__)
@@ -443,6 +444,7 @@ class Docserv(DocservState, DocservConfig):
             self.config['server']['max_threads'] = multiprocessing.cpu_count()
             logger.info("Reducing number of build threads to avoid using more threads than there are cores.")
 
+        logger.info("Docserv version %s", __version__)
         logger.info("Using these configuration settings:")
         for target in self.config['targets']:
             logger.info(" json_dir(%s)=%s",

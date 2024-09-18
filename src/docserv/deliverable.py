@@ -390,8 +390,8 @@ These are the details:
             self.dc_file,
             self.build_format,
             self.failed_command,
-            self.out.decode('utf-8'),
-            self.err.decode('utf-8'),
+            self.out,
+            self.err,
         )
         to = ', '.join(self.parent.maintainers)
         subject = "[docserv²] Failed to build %s (%s, %s/%s, %s)" % (

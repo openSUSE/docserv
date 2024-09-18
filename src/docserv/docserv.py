@@ -334,6 +334,11 @@ class DocservConfig:
                     secname,
                     servername)
                 self.config['targets'][secname]['json_dir'] = json_dir
+                json_i18n_dir = replace_placeholders(
+                    sec['json_i18n_dir'],
+                    secname,
+                    servername)
+                self.config['targets'][secname]['json_i18n_dir'] = json_i18n_dir
 
 
                 self.config['targets'][secname]['jinja_env'] = init_jinja_template(

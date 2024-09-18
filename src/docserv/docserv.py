@@ -443,6 +443,30 @@ class Docserv(DocservState, DocservConfig):
             self.config['server']['max_threads'] = multiprocessing.cpu_count()
             logger.info("Reducing number of build threads to avoid using more threads than there are cores.")
 
+        logger.info("Using these configuration settings:")
+        for target in self.config['targets']:
+            logger.info(" json_dir(%s)=%s",
+                        target,
+                        self.config['targets'][target].get('json_dir', 'n/a')
+            )
+            logger.info(" jinja_context_dir(%s)=%s",
+                        target,
+                        self.config['targets'][target].get('jinja_context_dir', 'n/a')
+            )
+            logger.info(" jinja_template_dir(%s)=%s",
+                        target,
+                        self.config['targets'][target].get('jinja_template_dir', 'n/a')
+            )
+            logger.info(" config_dir(%s)=%s",
+                        target,
+                        self.config['targets'][target].get('config_dir', 'n/a')
+            )
+            logger.info(" json_i18n_dir(%s)=%s",
+                        target,
+                        self.config['targets'][target].get('json_i18n_dir', 'n/a')
+            )
+
+
         logger.info("Will use %i build threads.", self.config['server']['max_threads'])
 
         try:

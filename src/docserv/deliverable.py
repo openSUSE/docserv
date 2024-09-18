@@ -322,6 +322,7 @@ class Deliverable:
         returncode, self.out, self.err = run(command['cmd'])
 
         if returncode != 0:
+            self.failed_command = command['cmd']
             self.mail()
             return False
         return True

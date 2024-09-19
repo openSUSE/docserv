@@ -280,7 +280,6 @@
     <xsl:text>      "title": "",&#10;</xsl:text>
     <xsl:text>      "subtitle": "",&#10;</xsl:text>
     <xsl:text>      "description": "",&#10;</xsl:text>
-    <xsl:text>      "lang-switchable": true,&#10;</xsl:text>
     <xsl:text>      "dcfile": </xsl:text>
     <xsl:value-of select="concat('&quot;', $dc, '&quot;,&#10;')" />
     <xsl:text>      "format": {</xsl:text>
@@ -325,6 +324,7 @@
       </xsl:for-each>
     </xsl:if>
     <xsl:text>      ],&#10;</xsl:text>
+
     <xsl:text>      "tasks": [],&#10;</xsl:text>
     <xsl:text>      "products": [],&#10;</xsl:text>
     <xsl:text>      "docTypes": [],&#10;</xsl:text>

@@ -16,6 +16,7 @@
 
   <!-- Parameters -->
   <xsl:param name="add-empty-docs" select="true()" />
+  <xsl:param name="suppress-desc-title" select="true()"/>
   <xsl:param name="tag-sep"><xsl:text>\n</xsl:text></xsl:param>
   <xsl:param name="lifecycle">supported</xsl:param>
 
@@ -222,11 +223,13 @@
   <xsl:template match="title" mode="desc">
     <xsl:param name="lang"/>
     <xsl:param name="node" select="."/>
-    <xsl:text>&lt;div class=\"title\"></xsl:text>
-    <xsl:apply-templates mode="desc">
-      <xsl:with-param name="lang" select="$lang"/>
-    </xsl:apply-templates>
-    <xsl:text>&lt;/div></xsl:text>
+    <xsl:if test="not($suppress-desc-title)">
+      <xsl:text>&lt;div class=\"title\"></xsl:text>
+      <xsl:apply-templates mode="desc">
+        <xsl:with-param name="lang" select="$lang"/>
+      </xsl:apply-templates>
+      <xsl:text>&lt;/div></xsl:text>
+    </xsl:if>
   </xsl:template>
 
   <!-- Template to handle attributes in 'desc' context -->

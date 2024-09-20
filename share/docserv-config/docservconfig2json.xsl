@@ -109,6 +109,7 @@
 
   <xsl:template match="product/desc">
     <xsl:param name="docset"/>
+    <xsl:variable name="this-lang" select="@lang"/>
     <xsl:variable name="default">
       <xsl:choose>
         <xsl:when test="@default = '1' or @default = 'true'">true</xsl:when>
@@ -121,8 +122,10 @@
       </xsl:apply-templates>
     </xsl:variable>
     <xsl:variable name="docset-desc">
-      <xsl:apply-templates select="$docset/overridedesc" mode="desc">
-        <xsl:with-param name="lang" select="@lang"/>
+      <xsl:apply-templates select="($docset/overridedesc/desc[1]|
+                                    $docset/overridedesc/desc[@lang = $this-lang]
+                                    )[last()]" mode="desc">
+        <xsl:with-param name="lang" select="$this-lang"/>
       </xsl:apply-templates>
     </xsl:variable>
     <xsl:text>    {&#10;</xsl:text>

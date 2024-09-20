@@ -15,7 +15,6 @@
   <xsl:strip-space elements="*"/>
 
   <!-- Parameters -->
-  <xsl:param name="add-empty-docs" select="true()" />
   <xsl:param name="suppress-desc-title" select="true()"/>
   <xsl:param name="tag-sep"><xsl:text>\n</xsl:text></xsl:param>
   <xsl:param name="lifecycle">supported</xsl:param>
@@ -34,7 +33,6 @@
     <xsl:variable name="name">
       <xsl:apply-templates select="name"/>
     </xsl:variable>
-    <xsl:variable name="productid-attr" select="@productid"/>
     <xsl:variable name="productid">
       <xsl:apply-templates select="@productid"/>
     </xsl:variable>

@@ -5,6 +5,7 @@ import logging
 from logging.config import fileConfig
 import multiprocessing
 import os
+import re
 import queue
 
 
@@ -447,27 +448,16 @@ class Docserv(DocservState, DocservConfig):
         logger.info("Docserv version %s", __version__)
         logger.info("Using these configuration settings:")
         for target in self.config['targets']:
-            logger.info(" json_dir(%s)=%s",
+            for item in ('json_dir',
+                         'jinja_context_dir',
+                         'jinja_template_dir',
+                         'config_dir',
+                         'json_i18n_dir',
+                         'json_langs'):
+                logger.info(f" {item}(%s)=%s",
                         target,
-                        self.config['targets'][target].get('json_dir', 'n/a')
+                        self.config['targets'][target].get(item, 'n/a')
             )
-            logger.info(" jinja_context_dir(%s)=%s",
-                        target,
-                        self.config['targets'][target].get('jinja_context_dir', 'n/a')
-            )
-            logger.info(" jinja_template_dir(%s)=%s",
-                        target,
-                        self.config['targets'][target].get('jinja_template_dir', 'n/a')
-            )
-            logger.info(" config_dir(%s)=%s",
-                        target,
-                        self.config['targets'][target].get('config_dir', 'n/a')
-            )
-            logger.info(" json_i18n_dir(%s)=%s",
-                        target,
-                        self.config['targets'][target].get('json_i18n_dir', 'n/a')
-            )
-
 
         logger.info("Will use %i build threads.", self.config['server']['max_threads'])
 

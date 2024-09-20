@@ -19,17 +19,41 @@
   <xsl:param name="tag-sep"><xsl:text>\n</xsl:text></xsl:param>
   <xsl:param name="lifecycle">supported</xsl:param>
 
+  <xsl:param name="product"/>
+  <xsl:param name="docset"/>
+
   <!-- The output directory to use. Always add a trailing "/"!! -->
   <xsl:param name="outputdir"><xsl:text>./</xsl:text></xsl:param>
 
 
   <!-- Templates -->
   <xsl:template match="/">
-    <xsl:apply-templates />
+    <xsl:choose>
+      <xsl:when test="$product != '' and $docset != ''">
+        <xsl:variable name="product-node" select="*/product[@productid=$product][docset[@setid=$docset]]"/>
+        <xsl:message>INFO: Selected product=<xsl:value-of select="concat('&quot;', $product, '&quot;')"/> and docset=<xsl:value-of select="concat('&quot;', $docset, '&quot;')"/>
+INFO: Found <xsl:value-of select="count($product-node)"/> node.</xsl:message>
+        <xsl:apply-templates select="$product-node"/>
+      </xsl:when>
+      <xsl:when test="$product != ''">
+        <xsl:variable name="product-node" select="*/product[@productid=$product]"/>
+        <xsl:message>INFO: Selected product=<xsl:value-of select="concat('&quot;', $product, '&quot;')"/>.
+Found <xsl:value-of select="count($product-node)"/> node
+        </xsl:message>
+        <xsl:apply-templates select="$product-node"/>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:apply-templates select="*"/>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
 
-  <xsl:template match="/*/product|/product">
+  <xsl:template match="*/product">
+    <xsl:call-template name="process-product" />
+  </xsl:template>
+
+  <xsl:template match="/product" name="process-product">
     <xsl:variable name="name">
       <xsl:apply-templates select="name"/>
     </xsl:variable>
@@ -37,10 +61,22 @@
       <xsl:apply-templates select="@productid"/>
     </xsl:variable>
 
-    <xsl:message>Found product <xsl:value-of select="@productid"/></xsl:message>
+    <xsl:message>INFO: Processing product <xsl:value-of select="concat('&quot;', @productid, '&quot;')"/></xsl:message>
     <xsl:choose>
-      <xsl:when test="$lifecycle != ''">
+      <xsl:when test="$lifecycle != '' and $docset != ''">
+        <xsl:apply-templates select="docset[@lifecycle=$lifecycle][@setid=$docset]" >
+          <xsl:with-param name="name" select="$name"/>
+          <xsl:with-param name="productid" select="$productid"/>
+        </xsl:apply-templates>
+      </xsl:when>
+      <xsl:when test="$lifecycle != '' and $docset = ''">
         <xsl:apply-templates select="docset[@lifecycle=$lifecycle]" >
+          <xsl:with-param name="name" select="$name"/>
+          <xsl:with-param name="productid" select="$productid"/>
+        </xsl:apply-templates>
+      </xsl:when>
+      <xsl:when test="$lifecycle = '' and $docset != ''">
+        <xsl:apply-templates select="docset[@setid=$docset]" >
           <xsl:with-param name="name" select="$name"/>
           <xsl:with-param name="productid" select="$productid"/>
         </xsl:apply-templates>
@@ -62,9 +98,6 @@
     <xsl:param name="name"/>
     <xsl:param name="productid"/>
     <xsl:variable name="productid-attr" select="../@productid" />
-    <xsl:variable name="pos">
-      <xsl:number count="docset" level="any"/>
-    </xsl:variable>
     <xsl:variable name="filename" select="concat($outputdir, $productid-attr, '/', @setid, '.json')"/>
 
     <exsl:document

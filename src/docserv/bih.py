@@ -458,8 +458,8 @@ These are the details:
         else:
             logger.warning("Stitching of %s failed!",
                            self.config['targets'][target]['config_dir'])
-            logger.warning("Stitching STDOUT: %s", self.out.decode('utf-8'))
-            logger.warning("Stitching STDERR: %s", self.err.decode('utf-8'))
+            logger.warning("Stitching STDOUT: %s", self.out)
+            logger.warning("Stitching STDERR: %s", self.err)
 
             self.initialized = False
             return False

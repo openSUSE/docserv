@@ -29,6 +29,9 @@ from . import __version__
 
 logger = logging.getLogger(__name__)
 
+SEPARATOR = re.compile(r"[,; ]")
+
+
 class DocservState:
     config = {}
 
@@ -263,6 +266,18 @@ class DocservConfig:
     Class for handling the .ini configuration file.
     """
 
+    def check_langs(self, langstr):
+        """
+        Check if the language string is valid.
+        """
+        langarray = SEPARATOR.split(langstr)
+        # Check if we have
+        unknown_langs =set(langarray) - set(self.config['server']['valid_languages'])
+        if len(unknown_langs):
+            raise ValueError("Unknown languages in %s: %s" % (langstr, unknown_langs))
+        return langarray
+
+
     def parse_config(self, argv):
         """Parsing Docserv config file"""
         logger.debug("Parsing Docserv file")
@@ -298,7 +313,7 @@ class DocservConfig:
                 config['server']['temp_repo_dir'],
                 "",
                 servername)
-            self.config['server']['valid_languages'] = config['server']['valid_languages']
+            self.config['server']['valid_languages'] = SEPARATOR.split(config['server']['valid_languages'])
             if config['server']['max_threads'] == 'max':
                 self.config['server']['max_threads'] = multiprocessing.cpu_count()
             else:
@@ -341,6 +356,7 @@ class DocservConfig:
                     secname,
                     servername)
                 self.config['targets'][secname]['json_i18n_dir'] = json_i18n_dir
+                self.config['targets'][secname]['json_langs'] = self.check_langs(sec['json_langs'])
 
 
                 self.config['targets'][secname]['jinja_env'] = init_jinja_template(

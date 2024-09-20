@@ -445,7 +445,7 @@ These are the details:
                '%s %s'
                ) % (
             os.path.join(BIN_DIR, 'docserv-stitch'),
-            self.config['server']['valid_languages'],
+            " ".join(self.config['server']['valid_languages']),
             self.config['targets'][target]['site_sections'],
             self.config['targets'][target]['config_dir'],
             self.stitch_tmp_file,
@@ -477,13 +477,13 @@ These are the details:
             self.initialized = False
             return False
 
-        valid_languages_split = self.config['server']['valid_languages'].split(' ')
-        if not self.lang in valid_languages_split:
+        valid_languages = self.config['server']['valid_languages']
+        if not self.lang in valid_languages:
             logger.warning( "Language %s is not valid. "
                             "This configuration allows the following language codes: %s. "
                             "Cancelling build instruction." %
                             (self.lang,
-                             self.config['server']['valid_languages']))
+                             valid_languages))
             self.initialized = False
             return False
 

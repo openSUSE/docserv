@@ -165,7 +165,7 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
     # site_sections = targetconfig['site_sections'].split()
     # default_site_section = targetconfig['default_site_section']
     # If valid_languages contains more than one spaces, this doesn't hurt
-    all_langs = bih.config['server']['valid_languages'].split()
+    all_langs = bih.config['server']['valid_languages']
     lifecycles = ["supported", "unsuppoted"]
     logger.debug("""Useful variables:
     docserv config: %r

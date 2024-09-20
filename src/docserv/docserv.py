@@ -516,7 +516,7 @@ class Docserv(DocservState, DocservConfig):
                        '--valid-site-sections="%s" '
                        '%s %s') % (
                     os.path.join(BIN_DIR, 'docserv-stitch'),
-                    self.config['server']['valid_languages'],
+                    " ".join(self.config['server']['valid_languages']),
                     self.config['targets'][target]['site_sections'],
                     self.config["targets"][target]['config_dir'],
                     stitch_tmp_file)
@@ -528,8 +528,8 @@ class Docserv(DocservState, DocservConfig):
                 else:
                     logger.warning("Stitching of %s failed!",
                                    self.config['targets'][target]['config_dir'])
-                    logger.warning("Stitching STDOUT: %s", self.out.decode('utf-8'))
-                    logger.warning("Stitching STDERR: %s", self.err.decode('utf-8'))
+                    logger.warning("Stitching STDOUT: %s", self.out)
+                    logger.warning("Stitching STDERR: %s", self.err)
                 # End copypasta
 
             thread_receive = threading.Thread(target=self.listen)

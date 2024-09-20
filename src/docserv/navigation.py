@@ -151,6 +151,7 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
     targetconfig = bih.config['targets'][target]
     json_dir = targetconfig['json_dir']
     json_i18n_dir = targetconfig['json_i18n_dir']
+    json_langs = targetconfig['json_langs']
 
     backup_path = targetconfig['backup_path']
     # Templates, could raise TemplateNotFound
@@ -329,15 +330,15 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
             workdata[""]["template"],
             workdata[""]["render_args"],
             "index.html")
+    logger.debug("Wrote root homepage index.html")
 
-    for homepagelang in ("en-us",):
-        path = os.path.join(outputdir, homepagelang)
-        process(path,
-                homepagejsonfile,
-                workdata[""]["template"],
-                workdata[""]["render_args"],
-                "index.html")
-        logger.debug("Wrote homepage index.html for %s", homepagelang)
+    path = os.path.join(outputdir, lang)
+    process(path,
+            homepagejsonfile,
+            workdata[""]["template"],
+            workdata[""]["render_args"],
+            "index.html")
+    logger.debug("Wrote homepage index.html for %s", lang)
 
     # Search
     #process(outputdir, meta, env.get_template("search.html.jinja"), {}, "search.html")

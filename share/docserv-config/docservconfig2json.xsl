@@ -40,10 +40,20 @@
     </xsl:variable>
 
     <xsl:message>Found product <xsl:value-of select="@productid"/></xsl:message>
-    <xsl:apply-templates select="docset[@lifecycle=$lifecycle]" >
-      <xsl:with-param name="name" select="$name"/>
-      <xsl:with-param name="productid" select="$productid"/>
-    </xsl:apply-templates>
+    <xsl:choose>
+      <xsl:when test="$lifecycle != ''">
+        <xsl:apply-templates select="docset[@lifecycle=$lifecycle]" >
+          <xsl:with-param name="name" select="$name"/>
+          <xsl:with-param name="productid" select="$productid"/>
+        </xsl:apply-templates>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:apply-templates select="docset" >
+          <xsl:with-param name="name" select="$name"/>
+          <xsl:with-param name="productid" select="$productid"/>
+        </xsl:apply-templates>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
   <!-- Ignored elements -->

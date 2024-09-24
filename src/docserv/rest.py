@@ -43,14 +43,18 @@ class RESTServer(BaseHTTPRequestHandler):
                 if self.server.docserv.queue_build_instruction(job):
                     logger.info("Queueing %s", json.dumps(job))
                 else:
-                    logger.info("Not queueing %s", json.dumps(job))
-            # self._set_headers()
-            return self.send_response(200)
+                    logger.warning("Not queueing %s", json.dumps(job))
+
+            # Send back a response
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b'Build instructions queued successfully')
+
         except json.decoder.JSONDecodeError:
             # do not print the details of the request, when we add an
             # authentication thing here, we may not be able to scrub the
             # password from a malformed request easily.
-            logger.warning("Invalid JSON data submitted to REST API as build instruction. Ignoring.")
+            logger.error("Invalid JSON data submitted to REST API as build instruction. Ignoring.")
             self.send_error(400, "Invalid JSON data")
 
     def handle_metadata(self):

@@ -224,9 +224,30 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
         "sle-micro": {
              "render_args": {"isProduct": True},
              "template": indextmpl,},
+        "smt": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+        "soc": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+        "suse-cap": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+        "suse-caasp": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
         "suma": {
              "render_args": {"isProduct": True},
-             "template": indextmpl,},
+             "template": indextmpl,
+        },
+        "suma-retail": {
+             "render_args": {"isProduct": True},
+             "template": indextmpl,
+        },
         "liberty": {
              "render_args": {"isProduct": True},
              "template": indextmpl,},

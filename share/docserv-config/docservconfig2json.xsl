@@ -173,7 +173,7 @@ Found <xsl:value-of select="count($product-node)"/> node
     <xsl:text>       "lang": </xsl:text>
     <xsl:value-of select="concat('&quot;', @lang, '&quot;,&#10;')"/>
     <xsl:text>       "default": </xsl:text>
-    <xsl:value-of select="concat('&quot;', $default, '&quot;,&#10;')"/>
+    <xsl:value-of select="concat($default, ',&#10;')"/>
     <xsl:text>       "description": "</xsl:text>
     <xsl:choose>
       <xsl:when test="$docset/overridedesc/@treatment = 'append'">

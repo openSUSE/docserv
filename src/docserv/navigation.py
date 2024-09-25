@@ -134,6 +134,20 @@ def relatedproducts(product, docset, stitched_config: str):
     return result
 
 
+def docserv2json(stitched_config: str) -> dict:
+    """
+    Convert the stitched Docserv XML to JSON
+
+    :param stitched_config: the path to the stitched Docserv config
+    :return: a dictionary with the JSON content
+    """
+    stylesheet = os.path.join(SHARE_DIR, "docserv-config/docservconfig2json.xsl")
+    xml = etree.parse(stitched_config)
+    transform = etree.XSLT(etree.parse(stylesheet))
+    result = transform(xml)
+    return json.loads(str(result))
+
+
 def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
     # Replaces/extends docserv-build-navigation script
     """Render a Jinja template and save the output to a file

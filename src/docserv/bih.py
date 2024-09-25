@@ -420,6 +420,30 @@ These are the details:
             send_mail = True
         feedback_message(msg, subject, to, send_mail)
 
+    def validate_config(self):
+        """
+        TODO:
+        Validate a single XML configuration file against the
+        productconfig schema.
+        """
+        pass
+
+    def docserv_stitch(self, config_dir, site_sections, valid_languages):
+        """
+        TODO:
+        After validation, stitch all XML configuration files together
+        """
+        logger.debug("Stitching XML config directory to %s",
+                     self.stitch_tmp_file)
+
+        # Steps to do:
+        # 1. Validate each file against the productconfig schema
+        # 2. Stitch all files together
+        # 3. Check for unique productid attributes
+
+        # then read all files into an xml tree
+        self.tree = etree.parse(self.stitch_tmp_file)
+
     def read_conf_dir(self):
         """
         Use the docserv-stitch command to stitch all single XML configuration
@@ -437,6 +461,8 @@ These are the details:
 
         self.stitch_tmp_file = os.path.join(self.stitch_tmp_dir,
             ('productconfig_simplified_%s.xml' % target))
+
+        ## START stitching
         logger.debug("Stitching XML config directory to %s",
                      self.stitch_tmp_file)
         cmd = ('%s --simplify --revalidate-only '
@@ -464,11 +490,12 @@ These are the details:
             self.initialized = False
             return False
 
-        self.local_repo_build_dir = os.path.join(self.config['server']['temp_repo_dir'], ''.join(
-            random.choices(string.ascii_uppercase + string.digits, k=12)))
-
         # then read all files into an xml tree
         self.tree = etree.parse(self.stitch_tmp_file)
+        ## END of Stitching
+
+        self.local_repo_build_dir = os.path.join(self.config['server']['temp_repo_dir'], ''.join(
+            random.choices(string.ascii_uppercase + string.digits, k=12)))
 
         try:
             self.tree.xpath("//product[@productid='%s']/docset[@setid='%s']" % (self.product, self.docset))[0]

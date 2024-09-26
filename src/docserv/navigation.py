@@ -189,9 +189,13 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
     json_dir = targetconfig['json_dir']
     json_i18n_dir = targetconfig['json_i18n_dir']
     json_langs = targetconfig['json_langs']
+    basecachedir = os.path.join(CACHE_DIR, servername, target)
 
     # Parse the stitched Docserv config
     tree = etree.parse(stitched_config, parser=etree.XMLParser())
+
+    available_trans = get_translations(tree, product, docset)
+
 
     backup_path = targetconfig['backup_path']
     # Templates, could raise TemplateNotFound
@@ -209,14 +213,15 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
     all_langs = bih.config['server']['valid_languages']
     lifecycles = ["supported", "unsuppoted"]
     logger.debug("""Useful variables:
-    docserv config: %r
-    target: %r
-    product: %r
-    docset: %r
+    docserv config/target: %s/%s
+    product/docset: %s/%s
     lang: %r
     json_dir: %r
     outputdir: %r
-    """, servername, target, product, docset, lang, json_dir, outputdir,
+    translations: %s
+    """,
+    servername, target, product, docset, requested_lang, json_dir, outputdir,
+    available_trans,
     # jsondata,
     # default_site_section,
     )
@@ -313,7 +318,7 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
         },
     }
 
-    logger.debug("workdata dict %s", workdata)
+    # logger.debug("workdata dict %s", workdata)
 
     def process(path:str, meta:str, template, args:dict, output:str):
         """Process the Jinja rendering process

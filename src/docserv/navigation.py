@@ -27,7 +27,7 @@ def init_jinja_template(path: str) -> Environment:
     return env
 
 
-def create_cache(cache_path, stitched_cache):
+def create_cache(cache_path: str, stitched_cache: str) -> None:
     """Combine all cached XML files into one
 
     :param cache_path: the path to the cache directory
@@ -43,7 +43,8 @@ def create_cache(cache_path, stitched_cache):
         fh.write(etree.tostring(outroot, encoding='unicode', pretty_print=True))
 
 
-def build_json_home(bih, stitched_config: str) -> tuple[str, str]:
+def build_json_home(tree: etree._Element|etree._ElementTree,
+                    bih) -> tuple[str, str]:
     """Create a build navigation JSON
     """
     target = bih.build_instruction['target']
@@ -55,12 +56,13 @@ def build_json_home(bih, stitched_config: str) -> tuple[str, str]:
     homepage_json = os.path.join(SHARE_DIR, "homepage/homepage.xsl")
     output = os.path.join(CACHE_DIR, server_name, target, "homepage.json")
 
-    logger.debug("Transforming stitch XML (%r) with (%r)...",
-                 stitched_config, homepage_json,
+    logger.debug("Transforming stitch XML with (%r)...",
+                 homepage_json,
                  )
-    xml = etree.parse(stitched_config)
-    transform = etree.XSLT(etree.parse(homepage_json))
-    result = transform(xml)
+    transform = etree.XSLT(etree.parse(homepage_json,
+                                       parser=etree.XMLParser())
+    )
+    result = transform(tree)
     # Save result to file
     with open(output, "w") as fh:
         fh.write(str(result))
@@ -68,15 +70,14 @@ def build_json_home(bih, stitched_config: str) -> tuple[str, str]:
     return output, result
 
 
-def list_all_products(config: str):
+def list_all_products(tree: etree._Element|etree._ElementTree):
     """List all products and docsets
 
-    :param config: the stitched Docserv config
+    :param tree: the XML tree from the stitched Docserv config
     :yield: a string in the format "product/docset", for example
       "sles-sap/trento"
     """
     # Replaces list-all-products.xsl
-    tree = etree.parse(config)
     for dc in tree.iter("docset"):
         yield (f"{dc.xpath('ancestor::product/@productid')[0]}"
                "/"
@@ -84,7 +85,10 @@ def list_all_products(config: str):
                )
 
 
-def relatedproducts(product, docset, stitched_config: str):
+def relatedproducts(tree: etree._Element|etree._ElementTree,
+                    product: str,
+                    docset: str,
+                    ) -> list[str]:
     """Returns the dependencies of a specific product/docset
     """
     # Replaces list-related-products.xsl
@@ -95,7 +99,7 @@ def relatedproducts(product, docset, stitched_config: str):
     # "$related_stylesheet" "$stitched_config" | \
     # sort -u
     related_stylesheet = f"{SHARE_DIR}/build-navigation/list-related-products.xsl"
-    xml = etree.parse(stitched_config)
+    # xml = etree.parse(stitched_config)
     # transform = etree.XSLT(related_stylesheet)
     # params = {
     #     "product": product,
@@ -107,23 +111,24 @@ def relatedproducts(product, docset, stitched_config: str):
 
     #
     result = []
-    foundproduct = xml.findall(f"product[@productid = '{product}']")
+    foundproduct = tree.findall(f"product[@productid={product!r}]", namespaces=None)
     if not foundproduct:
         logger.fatal("Product ID from %s does not exist", product)
         return result
     if len(foundproduct) > 1:
         logger.fatal("Docserv config contains non-unique product/docset")
         return result
-    founddocset = foundproduct[0].findall(f"docset[@setid = '{docset}']")
+    founddocset = foundproduct[0].findall(f"docset[@setid={docset!r}]")
     if not founddocset:
         logger.fatal("Docset ID from %s does not exist within product=%s",
                      docset, product)
         return result
 
     # Find all references that matches a ref with the same product/docset
-    for ref in xml.iterfind(f"//docset/internal/ref"
+    for ref in tree.iterfind(f"//docset/internal/ref"
                              f"[@product='{product}']"
-                             f"[@docset='{docset}']"
+                             f"[@docset='{docset}']",
+                             namespaces=None,
     ):
         result.append("{}/{}".format(
             ref.xpath("ancestor::product/@productid")[0],
@@ -134,17 +139,17 @@ def relatedproducts(product, docset, stitched_config: str):
     return result
 
 
-def docserv2json(stitched_config: str) -> dict:
+def docserv2json(tree: etree._Element|etree._ElementTree) -> dict:
     """
     Convert the stitched Docserv XML to JSON
 
-    :param stitched_config: the path to the stitched Docserv config
+    :param tree: the XML tree of the stitched Docserv config
     :return: a dictionary with the JSON content
     """
     stylesheet = os.path.join(SHARE_DIR, "docserv-config/docservconfig2json.xsl")
-    xml = etree.parse(stitched_config)
+    # xml = etree.parse(stitched_config)
     transform = etree.XSLT(etree.parse(stylesheet))
-    result = transform(xml)
+    result = transform(tree)
     return json.loads(str(result))
 
 
@@ -166,6 +171,9 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
     json_dir = targetconfig['json_dir']
     json_i18n_dir = targetconfig['json_i18n_dir']
     json_langs = targetconfig['json_langs']
+
+    # Parse the stitched Docserv config
+    tree = etree.parse(stitched_config, parser=etree.XMLParser())
 
     backup_path = targetconfig['backup_path']
     # Templates, could raise TemplateNotFound

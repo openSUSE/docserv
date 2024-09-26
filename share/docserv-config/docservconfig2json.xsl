@@ -138,6 +138,9 @@ Found <xsl:value-of select="count($product-node)"/> node
       <xsl:text>  ],&#10;</xsl:text>
       <xsl:text>  "archives": []&#10;</xsl:text>
       <xsl:text>}</xsl:text>
+      <xsl:if test="$docset = '' and not($infile) and following-sibling::docset">
+        <xsl:value-of select="$docset-sep"/>
+      </xsl:if>
     </xsl:variable>
 
     <xsl:choose>

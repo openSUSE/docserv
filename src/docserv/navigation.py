@@ -24,6 +24,7 @@ def init_jinja_template(path: str) -> Environment:
                       undefined=DebugUndefined,
                       extensions=['jinja2.ext.debug']
                       )
+    env.filters['file_exists'] = os.path.exists
     return env
 
 

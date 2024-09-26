@@ -14,19 +14,40 @@
   <xsl:output method="text"/>
   <xsl:strip-space elements="*"/>
 
-  <!-- Parameters -->
+  <!-- ====== Parameters ====== -->
+  <!-- Should the desc/title tag be suppressed from the output? -->
   <xsl:param name="suppress-desc-title" select="true()"/>
+
+  <!-- Use the following separator for all tags inside <desc> -->
   <xsl:param name="tag-sep"><xsl:text>\n</xsl:text></xsl:param>
+
+  <!-- Use this separator to separate multiple docsets in stdout.
+    Only used when you set infile=false().
+  -->
+  <xsl:param name="docset-sep">
+    <xsl:text>&#10;&#10;====&#10;&#10;</xsl:text>
+  </xsl:param>
+
+  <!-- Which lifecycle we search for? -->
   <xsl:param name="lifecycle">supported</xsl:param>
 
+  <!-- The product and docset to select.
+    If they are empty, all products or docsets are processed -->
   <xsl:param name="product"/>
   <xsl:param name="docset"/>
 
-  <!-- The output directory to use. Always add a trailing "/"!! -->
+  <!-- Use output directory to store JSON files.
+    Always add a trailing "/"!! -->
   <xsl:param name="outputdir"><xsl:text>./</xsl:text></xsl:param>
 
+  <!-- Should the JSON be stored or printed on stdout?
+    true() = store them in a file
+    false() = print them to stdout; also use docset-sep if needed.
+  -->
+  <xsl:param name="infile" select="true()"/>
 
-  <!-- Templates -->
+
+  <!-- ====== Templates ====== -->
   <xsl:template match="/">
     <xsl:variable name="rootproduct" select="(product|*/product)"/>
     <xsl:choose>
@@ -100,31 +121,39 @@ Found <xsl:value-of select="count($product-node)"/> node
     <xsl:param name="productid"/>
     <xsl:variable name="productid-attr" select="../@productid" />
     <xsl:variable name="filename" select="concat($outputdir, $productid-attr, '/', @setid, '.json')"/>
-
-    <exsl:document
-      href="{$filename}"
-      method="text" encoding="UTF-8" indent="no"
-      media-type="application/x-json">
+    <xsl:variable name="content">
       <xsl:text>{&#10;</xsl:text>
       <xsl:value-of select="$name" />
       <xsl:value-of select="$productid" />
       <xsl:apply-templates select="@setid" />
       <xsl:apply-templates select="@lifecycle"/>
       <xsl:text>  "hide-productname": false,&#10;</xsl:text>
-
       <xsl:text>  "descriptions": [&#10;</xsl:text>
       <xsl:apply-templates select="../desc">
         <xsl:with-param name="docset" select="."/>
       </xsl:apply-templates>
       <xsl:text>  ],&#10;</xsl:text>
-
       <xsl:text>  "documents": [</xsl:text>
       <xsl:apply-templates select="builddocs/language[@default='1' or @default='true']" />
       <xsl:text>  ],&#10;</xsl:text>
       <xsl:text>  "archives": []&#10;</xsl:text>
       <xsl:text>}</xsl:text>
-    </exsl:document>
-    <xsl:message>Wrote <xsl:value-of select="$filename"/></xsl:message>
+    </xsl:variable>
+
+    <xsl:choose>
+      <xsl:when test="$infile">
+        <exsl:document
+          href="{$filename}"
+          method="text" encoding="UTF-8" indent="no"
+          media-type="application/x-json">
+          <xsl:value-of select="$content"/>
+        </exsl:document>
+        <xsl:message>Wrote <xsl:value-of select="$filename"/></xsl:message>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:value-of select="$content"/>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
 

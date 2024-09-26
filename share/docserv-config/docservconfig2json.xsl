@@ -28,15 +28,16 @@
 
   <!-- Templates -->
   <xsl:template match="/">
+    <xsl:variable name="rootproduct" select="(product|*/product)"/>
     <xsl:choose>
       <xsl:when test="$product != '' and $docset != ''">
-        <xsl:variable name="product-node" select="*/product[@productid=$product][docset[@setid=$docset]]"/>
+        <xsl:variable name="product-node" select="$rootproduct[@productid=$product][docset[@setid=$docset]]"/>
         <xsl:message>INFO: Selected product=<xsl:value-of select="concat('&quot;', $product, '&quot;')"/> and docset=<xsl:value-of select="concat('&quot;', $docset, '&quot;')"/>
 INFO: Found <xsl:value-of select="count($product-node)"/> node.</xsl:message>
         <xsl:apply-templates select="$product-node"/>
       </xsl:when>
       <xsl:when test="$product != ''">
-        <xsl:variable name="product-node" select="*/product[@productid=$product]"/>
+        <xsl:variable name="product-node" select="$rootproduct[@productid=$product]"/>
         <xsl:message>INFO: Selected product=<xsl:value-of select="concat('&quot;', $product, '&quot;')"/>.
 Found <xsl:value-of select="count($product-node)"/> node
         </xsl:message>

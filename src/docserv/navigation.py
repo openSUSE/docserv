@@ -305,6 +305,10 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
             "render_args": {"isProduct": True},
             "template": indextmpl,
         },
+        "ses": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
         "soc": {
             "render_args": {"isProduct": True},
             "template": indextmpl,

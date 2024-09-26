@@ -246,7 +246,7 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
     logger.debug("""Useful variables:
     docserv config/target: %s/%s
     product/docset: %s/%s
-    lang: %r
+    requested lang: %r
     json_dir: %r
     outputdir: %r
     translations: %s
@@ -257,14 +257,15 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
     # default_site_section,
     )
 
+    # Create directories for all products
     data_path = "docserv/data"
-    for p in list_all_products(stitched_config):
-        fulldir = os.path.join(backup_path, data_path, p, lang, p)
+    for p in list_all_products(tree):
+        fulldir = os.path.join(backup_path, data_path, p, requested_lang, p)
         if not os.path.exists(fulldir):
             logger.debug("Creating directory %s", fulldir)
             os.makedirs(fulldir, exist_ok=True)
 
-    #
+    # TODO: should that be retrieved from Docserv config?
     workdata: dict[str, dict[str, Any]] = {
         "": {
             # targetconfig['jinjacontext_home'],
@@ -364,7 +365,7 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
             context = json.load(fh)
 
         logger.debug("JSON context successfully loaded (%r)", meta)
-        transfile = os.path.join(json_i18n_dir, f"{lang.replace('-', '_')}.json")
+        transfile = os.path.join(json_i18n_dir, f"{requested_lang.replace('-', '_')}.json")
         if not os.path.exists(transfile):
             logger.error("Translation file %r does not exist", transfile)
             logger.warning("Using default translation file en_us.json")
@@ -401,17 +402,22 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
             logger.exception("Jinja error", err)
             raise
 
-    logger.debug("Going to render index page for %s/%s/%s", lang, product, docset)
-    jsonfile = os.path.join(json_dir, product, f"{docset}.json")
-    if not os.path.exists(jsonfile):
-        logger.error("JSON metadata file %r does not exist", jsonfile)
-        logger.error("Cannot render index page for %s/%s", product, docset)
-        return
-    path = os.path.join(outputdir, lang, product, docset)
-    template = workdata[product]["template"]
-    args = workdata[product]["render_args"]
+    # Iterate over all translations
+    # Overwrites lang variable
+    for lang in available_trans:
+        logger.debug("Going to render index page for %s/%s/%s", lang, product, docset)
+        jsonfile = os.path.join(json_dir, product, f"{docset}.json")
 
-    process(path, jsonfile, template, args, "index.html")
+        if not os.path.exists(jsonfile):
+            logger.error("JSON metadata file %r does not exist", jsonfile)
+            logger.error("Cannot render index page for %s/%s", product, docset)
+            # return
+
+        path = os.path.join(outputdir, lang, product, docset)
+        template = workdata[product]["template"]
+        args = workdata[product]["render_args"]
+
+        process(path, jsonfile, template, args, "index.html")
 
     # TODO: create a cache.xml?
     # homepagejson, result = build_json_home(bih, stitched_config)

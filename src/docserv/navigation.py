@@ -421,7 +421,10 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
         template = workdata[product]["template"]
         args = workdata[product]["render_args"]
 
-        process(path, jsonfile, template, args, "index.html")
+        try:
+            process(path, jsonfile, template, args, "index.html")
+        except FileNotFoundError as err:
+            logger.warning("%s", err)
 
     # TODO: create a cache.xml?
     # homepagejson, result = build_json_home(bih, stitched_config)

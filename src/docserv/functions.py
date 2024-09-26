@@ -87,6 +87,6 @@ def print_help():
 
 > systemctl start docserv@CONFIG_FILE
 or
-> docserv CONFIG_FILE
+> docserv CONFIG_FILE [LOGGING_INI]
 
 The CONFIG_FILE must reside in /etc/docserv/ and end with .ini.""")

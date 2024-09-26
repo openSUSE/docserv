@@ -153,6 +153,24 @@ def docserv2json(tree: etree._Element|etree._ElementTree) -> dict:
     return json.loads(str(result))
 
 
+def get_translations(tree: etree._Element|etree._ElementTree,
+                     product: str,
+                     docset: str) -> list[str]:
+    """
+    Get all translations for a specific product/docset
+
+    :param tree: the XML tree of the stitched Docserv config
+    :param product: the product ID
+    :param docset: the docset ID
+    :return: a list of all translations
+    """
+    return tree.xpath(
+        f"/*/product[@productid={product!r}]/"
+        f"docset[@setid={docset!r}]/"
+        f"builddocs/language/@lang"
+    )
+
+
 def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
     # Replaces/extends docserv-build-navigation script
     """Render a Jinja template and save the output to a file

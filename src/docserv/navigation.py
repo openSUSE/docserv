@@ -139,17 +139,29 @@ def relatedproducts(tree: etree._Element|etree._ElementTree,
     return result
 
 
-def docserv2json(tree: etree._Element|etree._ElementTree) -> dict:
+def docserv2json(tree: etree._Element|etree._ElementTree,
+                 product: str,
+                 docset: str) -> dict:
     """
     Convert the stitched Docserv XML to JSON
 
     :param tree: the XML tree of the stitched Docserv config
     :return: a dictionary with the JSON content
     """
+    # etree.XSLT.strparam
     stylesheet = os.path.join(SHARE_DIR, "docserv-config/docservconfig2json.xsl")
-    # xml = etree.parse(stitched_config)
-    transform = etree.XSLT(etree.parse(stylesheet))
-    result = transform(tree)
+    xslt_tree = etree.parse(stylesheet, parser=etree.XMLParser())
+    transform = etree.XSLT(xslt_tree)
+    params = {"infile": "false()",
+              "product": etree.XSLT.strparam(product),
+              "docset": etree.XSLT.strparam(docset),
+              }
+    result = transform(tree, **params)
+    # Check if we have any errors other than XSLT
+    for entry in transform.error_log:
+        if entry.domain != etree.ErrorDomains.XSLT:
+            logger.error("Error from XSLT transformation: %s", entry.message)
+
     return json.loads(str(result))
 
 
@@ -171,6 +183,24 @@ def get_translations(tree: etree._Element|etree._ElementTree,
     )
 
 
+def get_all_dcfiles(tree: etree._Element|etree._ElementTree,
+                    product: str,
+                    docset: str,
+                    lang: str = "en-us") -> list[str]:
+    """
+    Get all English DC files by default (without subdeliverables)
+
+    :param tree: the XML tree of the stitched Docserv config
+    :return: a list of all English DC files
+    """
+    return tree.xpath(
+        f"/*/product[@productid={product!r}]/"
+        f"docset[@setid={docset!r}]/"
+        f"builddocs/language[@lang={lang!r}]/"
+        f"deliverable[not(subdeliverable)]/dc/text()"
+    )
+
+
 def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
     # Replaces/extends docserv-build-navigation script
     """Render a Jinja template and save the output to a file
@@ -180,11 +210,12 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
     :param bih: the instance of the BuildInstructionHandler
     :param stitched_config: the stitched Docserv config
     """
+    # Create shortcuts:
     servername = bih.config['server']['name']
     target = bih.build_instruction['target']
     product = bih.product
     docset = bih.docset
-    lang = bih.lang
+    requested_lang = bih.lang
     targetconfig = bih.config['targets'][target]
     json_dir = targetconfig['json_dir']
     json_i18n_dir = targetconfig['json_i18n_dir']

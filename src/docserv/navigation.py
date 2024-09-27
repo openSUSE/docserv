@@ -283,7 +283,7 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
             "render_args": {"isProduct": True},
             "template": indextmpl,
         },
-        "containers": {
+        "container": {
             "render_args": {"isProduct": True},
             "template": indextmpl,
         },

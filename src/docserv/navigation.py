@@ -71,8 +71,8 @@ def build_json_home(tree: etree._Element|etree._ElementTree,
     return output, result
 
 
-def list_all_products(tree: etree._Element|etree._ElementTree):
-    """List all products and docsets
+def list_all_products_with_docsets(tree: etree._Element|etree._ElementTree):
+    """List all products and their docsets
 
     :param tree: the XML tree from the stitched Docserv config
     :yield: a string in the format "product/docset", for example
@@ -259,7 +259,7 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
 
     # Create directories for all products
     data_path = "docserv/data"
-    for p in list_all_products(tree):
+    for p in list_all_products_with_docsets(tree):
         fulldir = os.path.join(backup_path, data_path, p, requested_lang, p)
         if not os.path.exists(fulldir):
             logger.debug("Creating directory %s", fulldir)

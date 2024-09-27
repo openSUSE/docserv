@@ -86,6 +86,19 @@ def list_all_products_with_docsets(tree: etree._Element|etree._ElementTree):
                )
 
 
+def list_all_products(tree: etree._Element|etree._ElementTree):
+    """List all products
+
+    :param tree: the XML tree from the stitched Docserv config
+    :yield: a string with the product ID
+    """
+    # Replaces list-all-products.xsl
+    for product in tree.iter("product"):
+        productid = product.attrib.get("productid", None)
+        if productid:
+            yield productid
+
+
 def relatedproducts(tree: etree._Element|etree._ElementTree,
                     product: str,
                     docset: str,
@@ -266,7 +279,7 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
             os.makedirs(fulldir, exist_ok=True)
 
     # TODO: should that be retrieved from Docserv config?
-    workdata: dict[str, dict[str, Any]] = {
+    _workdata: dict[str, dict[str, Any]] = {
         "": {
             # targetconfig['jinjacontext_home'],
             "meta": "homepage.json",
@@ -295,7 +308,7 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
              "render_args": {"isProduct": True},
              "template": indextmpl,
         },
-        "neufector": {
+        "neuvector": {
             "render_args": {"isProduct": True},
             "template": indextmpl,
         },
@@ -414,6 +427,40 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
             "render_args": {"isTRD": True,},
         },
     }
+
+    workdata = {}
+    # Homepage
+    workdata[""] = {
+            # targetconfig['jinjacontext_home'],
+            "meta": "homepage.json",
+            "template": hometmpl,
+            "render_args": {},
+        }
+    for w in list_all_products(tree):
+        # Handle product exceptions
+        if w == "smart":
+            jinjacontext = {
+                "render_args": {"isSmartDocs": True},
+                "template": indextmpl,
+                }
+        elif w == "trd":
+            jinjacontext = {
+                "render_args": {"isTRD": True},
+                "template": indextmpl,
+                "meta": "trd_metadata.json"
+                }
+        elif w == "sbp":
+            jinjacontext = {
+                "render_args": {"isSBP": True},
+                "template": indextmpl,
+                }
+        else:
+            jinjacontext = {
+                "render_args": {"isProduct": True},
+                "template": indextmpl,
+                }
+
+        workdata[w] = jinjacontext
 
     # logger.debug("workdata dict %s", workdata)
 

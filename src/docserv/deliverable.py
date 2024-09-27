@@ -672,7 +672,7 @@ These are the details:
 
         # Metadata from the .meta file
         if metadata is not None:
-            logger.debug("Add metadata to deliverable cache: %s")
+            logger.debug("Add metadata to deliverable cache: %s", metadata)
             d = metadata.get("seo-title", "")
             if d:
                 etree.SubElement(root, "seo-title").text = d

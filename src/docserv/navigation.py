@@ -228,7 +228,6 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
 
     available_trans = get_translations(tree, product, docset)
 
-
     backup_path = targetconfig['backup_path']
     # Templates, could raise TemplateNotFound
     # logger.debug("Target config: %s", targetconfig)
@@ -276,6 +275,23 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
         },
 
         # Our products
+        "appliance": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+        "compliance": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+        "containers": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+        "hpe-helion": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+
         "sbp": {
             # "meta": "sbp_metadata.json",
             "template": indextmpl,
@@ -409,7 +425,7 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
 
     # Iterate over all translations
     # Overwrites lang variable
-    for lang in available_trans:
+    for lang in [requested_lang]:  # available_trans:
         logger.debug("Going to render index page for %s/%s/%s", lang, product, docset)
         jsonfile = os.path.join(json_dir, product, f"{docset}.json")
 

@@ -274,7 +274,7 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
             "render_args": {},
         },
 
-        # Our products
+        # Our products sorted alphabetically
         "appliance": {
             "render_args": {"isProduct": True},
             "template": indextmpl,
@@ -291,38 +291,76 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
             "render_args": {"isProduct": True},
             "template": indextmpl,
         },
-
+        "liberty": {
+             "render_args": {"isProduct": True},
+             "template": indextmpl,
+        },
+        "neufector": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+        "opensuse": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+        "rancher": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
         "sbp": {
             # "meta": "sbp_metadata.json",
             "template": indextmpl,
             "render_args": dict(isSBP=True,),
         },
-        "sles": {
-             "render_args": {"isProduct": True},
-             "template": indextmpl,},
-        "sled": {
-             "render_args": {"isProduct": True},
-             "template": indextmpl,},
-        "sles-sap": {
-             "render_args": {"isProduct": True},
-             "template": indextmpl,},
-        "sle-ha": {
-             "render_args": {"isProduct": True},
-             "template": indextmpl,},
-        "sle-hpc": {
-             "render_args": {"isProduct": True},
-             "template": indextmpl,},
-        "sle-rt": {
-             "render_args": {"isProduct": True},
-             "template": indextmpl,},
-        "sle-micro": {
-             "render_args": {"isProduct": True},
-             "template": indextmpl,},
-        "smt": {
+        "ses": {
             "render_args": {"isProduct": True},
             "template": indextmpl,
         },
-        "ses": {
+        "sled": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+        "sle-ha": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+        "sle-hpc": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+        "sle-micro": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+        "sle-pos": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+        "sle-public-cloud": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+        "sle-rt": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+        "sles": {
+             "render_args": {"isProduct": True},
+             "template": indextmpl,
+        },
+        "sles-sap": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+        "sle-vmdp": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+        "smart": {
+            "render_args": {"isSmartDocs": True},
+            "template": indextmpl,
+        },
+        "smt": {
             "render_args": {"isProduct": True},
             "template": indextmpl,
         },
@@ -330,11 +368,11 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
             "render_args": {"isProduct": True},
             "template": indextmpl,
         },
-        "suse-cap": {
+        "style": {
             "render_args": {"isProduct": True},
             "template": indextmpl,
         },
-        "suse-caasp": {
+        "subscription": {
             "render_args": {"isProduct": True},
             "template": indextmpl,
         },
@@ -346,24 +384,30 @@ def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
              "render_args": {"isProduct": True},
              "template": indextmpl,
         },
-        "liberty": {
-             "render_args": {"isProduct": True},
-             "template": indextmpl,},
-        "sle-ha": {
-             "render_args": {"isProduct": True},
-             "template": indextmpl,},
+        "suse-ai": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+        "suse-caasp": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+        "suse-cap": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
+        "suse-distribution-migration-system": {
+            "render_args": {"isProduct": True},
+            "template": indextmpl,
+        },
         "suse-edge": {
              "render_args": {"isProduct": True},
-             "template": indextmpl,},
-        "rancher": {
-             "render_args": {"isProduct": True},
-             "template": indextmpl,},
-        "sle16": {
-             "render_args": {"isProduct": True},
-             "template": indextmpl,},
-        "smart": {
-              "render_args": {"isSmartDocs": True},
-              "template": indextmpl,},
+             "template": indextmpl,
+        },
+        # "sle16": {
+        #     "render_args": {"isProduct": True},
+        #     "template": indextmpl,
+        # },
         "trd": {
             "meta": "trd_metadata.json",
             "template": indextmpl,

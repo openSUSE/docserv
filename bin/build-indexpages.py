@@ -271,11 +271,16 @@ def get_translations(tree: etree._Element|etree._ElementTree,
     else:
         docsetxpath = f"docset"
 
-    return list(set(tree.xpath(
-        f"/*/product[@productid={product!r}]/"
-        f"{docsetxpath}/"
-        f"builddocs/language/@lang"
-    )))
+    base = f"/*/product[@productid={product!r}]/{docsetxpath}"
+    docset = tree.xpath(base)
+    if not docset:
+        log.error("No docset found for product=%r docset=%r", product, docset)
+        return []
+
+    return list(set(docset[0].xpath(
+        f"./builddocs/language/@lang | ./external/link/language/@lang")
+        )
+    )
 
 
 def iter_product_docset_lang(tree, products):

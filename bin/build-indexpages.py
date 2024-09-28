@@ -27,7 +27,7 @@ import sys
 
 from lxml import etree
 from jinja2 import Environment, FileSystemLoader, DebugUndefined
-from jinja2.exceptions import TemplateError, UndefinedError
+from jinja2.exceptions import TemplateNotFound
 
 
 __version__ = "0.1.0"
@@ -197,18 +197,41 @@ def parsecli(cliargs=None):
     else:
         parser.error(f"Directory {docservconfigdir} does not exist or is missing 'json-portal-dsc/i18n' subdirectory")
 
+    if docservconfigdir.joinpath("jinja-doc-suse-com", "suseparts").exists():
+        args.susepartsdir = docservconfigdir.joinpath("jinja-doc-suse-com", "suseparts")
+    else:
+        parser.error(f"Directory {docservconfigdir} does not exist or is missing 'json-portal-dsc/suseparts' subdirectory")
+
     return args
+
+
+def jinja_path_exists(env, path: str) -> bool:
+    """Check if a path exists"""
+    for f in env.loader.searchpath:
+        log.debug("Checking if path %r exists in template dir(%r): %s",
+                  path,
+                  f,
+                  os.path.exists(os.path.join(f, path)))
+    return any([ os.path.exists(os.path.join(f, path)) for f in env.loader.searchpath])
+
+
+def jinja_current_dir() -> str:
+    """Return the current directory"""
+    log.debug("Current directory: %s", os.getcwd())
+    return os.getcwd()
 
 
 def init_jinja_template(path: str) -> Environment:
     """Initialize the Jinja templates"""
+    log.debug("Initializing Jinja2 templates from %s", path)
     env = Environment(loader=FileSystemLoader(path),
                       trim_blocks=True,
                       lstrip_blocks=True,
                       undefined=DebugUndefined,
                       extensions=['jinja2.ext.debug']
                       )
-    env.filters['file_exists'] = os.path.exists
+    env.filters['file_exists'] = lambda p: jinja_path_exists(env, p)
+    env.filters['current_dir'] = jinja_current_dir
     return env
 
 
@@ -232,6 +255,49 @@ def get_docsets_from_product(tree, productid):
     yield from tree.xpath(f"./product[@productid={productid!r}]/docset")
 
 
+def get_translations(tree: etree._Element|etree._ElementTree,
+                     product: str,
+                     docset: str|None) -> list[str]:
+    """
+    Get all translations for a specific product/docset
+
+    :param tree: the XML tree of the stitched Docserv config
+    :param product: the product ID
+    :param docset: the docset ID
+    :return: a list of all translations
+    """
+    if docset:
+        docsetxpath = f"docset[@setid={docset!r}]"
+    else:
+        docsetxpath = f"docset"
+
+    return list(set(tree.xpath(
+        f"/*/product[@productid={product!r}]/"
+        f"{docsetxpath}/"
+        f"builddocs/language/@lang"
+    )))
+
+
+def iter_product_docset_lang(tree, products):
+    """
+    Iterate over all products, docsets, and languages
+    """
+    for product in products:
+        for docsetelement in get_docsets_from_product(tree, product):
+            docset = docsetelement.attrib.get("setid")
+            for lang in get_translations(tree, product, docset):
+                yield product, docset, lang
+
+
+def load_json_from_file(jsonfile: Path) -> dict:
+    """
+    Load a JSON file and return the content
+    """
+    with open(jsonfile) as fh:
+        content = json.load(fh)
+    return content
+
+
 def render(args, tree, env):
     """
     Render the index pages
@@ -243,19 +309,25 @@ def render(args, tree, env):
     #
     jsondir = args.jsondir
     jinja_i18n_dir = args.jinja_i18n_dir
+    susepartsdir = args.susepartsdir
     indextmpl = env.get_template("index.html.jinja")
     hometmpl = env.get_template("home.html.jinja")
+    searchtmpl = env.get_template("search.html.jinja")
 
     log.debug("""Variables used:
-     products: %s
-      docsets: %s
-        langs: %s
-    outputdir: %s
-      jsondir: %s
-jinja_i18n_dir: %s
+         products: %s
+          docsets: %s
+            langs: %s
+        outputdir: %s
+          jsondir: %s
+   jinja_i18n_dir: %s
+     susepartsdir: %s
 """,
-products, docsets, langs, outputdir, jsondir, jinja_i18n_dir
+products, docsets, langs, outputdir, jsondir, jinja_i18n_dir, susepartsdir
     )
+
+    # Create output directory:
+    outputdir.mkdir(parents=True, exist_ok=True)
 
     # Create directories for all products
     workdata = {}
@@ -360,17 +432,17 @@ def main(cliargs=None):
     """Main function"""
     try:
         args = parsecli(cliargs)
-        env = init_jinja_template(args.jinjatemplatedir)
+        env = init_jinja_template(args.jinjatemplatedir.absolute())
         log.debug("Arguments: %s", args)
         env = init_jinja_template(args.jinjatemplatedir)
         tree = etree.parse(args.stitch_file, etree.XMLParser())
         render(args, tree, env)
 
     except json.JSONDecodeError as err:
-        log.error("Error decoding JSON file %s", err)
+        log.error("Error decoding JSON file %s\nAbort.", err)
 
     except FileNotFoundError as err:
-        log.error("File not found: %s", err)
+        log.error("File not found: %s.\nAbort", err)
 
     except ValueError as e:
         log.error("Error: %s", e)

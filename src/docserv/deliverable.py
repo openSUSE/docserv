@@ -626,7 +626,7 @@ These are the details:
                 else:
                     metadata[key] = value
             except ValueError as err:
-                logger.error("In %s:%s => %s", (metafile, m, err))
+                logger.error("In %s:%s => %s", metafile, m, err)
                 continue
 
         if "task" in metadata:

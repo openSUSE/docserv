@@ -374,63 +374,108 @@ products, docsets, langs, outputdir, jsondir, jinja_i18n_dir, susepartsdir
     if not products:
         products = [p for p in workdata.keys() if p]
 
-    for product, lang in itertools.product(products, langs):
-        # log.debug("Processing product %r in language %r", product, lang)
-        for docsetelement in get_docsets_from_product(tree, product):
-            docset = docsetelement.attrib.get("setid")
-            log.debug("Processing product=%r for docset=%r lang=%r",
-                      product, docset, lang)
-            path = outputdir / lang / product / docset
-            transfile = jinja_i18n_dir / f"{lang.replace('-', '_')}.json"
-            jsonfile = jsondir / product / f"{docset}.json"
-            template = workdata[product]["template"]
-            args = workdata[product]["render_args"]
+    for product, docset, lang in iter_product_docset_lang(tree, products):
+        log.debug("Processing product=%r for docset=%r lang=%r",
+                    product, docset, lang)
+        path = outputdir / lang / product / docset
+        transfile = jinja_i18n_dir / f"{lang.replace('-', '_')}.json"
+        jsonfile = jsondir / product / f"{docset}.json"
+        template = workdata[product]["template"]
+        args = workdata[product]["render_args"]
 
-            # Load translation file
-            with open(transfile, "r") as fh:
-                transdata = json.load(fh)
+        if susepartsdir.joinpath(f"head_{lang}.html").exists():
+            log.debug("Found head file for lang=%r", lang)
+        else:
+            log.warning("Head file for lang=%r not found", lang)
+
+        # Load translation file
+        try:
+            # TODO: It is loaded multiple times. Certainly there are
+            # better ways to do this.
+            transdata = load_json_from_file(transfile)
             log.debug("Successfully loaded translation file %r", transfile)
+        except FileNotFoundError as err:
+            transfile = jinja_i18n_dir / "en_us.json"
+            transdata = load_json_from_file(transfile)
+            log.info("Fallback to English for lang=%r", lang)
 
-            try:
-                with open(jsonfile) as fh:
-                    context = json.load(fh)
-                log.debug("Successfully loaded JSON context %r", jsonfile)
-            except FileNotFoundError as err:
-                log.error("Error loading JSON file %s", err)
-                log.debug("Continue with next product")
-                continue
+        try:
+            context = load_json_from_file(jsonfile)
+            log.debug("Successfully loaded JSON context %r", jsonfile)
+        except FileNotFoundError as err:
+            log.error("Error loading JSON file %s. Continue with next product/docset", err)
+            continue
 
-            # Create the output directory
-            os.makedirs(path, exist_ok=True)
-            output = os.path.join(path, "index.html")
+        # Create the output directory
+        os.makedirs(path, exist_ok=True)
+        output = os.path.join(path, "index.html")
 
-            with open(output, "w") as fh:
-                content = template.render(data=context,
-                                          # debug=True,
-                                          translations=transdata,
-                                          lang=lang.replace("_", "-"),
-                                          **args)
-                fh.write(content)
-            log.debug("Wrote %s with args=%s", output, args)
+        with open(output, "w") as fh:
+            content = template.render(data=context,
+                                        # debug=True,
+                                        translations=transdata,
+                                        lang=lang.replace("_", "-"),
+                                        **args)
+            fh.write(content)
+        log.debug("Wrote %s with args=%s", output, args)
 
 
     # Load the homepage.json as context
     homepagejsonfile = jsondir / "homepage.json"
     with open(homepagejsonfile) as fh:
-        context = json.load(fh)
+        homepagecontext = json.load(fh)
     log.debug("Successfully loaded JSON context %r", homepagejsonfile)
 
-    langs.insert(0, "") # the empty string denotes the root homepage
-    for lang in langs:
-        output = outputdir / lang / "index.html"
-        with open(output, "w") as fh:
-            content = hometmpl.render(data=context,
-                                    translations=transdata,
-                                    lang=lang,
-                                    **workdata[""]["render_args"])
-            fh.write(content)
-        log.debug("Wrote %s", output)
 
+    firstleveldata = {
+        "index.html": {
+            "template": hometmpl,
+            "render_args": {},
+        },
+        "search.html": {
+            "template": searchtmpl,
+            "render_args": {},
+        },
+    }
+    for product in products:
+        langs = list(get_translations(tree, product, docset=None))
+        log.debug("Available translations for product=%s: %s", product, langs)
+        for lang in langs:
+
+            transfile = jinja_i18n_dir / f"{lang.replace('-', '_')}.json"
+            try:
+                transdata = load_json_from_file(transfile)
+            except FileNotFoundError:
+                # Use English as fallback if the translation cannot be found:
+                log.warning("Translation file for %s not found. Using English as fallback", lang)
+                transdata = load_json_from_file(jinja_i18n_dir / "en_us.json")
+
+            # First create the top-level index.html and search.html
+            for part in ("", lang):
+                output = outputdir / part
+                # We maybe need to create a directory for the language
+                output.mkdir(parents=True, exist_ok=True)
+                output = output / "index.html"
+                log.debug("Trying to write to %s", str(output))
+                with open(output, "w") as fh:
+                    content = hometmpl.render(data=homepagecontext,
+                                            translations=transdata,
+                                            lang=lang,
+                                            **workdata[""]["render_args"])
+                    fh.write(content)
+                    log.debug("Wrote %s", output)
+
+                output = outputdir / part / "search.html"
+                log.debug("Trying to write to %s", str(output))
+                with open(output, "w") as fh:
+                    content = searchtmpl.render(data={},
+                                            translations=transdata,
+                                            lang=lang,
+                                            **workdata[""]["render_args"])
+                    fh.write(content)
+                    log.debug("Wrote %s", output)
+
+    return
 
 
 def main(cliargs=None):

@@ -519,7 +519,6 @@ products, docsets, lifecycle, requestedlangs, outputdir, jsondir, jinja_i18n_dir
         homepagecontext = json.load(fh)
     log.debug("Successfully loaded JSON context %r", homepagejsonfile)
 
-
     firstleveldata = {
         "index.html": {
             "template": hometmpl,
@@ -530,43 +529,40 @@ products, docsets, lifecycle, requestedlangs, outputdir, jsondir, jinja_i18n_dir
             "render_args": {},
         },
     }
-    for product in products:
-        langs = list(get_translations(tree, product, docset=None, lifecycle=lifecycle))
-        log.debug("Available translations for product=%s: %s", product, langs)
-        for lang in langs:
 
-            transfile = jinja_i18n_dir / f"{lang.replace('-', '_')}.json"
-            try:
-                transdata = load_json_from_file(transfile)
-            except FileNotFoundError:
-                # Use English as fallback if the translation cannot be found:
-                log.warning("Translation file for %s not found. Using English as fallback", lang)
-                transdata = load_json_from_file(jinja_i18n_dir / "en_us.json")
+    for product, lang in itertools.product(products, requestedlangs):
+        transfile = jinja_i18n_dir / f"{lang.replace('-', '_')}.json"
+        try:
+            transdata = load_json_from_file(transfile)
+        except FileNotFoundError:
+            # Use English as fallback if the translation cannot be found:
+            log.warning("Translation file for %s not found. Using English as fallback", lang)
+            transdata = load_json_from_file(jinja_i18n_dir / "en_us.json")
 
-            # First create the top-level index.html and search.html
-            for part in ("", lang):
-                output = outputdir / part
-                # We maybe need to create a directory for the language
-                output.mkdir(parents=True, exist_ok=True)
-                output = output / "index.html"
-                log.debug("Trying to write to %s", str(output))
-                with open(output, "w") as fh:
-                    content = hometmpl.render(data=homepagecontext,
-                                            translations=transdata,
-                                            lang=lang,
-                                            **workdata[""]["render_args"])
-                    fh.write(content)
-                    log.debug("Wrote %s", output)
+        # First create the top-level index.html and search.html
+        for part in ("", lang):
+            output = outputdir / part
+            # We maybe need to create a directory for the language
+            output.mkdir(parents=True, exist_ok=True)
+            output = output / "index.html"
+            log.debug("Trying to write to %s", str(output))
+            with open(output, "w") as fh:
+                content = hometmpl.render(data=homepagecontext,
+                                        translations=transdata,
+                                        lang=lang,
+                                        **workdata[""]["render_args"])
+                fh.write(content)
+                log.debug("Wrote %s", output)
 
-                output = outputdir / part / "search.html"
-                log.debug("Trying to write to %s", str(output))
-                with open(output, "w") as fh:
-                    content = searchtmpl.render(data={},
-                                            translations=transdata,
-                                            lang=lang,
-                                            **workdata[""]["render_args"])
-                    fh.write(content)
-                    log.debug("Wrote %s", output)
+            output = outputdir / part / "search.html"
+            log.debug("Trying to write to %s", str(output))
+            with open(output, "w") as fh:
+                content = searchtmpl.render(data={},
+                                        translations=transdata,
+                                        lang=lang,
+                                        **workdata[""]["render_args"])
+                fh.write(content)
+                log.debug("Wrote %s", output)
 
     return
 

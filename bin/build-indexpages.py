@@ -221,10 +221,10 @@ def parsecli(cliargs=None):
         args.products = [] if args.products is None else SEPARATOR.split(args.products)
     if args.docsets is not None:
         args.docsets = [] if args.docsets is None else SEPARATOR.split(args.docsets)
-    if args.langs is not None:
-        args.langs = [] if args.langs is None else SEPARATOR.split(args.langs)
-    if args.lifecycle is not None:
-        args.lifecycle = [] if args.lifecycle is None else SEPARATOR.split(args.lifecycle)
+    #if args.langs is not None:
+    #    args.langs = [] if args.langs is None else SEPARATOR.split(args.langs)
+    #if args.lifecycle is not None:
+    #    args.lifecycle = [] if args.lifecycle is None else SEPARATOR.split(args.lifecycle)
 
     docservconfigdir = Path(args.docserv_config_dir)
     if docservconfigdir.joinpath("config.d").exists():

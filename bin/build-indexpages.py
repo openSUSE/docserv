@@ -210,6 +210,7 @@ def parsecli(cliargs=None):
                        help=("Languages to process (defaults to %(default)r). "
                              "Use comma or semicolon-separated list for multiple languages.\n"
                              f"Use 'all' to process all languages ({ALL_LANGUAGES})."
+                             )
                         )
     parser.add_argument("-c", "--lifecycle",
                         default=["supported"],

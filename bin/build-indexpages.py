@@ -147,7 +147,7 @@ def parsecli(cliargs=None):
                         )
     parser.add_argument("-c", "--lifecycle",
                         default="supported",
-                        choices=["supported", "beta", "unsupported", "unpublished"],
+                        choices=["supported", "beta", "unsupported", "unpublished", "all"],
                         help=("Lifecycle to process (defaults to %(default)r)")
                         )
     # Positional arguments
@@ -162,6 +162,9 @@ def parsecli(cliargs=None):
     DEFAULT_LOGGING_DICT["handlers"]["console"]["level"] = loglevel
     DEFAULT_LOGGING_DICT["loggers"][LOGGERNAME]["level"] = loglevel
     dictConfig(DEFAULT_LOGGING_DICT)
+
+    if args.lifecycle == ["all"]:
+        args.lifecycle = []
 
     if args.products is None and args.docsets is not None:
         parser.error("If you specify a docset, you must also specify a product")
@@ -248,16 +251,24 @@ def list_all_products(tree: etree._Element|etree._ElementTree):
             yield productid
 
 
-def get_docsets_from_product(tree, productid):
+def get_docsets_from_product(tree, productid, lifecycle):
     """
     Get all docsets from a product
     """
-    yield from tree.xpath(f"./product[@productid={productid!r}]/docset")
+    xpath = f"./product[@productid={productid!r}]/"
+    if lifecycle:
+        lc=" or ".join([f"@lifecycle={lc!r}" for lc in lifecycle])
+        xpath += f"docset[{lc}]"
+    else:
+        xpath += f"docset"
+    log.debug("XPath: %s", xpath)
+    yield from tree.xpath(xpath)
 
 
 def get_translations(tree: etree._Element|etree._ElementTree,
                      product: str,
-                     docset: str|None) -> list[str]:
+                     docset: str|None,
+                     lifecycle) -> list[str]:
     """
     Get all translations for a specific product/docset
 
@@ -266,31 +277,35 @@ def get_translations(tree: etree._Element|etree._ElementTree,
     :param docset: the docset ID
     :return: a list of all translations
     """
+    # xpath = f"./builddocs/language/@lang | ./external/link/language/@lang"
+    xpath = f"/*/product[@productid={product!r}]/docset"
     if docset:
-        docsetxpath = f"docset[@setid={docset!r}]"
-    else:
-        docsetxpath = f"docset"
+        xpath += f"[@setid={docset!r}]"
+    if lifecycle:
+        lc=" or ".join([f"@lifecycle={lc!r}" for lc in lifecycle])
+        xpath += f"[{lc}]"
 
-    base = f"/*/product[@productid={product!r}]/{docsetxpath}"
-    docset = tree.xpath(base)
+    # xpath += f"{docsetxpath}"
+    docset = tree.xpath(xpath)
+    log.debug("XPath: %s => %i", xpath, len(docset))
     if not docset:
-        log.error("No docset found for product=%r docset=%r", product, docset)
+        log.error("No docset found for product=%r docset=%r with lifecylce=%s",
+                  product, docset, lifecycle)
         return []
 
-    return list(set(docset[0].xpath(
-        f"./builddocs/language/@lang | ./external/link/language/@lang")
-        )
-    )
+    xpath = f"./builddocs/language/@lang | ./external/link/language/@lang"
+    log.debug("XPath: %s", xpath)
+    return list(set(docset[0].xpath(xpath)))
 
 
-def iter_product_docset_lang(tree, products):
+def iter_product_docset_lang(tree, products, lifecycle):
     """
     Iterate over all products, docsets, and languages
     """
     for product in products:
-        for docsetelement in get_docsets_from_product(tree, product):
+        for docsetelement in get_docsets_from_product(tree, product, lifecycle):
             docset = docsetelement.attrib.get("setid")
-            for lang in get_translations(tree, product, docset):
+            for lang in get_translations(tree, product, docset, lifecycle):
                 yield product, docset, lang
 
 
@@ -310,6 +325,7 @@ def render(args, tree, env):
     products = args.products
     docsets = args.docsets
     langs = args.langs
+    lifecycle = args.lifecycle
     outputdir = Path(args.output_dir)
     #
     jsondir = args.jsondir
@@ -323,12 +339,13 @@ def render(args, tree, env):
          products: %s
           docsets: %s
             langs: %s
+        lifecycle: %s
         outputdir: %s
           jsondir: %s
    jinja_i18n_dir: %s
      susepartsdir: %s
 """,
-products, docsets, langs, outputdir, jsondir, jinja_i18n_dir, susepartsdir
+products, docsets, langs, lifecycle, outputdir, jsondir, jinja_i18n_dir, susepartsdir
     )
 
     # Create output directory:
@@ -374,7 +391,7 @@ products, docsets, langs, outputdir, jsondir, jinja_i18n_dir, susepartsdir
     if not products:
         products = [p for p in workdata.keys() if p]
 
-    for product, docset, lang in iter_product_docset_lang(tree, products):
+    for product, docset, lang in iter_product_docset_lang(tree, products, lifecycle):
         log.debug("Processing product=%r for docset=%r lang=%r",
                     product, docset, lang)
         path = outputdir / lang / product / docset
@@ -438,7 +455,7 @@ products, docsets, langs, outputdir, jsondir, jinja_i18n_dir, susepartsdir
         },
     }
     for product in products:
-        langs = list(get_translations(tree, product, docset=None))
+        langs = list(get_translations(tree, product, docset=None, lifecycle=lifecycle))
         log.debug("Available translations for product=%s: %s", product, langs)
         for lang in langs:
 

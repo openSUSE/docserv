@@ -216,6 +216,20 @@ def get_all_dcfiles(tree: etree._Element|etree._ElementTree,
 
 
 def render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
+    """Render a Jinja template and save the output to a file
+
+    :param env: the Jinja environment
+    :param outputdir: the output directory where to store the rendered HTML files
+    :param bih: the instance of the BuildInstructionHandler
+    :param stitched_config: the stitched Docserv config
+    """
+    logger.warning(
+        "Rendering of index pages currently disabled. "
+        "Use the bin/build-indexpages.py script to render the index pages."
+    )
+
+
+def __render_and_save(env, outputdir: str, bih, stitched_config: str) -> None:
     # Replaces/extends docserv-build-navigation script
     """Render a Jinja template and save the output to a file
 

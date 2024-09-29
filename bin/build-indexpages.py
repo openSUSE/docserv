@@ -106,6 +106,31 @@ jinjalog = logging.getLogger(JINJALOGGERNAME)
 xpathlog = logging.getLogger(XPATHLOGGERNAME)
 
 
+class LifecycleAction(argparse.Action):
+    CHOICES = set(("supported", "beta", "unsupported", "unpublished", "all"))
+    seen = False
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        if self.seen:
+            parser.error(f"Option {option_string} can only be specified once. "
+                         "Use a comma or semicolon to separate multiple values."
+                         )
+        self.seen = True
+        lifecycles = set([l for l in SEPARATOR.split(values)])
+
+        invalid_lifecycles = lifecycles - self.CHOICES
+        if invalid_lifecycles:
+            parser.error(f"Invalid lifecycle(s): {invalid_lifecycles}")
+
+        lifecycles = list(lifecycles)
+        if "all" in lifecycles:
+            setattr(namespace, self.dest, ["all"])
+        else:
+            if not hasattr(namespace, self.dest):
+                setattr(namespace, self.dest, [])
+            setattr(namespace, self.dest, lifecycles)
+
+
 def parsecli(cliargs=None):
     """Parse CLI with :class:`argparse.ArgumentParser` and return parsed result
 
@@ -160,8 +185,8 @@ def parsecli(cliargs=None):
                               "Use comma-separated list for multiple languages.")
                         )
     parser.add_argument("-c", "--lifecycle",
-                        default="supported",
-                        choices=["supported", "beta", "unsupported", "unpublished", "all"],
+                        default=["supported"],
+                        action=LifecycleAction,
                         help=("Lifecycle to process (defaults to %(default)r)")
                         )
     # Positional arguments

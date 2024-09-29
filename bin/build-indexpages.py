@@ -40,6 +40,8 @@ PYTHON_VERSION: str = f"{sys.version_info.major}.{sys.version_info.minor}"
 SEPARATOR = re.compile(r"[,; ]")
 
 LOGGERNAME = "indexpages"
+JINJALOGGERNAME = f"{LOGGERNAME}.jinja"
+XPATHLOGGERNAME = f"{LOGGERNAME}.xpath"
 #: The log file to use
 LOGFILE = "/tmp/indexpages.log"
 #: Map verbosity level (int) to log level
@@ -76,8 +78,18 @@ DEFAULT_LOGGING_DICT = {
     },
     "loggers": {
         LOGGERNAME: {
-            "handlers": ["console",],
+            "handlers": ["console", "file"],
             "level": "DEBUG",
+            # 'propagate': True
+        },
+        JINJALOGGERNAME: {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            # 'propagate': True
+        },
+        XPATHLOGGERNAME: {
+            "handlers": ["console", "file"],
+            "level": "INFO",
             # 'propagate': True
         },
         "": {
@@ -90,6 +102,8 @@ DEFAULT_LOGGING_DICT = {
 logging.getLogger().setLevel(logging.NOTSET)
 
 log = logging.getLogger(LOGGERNAME)
+jinjalog = logging.getLogger(JINJALOGGERNAME)
+xpathlog = logging.getLogger(XPATHLOGGERNAME)
 
 
 def parsecli(cliargs=None):
@@ -157,10 +171,18 @@ def parsecli(cliargs=None):
     )
     args = parser.parse_args(args=cliargs)
     args.parser = parser
-    # Setup logging and the log level according to the "-v" option
+
+    # Setup main logging and the log level according to the "-v" option
     loglevel = LOGLEVELS.get(args.verbose, logging.DEBUG)
     DEFAULT_LOGGING_DICT["handlers"]["console"]["level"] = loglevel
     DEFAULT_LOGGING_DICT["loggers"][LOGGERNAME]["level"] = loglevel
+
+    # Setup sub loggers
+    if args.verbose > len(LOGLEVELS):
+         DEFAULT_LOGGING_DICT["loggers"][JINJALOGGERNAME]["level"] = logging.DEBUG
+    if args.verbose +1 > len(LOGLEVELS):
+        DEFAULT_LOGGING_DICT["loggers"][XPATHLOGGERNAME]["level"] = logging.DEBUG
+
     dictConfig(DEFAULT_LOGGING_DICT)
 
     if args.lifecycle == ["all"]:
@@ -211,7 +233,7 @@ def parsecli(cliargs=None):
 def jinja_path_exists(env, path: str) -> bool:
     """Check if a path exists"""
     for f in env.loader.searchpath:
-        log.debug("Checking if path %r exists in template dir(%r): %s",
+        jinjalog.debug("Checking if path %r exists in template dir(%r): %s",
                   path,
                   f,
                   os.path.exists(os.path.join(f, path)))
@@ -220,13 +242,13 @@ def jinja_path_exists(env, path: str) -> bool:
 
 def jinja_current_dir() -> str:
     """Return the current directory"""
-    log.debug("Current directory: %s", os.getcwd())
+    jinjalog.debug("Current directory: %s", os.getcwd())
     return os.getcwd()
 
 
 def init_jinja_template(path: str) -> Environment:
     """Initialize the Jinja templates"""
-    log.debug("Initializing Jinja2 templates from %s", path)
+    jinjalog.debug("Initializing Jinja2 templates from %s", path)
     env = Environment(loader=FileSystemLoader(path),
                       trim_blocks=True,
                       lstrip_blocks=True,
@@ -287,14 +309,14 @@ def get_translations(tree: etree._Element|etree._ElementTree,
 
     # xpath += f"{docsetxpath}"
     docset = tree.xpath(xpath)
-    log.debug("XPath: %s => %i", xpath, len(docset))
+    xpathlog.debug("XPath: %s => %i", xpath, len(docset))
     if not docset:
         log.error("No docset found for product=%r docset=%r with lifecylce=%s",
                   product, docset, lifecycle)
         return []
 
     xpath = f"./builddocs/language/@lang | ./external/link/language/@lang"
-    log.debug("XPath: %s", xpath)
+    xpathlog.debug("XPath: %s", xpath)
     return list(set(docset[0].xpath(xpath)))
 
 
@@ -499,6 +521,7 @@ def main(cliargs=None):
     """Main function"""
     try:
         args = parsecli(cliargs)
+        log.debug("=== Starting ===")
         env = init_jinja_template(args.jinjatemplatedir.absolute())
         log.debug("Arguments: %s", args)
         env = init_jinja_template(args.jinjatemplatedir)

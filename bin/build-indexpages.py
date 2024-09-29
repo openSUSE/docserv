@@ -371,13 +371,16 @@ def get_translations(tree: etree._Element|etree._ElementTree,
     return list(set(docset[0].xpath(xpath)))
 
 
-def iter_product_docset_lang(tree, products, lifecycle):
+def iter_product_docset_lang(tree, products, requested_docsets, lifecycle):
     """
     Iterate over all products, docsets, and languages
     """
     for product in products:
         for docsetelement in get_docsets_from_product(tree, product, lifecycle):
             docset = docsetelement.attrib.get("setid")
+            if requested_docsets and docset not in requested_docsets:
+                log.debug("Skipping docset %r", docset)
+                continue
             #for lang in get_translations(tree, product, docset, lifecycle):
             yield product, docset
 
@@ -396,7 +399,7 @@ def render(args, tree, env):
     Render the index pages
     """
     products = args.products
-    docsets = args.docsets
+    requesteddocsets = args.docsets
     requestedlangs = args.langs
     lifecycle = args.lifecycle
     outputdir = Path(args.output_dir)
@@ -410,7 +413,7 @@ def render(args, tree, env):
 
     log.debug("""Variables used:
          products: %s
-          docsets: %s
+ requesteddocsets: %s
         lifecycle: %s
    requestedlangs: %s
         outputdir: %s
@@ -418,7 +421,7 @@ def render(args, tree, env):
    jinja_i18n_dir: %s
      susepartsdir: %s
 """,
-products, docsets, lifecycle, requestedlangs, outputdir, jsondir, jinja_i18n_dir, susepartsdir
+products, requesteddocsets, lifecycle, requestedlangs, outputdir, jsondir, jinja_i18n_dir, susepartsdir
     )
 
     # Create output directory:
@@ -465,7 +468,7 @@ products, docsets, lifecycle, requestedlangs, outputdir, jsondir, jinja_i18n_dir
         products = [p for p in workdata.keys() if p]
 
     for (product, docset), lang in itertools.product(
-        iter_product_docset_lang(tree, products, lifecycle),
+        iter_product_docset_lang(tree, products, requesteddocsets, lifecycle),
         requestedlangs
     ):
         log.debug("Processing product=%r for docset=%r lang=%r",

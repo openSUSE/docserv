@@ -30,7 +30,7 @@ from jinja2 import Environment, FileSystemLoader, DebugUndefined
 from jinja2.exceptions import TemplateNotFound
 
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "Tom Schraitle"
 
 
@@ -98,6 +98,9 @@ DEFAULT_LOGGING_DICT = {
     },
 }
 
+#: All languages supported by the documentation portal
+ALL_LANGUAGES = "ar-ar cs-cz de-de en-us es-es fi-fi fr-fr hu-hu it-it ja-jp ko-kr nl-nl pl-pl pt-br ru-ru sv-se zh-cn zh-tw".split(" ")
+
 # in order for all messages to be delegated.
 logging.getLogger().setLevel(logging.NOTSET)
 
@@ -129,6 +132,28 @@ class LifecycleAction(argparse.Action):
             if not hasattr(namespace, self.dest):
                 setattr(namespace, self.dest, [])
             setattr(namespace, self.dest, lifecycles)
+
+
+class LangsAction(argparse.Action):
+    LANG_PATTERN = re.compile(r"^[a-z]{2}-[a-z]{2}$")
+    seen = False
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        if self.seen:
+            parser.error(f"Option {option_string} can only be specified once. "
+                         "Use a comma or semicolon to separate multiple values."
+                         )
+        self.seen = True
+
+        if values.lower() == "all":
+            setattr(namespace, self.dest, ALL_LANGUAGES)
+            return
+
+        langs = [l for l in SEPARATOR.split(values)]
+        invalid_langs = [lang for lang in langs if not self.LANG_PATTERN.match(lang)]
+        if invalid_langs:
+            raise argparse.ArgumentError(self, f"Invalid languages: {', '.join(invalid_langs)}. Format should be 'xx-xx' (e.g., en-us,de-de)")
+        setattr(namespace, self.dest, langs)
 
 
 def parsecli(cliargs=None):
@@ -180,9 +205,11 @@ def parsecli(cliargs=None):
                         #required=True,
                         help="Docsets to process. Use comma, space, or semicolon for multiple docsets.")
     parser.add_argument("-l", "--langs",
-                        default="en-us",
-                        help=("Languages to process (defaults to %(default)r). "
-                              "Use comma-separated list for multiple languages.")
+                       default=["en-us"],
+                       action=LangsAction,
+                       help=("Languages to process (defaults to %(default)r). "
+                             "Use comma or semicolon-separated list for multiple languages.\n"
+                             f"Use 'all' to process all languages ({ALL_LANGUAGES})."
                         )
     parser.add_argument("-c", "--lifecycle",
                         default=["supported"],
@@ -223,8 +250,6 @@ def parsecli(cliargs=None):
         args.docsets = [] if args.docsets is None else SEPARATOR.split(args.docsets)
     #if args.langs is not None:
     #    args.langs = [] if args.langs is None else SEPARATOR.split(args.langs)
-    #if args.lifecycle is not None:
-    #    args.lifecycle = [] if args.lifecycle is None else SEPARATOR.split(args.lifecycle)
 
     docservconfigdir = Path(args.docserv_config_dir)
     if docservconfigdir.joinpath("config.d").exists():
@@ -352,8 +377,8 @@ def iter_product_docset_lang(tree, products, lifecycle):
     for product in products:
         for docsetelement in get_docsets_from_product(tree, product, lifecycle):
             docset = docsetelement.attrib.get("setid")
-            for lang in get_translations(tree, product, docset, lifecycle):
-                yield product, docset, lang
+            #for lang in get_translations(tree, product, docset, lifecycle):
+            yield product, docset
 
 
 def load_json_from_file(jsonfile: Path) -> dict:
@@ -371,7 +396,7 @@ def render(args, tree, env):
     """
     products = args.products
     docsets = args.docsets
-    langs = args.langs
+    requestedlangs = args.langs
     lifecycle = args.lifecycle
     outputdir = Path(args.output_dir)
     #
@@ -385,14 +410,14 @@ def render(args, tree, env):
     log.debug("""Variables used:
          products: %s
           docsets: %s
-            langs: %s
         lifecycle: %s
+   requestedlangs: %s
         outputdir: %s
           jsondir: %s
    jinja_i18n_dir: %s
      susepartsdir: %s
 """,
-products, docsets, langs, lifecycle, outputdir, jsondir, jinja_i18n_dir, susepartsdir
+products, docsets, lifecycle, requestedlangs, outputdir, jsondir, jinja_i18n_dir, susepartsdir
     )
 
     # Create output directory:
@@ -438,7 +463,10 @@ products, docsets, langs, lifecycle, outputdir, jsondir, jinja_i18n_dir, susepar
     if not products:
         products = [p for p in workdata.keys() if p]
 
-    for product, docset, lang in iter_product_docset_lang(tree, products, lifecycle):
+    for (product, docset), lang in itertools.product(
+        iter_product_docset_lang(tree, products, lifecycle),
+        requestedlangs
+    ):
         log.debug("Processing product=%r for docset=%r lang=%r",
                     product, docset, lang)
         path = outputdir / lang / product / docset

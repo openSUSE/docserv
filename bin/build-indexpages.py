@@ -99,7 +99,7 @@ DEFAULT_LOGGING_DICT = {
 }
 
 #: All languages supported by the documentation portal
-ALL_LANGUAGES = "ar-ar cs-cz de-de en-us es-es fi-fi fr-fr hu-hu it-it ja-jp ko-kr nl-nl pl-pl pt-br ru-ru sv-se zh-cn zh-tw".split(" ")
+ALL_LANGUAGES = "de-de en-us es-es fr-fr ja-jp ko-kr zh-cn".split(" ")
 
 # in order for all messages to be delegated.
 logging.getLogger().setLevel(logging.NOTSET)

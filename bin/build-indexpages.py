@@ -410,6 +410,7 @@ def render(args, tree, env):
     indextmpl = env.get_template("index.html.jinja")
     hometmpl = env.get_template("home.html.jinja")
     searchtmpl = env.get_template("search.html.jinja")
+    error404tmp = env.get_template("404.html.jinja")
 
     log.debug("""Variables used:
          products: %s
@@ -566,6 +567,12 @@ products, requesteddocsets, lifecycle, requestedlangs, outputdir, jsondir, jinja
                                         **workdata[""]["render_args"])
                 fh.write(content)
                 log.debug("Wrote %s", output)
+
+    output = outputdir / "404.html"
+    with output.open("w") as fh:
+        content = error404tmp.render(lang="en-us")
+        fh.write(content)
+        log.debug("Wrote %s", output)
 
     return
 

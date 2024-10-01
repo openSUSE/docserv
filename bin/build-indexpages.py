@@ -580,16 +580,21 @@ def main(cliargs=None):
         env = init_jinja_template(args.jinjatemplatedir)
         tree = etree.parse(args.stitch_file, etree.XMLParser())
         render(args, tree, env)
+        log.debug("=== Finished ===")
 
     except json.JSONDecodeError as err:
         log.error("Error decoding JSON file %s\nAbort.", err)
+        return 100
 
     except FileNotFoundError as err:
         log.error("File not found: %s.\nAbort", err)
+        return 50
 
     except ValueError as e:
         log.error("Error: %s", e)
-        return 1
+        return 20
+
+    return 0
 
 
 if __name__ == "__main__":

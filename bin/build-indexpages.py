@@ -523,16 +523,6 @@ products, requesteddocsets, lifecycle, requestedlangs, outputdir, jsondir, jinja
         homepagecontext = json.load(fh)
     log.debug("Successfully loaded JSON context %r", homepagejsonfile)
 
-    firstleveldata = {
-        "index.html": {
-            "template": hometmpl,
-            "render_args": {},
-        },
-        "search.html": {
-            "template": searchtmpl,
-            "render_args": {},
-        },
-    }
 
     for product, lang in itertools.product(products, requestedlangs):
         transfile = jinja_i18n_dir / f"{lang.replace('-', '_')}.json"
@@ -543,30 +533,59 @@ products, requesteddocsets, lifecycle, requestedlangs, outputdir, jsondir, jinja
             log.warning("Translation file for %s not found. Using English as fallback", lang)
             transdata = load_json_from_file(jinja_i18n_dir / "en_us.json")
 
-        # First create the top-level index.html and search.html
-        for part in ("", lang):
+        firstleveldata = {
+            "index.html": {
+                "template": hometmpl,
+                "render_args": {},
+            },
+            "search.html": {
+                "template": searchtmpl,
+                "render_args": {},
+            },
+        }
+
+        for data, part in itertools.product(firstleveldata.keys(), ("", lang)):
             output = outputdir / part
-            # We maybe need to create a directory for the language
             output.mkdir(parents=True, exist_ok=True)
-            output = output / "index.html"
+            output = output / data
             log.debug("Trying to write to %s", str(output))
+            template = firstleveldata[data]["template"]
+            render_args = firstleveldata[data]["render_args"]
             with open(output, "w") as fh:
-                content = hometmpl.render(data=homepagecontext,
-                                        translations=transdata,
-                                        lang=lang,
-                                        **workdata[""]["render_args"])
+                content = template.render(
+                    data=homepagecontext,
+                    translations=transdata,
+                    lang=lang,
+                    **render_args
+                )
                 fh.write(content)
                 log.debug("Wrote %s", output)
 
-            output = outputdir / part / "search.html"
-            log.debug("Trying to write to %s", str(output))
-            with open(output, "w") as fh:
-                content = searchtmpl.render(data={},
-                                        translations=transdata,
-                                        lang=lang,
-                                        **workdata[""]["render_args"])
-                fh.write(content)
-                log.debug("Wrote %s", output)
+
+        # First create the top-level index.html and search.html
+        # for part in ("", lang):
+        #     output = outputdir / part
+        #     # We maybe need to create a directory for the language
+        #     output.mkdir(parents=True, exist_ok=True)
+        #     output = output / "index.html"
+        #     log.debug("Trying to write to %s", str(output))
+        #     with open(output, "w") as fh:
+        #         content = hometmpl.render(data=homepagecontext,
+        #                                 translations=transdata,
+        #                                 lang=lang,
+        #                                 **workdata[""]["render_args"])
+        #         fh.write(content)
+        #         log.debug("Wrote %s", output)
+
+        #     output = outputdir / part / "search.html"
+        #     log.debug("Trying to write to %s", str(output))
+        #     with open(output, "w") as fh:
+        #         content = searchtmpl.render(data={},
+        #                                 translations=transdata,
+        #                                 lang=lang,
+        #                                 **workdata[""]["render_args"])
+        #         fh.write(content)
+        #         log.debug("Wrote %s", output)
 
     output = outputdir / "404.html"
     with output.open("w") as fh:

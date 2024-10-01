@@ -561,32 +561,6 @@ products, requesteddocsets, lifecycle, requestedlangs, outputdir, jsondir, jinja
                 fh.write(content)
                 log.debug("Wrote %s", output)
 
-
-        # First create the top-level index.html and search.html
-        # for part in ("", lang):
-        #     output = outputdir / part
-        #     # We maybe need to create a directory for the language
-        #     output.mkdir(parents=True, exist_ok=True)
-        #     output = output / "index.html"
-        #     log.debug("Trying to write to %s", str(output))
-        #     with open(output, "w") as fh:
-        #         content = hometmpl.render(data=homepagecontext,
-        #                                 translations=transdata,
-        #                                 lang=lang,
-        #                                 **workdata[""]["render_args"])
-        #         fh.write(content)
-        #         log.debug("Wrote %s", output)
-
-        #     output = outputdir / part / "search.html"
-        #     log.debug("Trying to write to %s", str(output))
-        #     with open(output, "w") as fh:
-        #         content = searchtmpl.render(data={},
-        #                                 translations=transdata,
-        #                                 lang=lang,
-        #                                 **workdata[""]["render_args"])
-        #         fh.write(content)
-        #         log.debug("Wrote %s", output)
-
     output = outputdir / "404.html"
     with output.open("w") as fh:
         content = error404tmp.render(lang="en-us")

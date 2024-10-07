@@ -252,7 +252,7 @@ def parsecli(cliargs=None):
     #if args.langs is not None:
     #    args.langs = [] if args.langs is None else SEPARATOR.split(args.langs)
 
-    docservconfigdir = Path(args.docserv_config_dir)
+    docservconfigdir = Path(args.docserv_config_dir).expanduser()
     if docservconfigdir.joinpath("config.d").exists():
         args.configddir = docservconfigdir.joinpath("config.d")
     else:

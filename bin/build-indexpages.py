@@ -252,6 +252,10 @@ def parsecli(cliargs=None):
     #if args.langs is not None:
     #    args.langs = [] if args.langs is None else SEPARATOR.split(args.langs)
 
+    args.stitch_file = Path(args.stitch_file)
+    if not args.stitch_file.exists():
+        parser.error(f"XML stitch file {str(args.stitch_file)!r} does not exist")
+
     docservconfigdir = Path(args.docserv_config_dir).expanduser()
     if docservconfigdir.joinpath("config.d").exists():
         args.configddir = docservconfigdir.joinpath("config.d")

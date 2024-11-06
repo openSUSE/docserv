@@ -462,6 +462,7 @@ class Docserv(DocservState, DocservConfig):
             logger.info("Reducing number of build threads to avoid using more threads than there are cores.")
 
         logger.info("Docserv version %s", __version__)
+        logger.info("From package %s in %s", __package__, __file__)
         logger.info("Using these configuration settings:")
         for target in self.config['targets']:
             for item in ('json_dir',

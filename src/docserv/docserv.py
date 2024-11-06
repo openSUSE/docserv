@@ -23,7 +23,7 @@ from .deliverable import Deliverable
 from .functions import print_help
 from .rest import RESTServer, ThreadedRESTServer
 from .navigation import init_jinja_template
-from .util import run, replace_placeholders
+from .util import replace_placeholders, stitching
 from . import __version__
 
 
@@ -510,6 +510,17 @@ class Docserv(DocservState, DocservConfig):
                 # Largely copypasta from bih.py cuz I dunno how to share stuff
                 logger.debug("Stitching XML config directory to %s",
                              stitch_tmp_file)
+                # TODO
+                rc, self.out, self.err = stitching(
+                    os.path.join(BIN_DIR, 'docserv-stitch'),
+                    " ".join(self.config['server']['valid_languages']),
+                    sec['site_sections'],
+                    target,
+                    # Positional arguments:
+                    sec['config_dir'],
+                    stitch_tmp_file,
+                    revalidate=False,
+                )
                 # Don't use --revalidate-only parameter: after starting we
                 # really want to make sure that the config is alright.
                 # cmd = ('%s --simplify '
@@ -518,28 +529,18 @@ class Docserv(DocservState, DocservConfig):
                 #        '%s %s') % (
                 #     os.path.join(BIN_DIR, 'docserv-stitch'),
                 #     " ".join(self.config['server']['valid_languages']),
-                #     self.config['targets'][target]['site_sections'],
-                #     self.config["targets"][target]['config_dir'],
+                #     sec['site_sections'],
+                #     sec['config_dir'],
                 #     stitch_tmp_file)
-                cmd = (
-                    f"{os.path.join(BIN_DIR, 'docserv-stitch')} --simplify "
-                    f"--valid-languages=\"{' '.join(self.config['server']['valid_languages'])}\" "
-                    f"--valid-site-sections=\"{self.config['targets'][target]['site_sections']}\" "
-                    f"--target={target} "
-                    f"{self.config['targets'][target]['config_dir']} "
-                    f"{stitch_tmp_file}"
-                )
-                logger.debug("Stitching command: %s", cmd)
-                rc, self.out, self.err = run(cmd)
-                if rc == 0:
+                if not rc:
                     logger.debug("Stitching of %s successful",
-                                 self.config['targets'][target]['config_dir'])
+                                 sec['config_dir'])
                 else:
                     logger.warning("Stitching of %s failed!",
-                                   self.config['targets'][target]['config_dir'])
+                                   sec['config_dir'])
                     logger.warning("Stitching STDOUT: %s", self.out)
                     logger.warning("Stitching STDERR: %s", self.err)
-                    raise RuntimeError("Stitching failed")
+                    raise RuntimeError("Stitching failed in Docserv.start")
                 # End copypasta
 
             thread_receive = threading.Thread(target=self.listen)

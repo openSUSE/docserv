@@ -81,3 +81,37 @@ def removedir(path: str) -> None:
     """
     logger.debug("Removing directory: %s", path)
     shutil.rmtree(path)
+
+
+def stitching(stitchcmd: str,
+              valid_languages: str,
+              valid_site_sections: str,
+              target: str,
+              config_dir: str,
+              stitch_tmp_file: str,
+              revalidate: bool = True,
+              ) -> tuple[int, str|bytes, str|bytes]:
+    # cmd = ('%s --simplify --revalidate-only '
+    #        '--valid-languages="%s" '
+    #        '--valid-site-sections="%s" '
+    #        '%s %s'
+    #        ) % (
+    #     os.path.join(BIN_DIR, 'docserv-stitch'),
+    #     " ".join(self.config['server']['valid_languages']),
+    #     self.config['targets'][target]['site_sections'],
+    #     self.config['targets'][target]['config_dir'],
+    #     self.stitch_tmp_file,
+    #     )
+    revalidate_str = "--revalidate-only" if revalidate else ""
+    cmd = (f"{stitchcmd} "
+            "--simplify "
+            f"{revalidate_str} "
+            f'--valid-languages="{valid_languages}" '
+            f'--valid-site-sections="{valid_site_sections}" '
+            f"--target={target} "
+            f"{config_dir} "
+            f"{stitch_tmp_file}"
+            )
+    logger.debug("Stitching command: %s", cmd)
+    rc, out, err = run(cmd)
+    return rc, out, err

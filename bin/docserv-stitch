@@ -97,7 +97,6 @@ spin() {
 JOBS=25
 TARGET=""
 DATE=$(date +"%Y-%m-%d")
-tmpoutfile="docserv-stitch-${DATE}.xml"
 xmllint='xmllint'
 jing='jing'
 starlet='xmlstarlet'
@@ -326,10 +325,11 @@ debug "======================================="
 debug "Checking each config file..."
 
 # tmpoutfile=$(mktemp --tmpdir=/tmp $tmpoutfile)
-tmpoutfile="/tmp/$tmpoutfile-$TARGET"
+tmpoutfile="/tmp/docserv-stitch-${DATE}-${TARGET}.xml"
+# tmpoutfile="/tmp/$tmpoutfile"
 # TMPCONFIGDIR=$(mktemp -d --tmpdir=/tmp docserv-stitch-tmpdir-XXXX)
-TMPCONFIGDIR="/tmp/docserv-stitch-tmpdir-$DATE-$TARGET"
-mkdir /tmp/docserv-stitch-tmpdir-$DATE 2>/dev/null
+TMPCONFIGDIR="/tmp/docserv-stitch-tmpdir-${DATE}/"
+mkdir ${TMPCONFIGDIR} 2>/dev/null
 
 cat << EOF > "$tmpoutfile"
 <?xml version="1.0" encoding="UTF-8"?>

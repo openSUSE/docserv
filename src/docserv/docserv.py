@@ -622,7 +622,7 @@ def main():
             # Ignore the error and provide the correct message
             raise FileNotFoundError(f"Could not find {loginifile}.")
 
-    logger.info("Starting Docserv...")
+    logger.info("Starting Docserv %s...", __version__)
     try:
         docserv = Docserv(sys.argv)
         docserv.start()

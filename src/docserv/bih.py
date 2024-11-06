@@ -57,6 +57,7 @@ class BuildInstructionHandler:
         self.cleanup_lock = threading.Lock()
 
         self.stitch_tmp_dir = stitch_tmp_dir
+        self.tmpdir_map = {}
 
         if self.validate(build_instruction, config):
             self.initialized = True
@@ -484,7 +485,7 @@ These are the details:
                f"--valid-languages={' '.join(self.config['server']['valid_languages'])} "
                f'--valid-site-sections="{targetdict["site_sections"]}" '
                f"--target={target} "
-               f"{targetdict['config_dir']}"
+               f"{targetdict['config_dir']} "
                f"{self.stitch_tmp_file}"
                )
         logger.debug("Stitching command: %s", cmd)

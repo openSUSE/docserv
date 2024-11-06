@@ -459,6 +459,7 @@ These are the details:
             logger.debug("Target %s does not exist.", target)
             return False
 
+        logger.debug("Processing for target %s", target)
         targetdict = self.config["targets"][target]
 
         self.stitch_tmp_file = os.path.join(self.stitch_tmp_dir,

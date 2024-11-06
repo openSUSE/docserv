@@ -498,7 +498,8 @@ These are the details:
             logger.warning("Stitching STDERR: %s", self.err)
 
             self.initialized = False
-            return False
+            raise RuntimeError("Stitching failed")
+            # return False
 
         # then read all files into an xml tree
         self.tree = etree.parse(self.stitch_tmp_file)

@@ -512,15 +512,23 @@ class Docserv(DocservState, DocservConfig):
                              stitch_tmp_file)
                 # Don't use --revalidate-only parameter: after starting we
                 # really want to make sure that the config is alright.
-                cmd = ('%s --simplify '
-                       '--valid-languages="%s" '
-                       '--valid-site-sections="%s" '
-                       '%s %s') % (
-                    os.path.join(BIN_DIR, 'docserv-stitch'),
-                    " ".join(self.config['server']['valid_languages']),
-                    self.config['targets'][target]['site_sections'],
-                    self.config["targets"][target]['config_dir'],
-                    stitch_tmp_file)
+                # cmd = ('%s --simplify '
+                #        '--valid-languages="%s" '
+                #        '--valid-site-sections="%s" '
+                #        '%s %s') % (
+                #     os.path.join(BIN_DIR, 'docserv-stitch'),
+                #     " ".join(self.config['server']['valid_languages']),
+                #     self.config['targets'][target]['site_sections'],
+                #     self.config["targets"][target]['config_dir'],
+                #     stitch_tmp_file)
+                cmd = (
+                    f"{os.path.join(BIN_DIR, 'docserv-stitch')} --simplify "
+                    f"--valid-languages=\"{' '.join(self.config['server']['valid_languages'])}\" "
+                    f"--valid-site-sections=\"{self.config['targets'][target]['site_sections']}\" "
+                    f"--target={target} "
+                    f"{self.config['targets'][target]['config_dir']} "
+                    f"{stitch_tmp_file}"
+                )
                 logger.debug("Stitching command: %s", cmd)
                 rc, self.out, self.err = run(cmd)
                 if rc == 0:
@@ -531,6 +539,7 @@ class Docserv(DocservState, DocservConfig):
                                    self.config['targets'][target]['config_dir'])
                     logger.warning("Stitching STDOUT: %s", self.out)
                     logger.warning("Stitching STDERR: %s", self.err)
+                    raise RuntimeError("Stitching failed")
                 # End copypasta
 
             thread_receive = threading.Thread(target=self.listen)

@@ -459,23 +459,33 @@ These are the details:
             logger.debug("Target %s does not exist.", target)
             return False
 
+        targetdict = self.config["targets"][target]
+
         self.stitch_tmp_file = os.path.join(self.stitch_tmp_dir,
             ('productconfig_simplified_%s.xml' % target))
 
         ## START stitching
         logger.debug("Stitching XML config directory to %s",
                      self.stitch_tmp_file)
-        cmd = ('%s --simplify --revalidate-only '
-               '--valid-languages="%s" '
-               '--valid-site-sections="%s" '
-               '%s %s'
-               ) % (
-            os.path.join(BIN_DIR, 'docserv-stitch'),
-            " ".join(self.config['server']['valid_languages']),
-            self.config['targets'][target]['site_sections'],
-            self.config['targets'][target]['config_dir'],
-            self.stitch_tmp_file,
-            )
+        # cmd = ('%s --simplify --revalidate-only '
+        #        '--valid-languages="%s" '
+        #        '--valid-site-sections="%s" '
+        #        '%s %s'
+        #        ) % (
+        #     os.path.join(BIN_DIR, 'docserv-stitch'),
+        #     " ".join(self.config['server']['valid_languages']),
+        #     self.config['targets'][target]['site_sections'],
+        #     self.config['targets'][target]['config_dir'],
+        #     self.stitch_tmp_file,
+        #     )
+        cmd = (f"{os.path.join(BIN_DIR, 'docserv-stitch')} "
+               "--simplify --revalidate-only "
+               f"--valid-languages={' '.join(self.config['server']['valid_languages'])} "
+               f'--valid-site-sections="{targetdict["site_sections"]}" '
+               f"--target={target} "
+               f"{targetdict['config_dir']}"
+               f"{self.stitch_tmp_file}"
+               )
         logger.debug("Stitching command: %s", cmd)
         rc, self.out, self.err = run(cmd)
         if not rc:

@@ -24,6 +24,8 @@
 # --spinner                       # Show a spinner while working, if you or your
 #                                 # CI are impatient and eager to kill processes
 #
+# --target                        # The target server
+#
 # INPUT_DIR                       # Directory with config files
 # OUTPUT_FILE                     # Output file name (parent directory must exist)
 #                                 # (optional; if not specified, this will only
@@ -93,6 +95,7 @@ spin() {
 }
 
 JOBS=25
+TARGET=""
 DATE=$(date +"%Y-%m-%d")
 tmpoutfile="docserv-stitch-${DATE}.xml"
 xmllint='xmllint'
@@ -119,6 +122,7 @@ DEBUG=1
 function debug() {
   [[ $DEBUG -gt 0 ]] && 2>&1 echo -e "INFO: $1"
 }
+
 
 function validate_config() {
   local file=$1
@@ -179,7 +183,7 @@ function parsecli()
     local REST=()
     local options=$(getopt -n "$PROG" \
       -o vh \
-      --long version,help,simplify,spinner,revalidate-only,product-config-schema:,valid-languages:,valid-site-sections:,checks-dir: \
+      --long version,help,simplify,spinner,revalidate-only,product-config-schema:,valid-languages:,valid-site-sections:,checks-dir:,target: \
       -- "$@")
     [ $? -eq 0 ] || {
         echo "Incorrect option provided"
@@ -223,6 +227,10 @@ function parsecli()
           checks_dir="$2"
           shift
           ;;
+        --target)
+          TARGET="$2"
+          shift
+          ;;
 
         --)
             shift
@@ -246,6 +254,9 @@ function parsecli()
     fi
     if [[ ! -d ${output_file%/*} ]]; then
       out "Parent directory of '${output_file%/*}' does not exist."
+    fi
+    if [[ -z $TARGET ]]; then
+      out "No target server specified."
     fi
 }
 
@@ -315,9 +326,9 @@ debug "======================================="
 debug "Checking each config file..."
 
 # tmpoutfile=$(mktemp --tmpdir=/tmp $tmpoutfile)
-tmpoutfile="/tmp/$tmpoutfile"
+tmpoutfile="/tmp/$tmpoutfile-$TARGET"
 # TMPCONFIGDIR=$(mktemp -d --tmpdir=/tmp docserv-stitch-tmpdir-XXXX)
-TMPCONFIGDIR="/tmp/docserv-stitch-tmpdir-$DATE"
+TMPCONFIGDIR="/tmp/docserv-stitch-tmpdir-$DATE-$TARGET"
 mkdir /tmp/docserv-stitch-tmpdir-$DATE 2>/dev/null
 
 cat << EOF > "$tmpoutfile"

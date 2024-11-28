@@ -30,13 +30,14 @@ from jinja2 import Environment, FileSystemLoader, DebugUndefined
 from jinja2.exceptions import TemplateNotFound
 
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __author__ = "Tom Schraitle"
 
 
 # --- Variables
 PYTHON_VERSION: str = f"{sys.version_info.major}.{sys.version_info.minor}"
 
+#: Separator for multiple values
 SEPARATOR = re.compile(r"[,; ]")
 
 LOGGERNAME = "indexpages"
@@ -99,7 +100,9 @@ DEFAULT_LOGGING_DICT = {
 }
 
 #: All languages supported by the documentation portal
-ALL_LANGUAGES = "de-de en-us es-es fr-fr ja-jp ko-kr zh-cn".split(" ")
+ALL_LANGUAGES = frozenset(
+    "de-de en-us es-es fr-fr ja-jp ko-kr zh-cn".split(" ")
+)
 
 # in order for all messages to be delegated.
 logging.getLogger().setLevel(logging.NOTSET)
@@ -135,25 +138,37 @@ class LifecycleAction(argparse.Action):
 
 
 class LangsAction(argparse.Action):
-    LANG_PATTERN = re.compile(r"^[a-z]{2}-[a-z]{2}$")
-    seen = False
+    LANG_PATTERN = re.compile(r"[a-z]{2}-[a-z]{2}")
+    LANG_REGEX = re.compile(
+        rf'^({LANG_PATTERN.pattern}{SEPARATOR.pattern})*'
+        rf'{LANG_PATTERN.pattern}'
+        rf'$'
+    )
 
     def __call__(self, parser, namespace, values, option_string=None):
-        if self.seen:
-            parser.error(f"Option {option_string} can only be specified once. "
-                         "Use a comma or semicolon to separate multiple values."
-                         )
-        self.seen = True
-
+        cls = type(self)
         if values.lower() == "all":
-            setattr(namespace, self.dest, ALL_LANGUAGES)
-            return
-
-        langs = [l for l in SEPARATOR.split(values)]
-        invalid_langs = [lang for lang in langs if not self.LANG_PATTERN.match(lang)]
+            languages = ALL_LANGUAGES
+        elif values.lower() == "all-en":
+            languages = tuple(x for x in ALL_LANGUAGES if x != 'en-us')
+        elif cls.LANG_REGEX.match(values):
+            languages = SEPARATOR.split(values)
+        else:
+            parser.error(
+                "Wrong syntax in --langs. "
+                "Each languages must to be in the format '[a-z]{2}-[a-z]{2}'. "
+                "More than one language need to be separated by commas."
+            )
+        print(">>> languages:", languages)
+        invalid_langs = set(languages) - set(ALL_LANGUAGES)
         if invalid_langs:
-            raise argparse.ArgumentError(self, f"Invalid languages: {', '.join(invalid_langs)}. Format should be 'xx-xx' (e.g., en-us,de-de)")
-        setattr(namespace, self.dest, langs)
+            parser.error(
+                f"Invalid language(s): {', '.join(invalid_langs)!r} "
+                f"(choose from {', '.join(sorted(ALL_LANGUAGES))})"
+            )
+
+        setattr(namespace, self.dest, languages)
+        return
 
 
 def parsecli(cliargs=None):
@@ -209,7 +224,8 @@ def parsecli(cliargs=None):
                        action=LangsAction,
                        help=("Languages to process (defaults to %(default)r). "
                              "Use comma or semicolon-separated list for multiple languages.\n"
-                             f"Use 'all' to process all languages ({ALL_LANGUAGES})."
+                             f"Use 'all' to process all languages ({', '.join(sorted(ALL_LANGUAGES))}). "
+                             f"Use 'all-en' to process all languages except 'en-us'."
                              )
                         )
     parser.add_argument("-c", "--lifecycle",

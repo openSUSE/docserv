@@ -12,16 +12,18 @@ For example:
 
 """
 
-
 import argparse
-
+from contextlib import contextmanager
+import time
 import json
 import itertools
 import logging
-from logging.config import dictConfig
+import logging.handlers
+# from logging.config import dictConfig
 from pathlib import Path
 import os.path
-from typing import Any
+from typing import Any, ClassVar, Callable, Dict, Optional
+import queue
 import re
 import sys
 
@@ -48,10 +50,9 @@ LOGFILE = "/tmp/indexpages.log"
 #: Map verbosity level (int) to log level
 LOGLEVELS = {
     None: logging.WARNING,  # fallback
-    0: logging.ERROR,
-    1: logging.WARNING,
-    2: logging.INFO,
-    3: logging.DEBUG,
+    0: logging.WARNING,
+    1: logging.INFO,
+    2: logging.DEBUG,
 }
 
 #: The dictionary, passed to :class:`logging.config.dictConfig`,
@@ -112,6 +113,16 @@ jinjalog = logging.getLogger(JINJALOGGERNAME)
 xpathlog = logging.getLogger(XPATHLOGGERNAME)
 
 
+@contextmanager
+def timer(method=time.perf_counter):
+    """Measures the time (implemented as context manager)"""
+    timer.elapsed_time = None
+    start_time = method()
+    try:
+        yield timer
+    finally:
+        timer.elapsed_time = method() - start_time
+
 class LifecycleAction(argparse.Action):
     CHOICES = set(("supported", "beta", "unsupported", "unpublished", "all"))
     seen = False
@@ -169,6 +180,87 @@ class LangsAction(argparse.Action):
 
         setattr(namespace, self.dest, languages)
         return
+
+
+def setup_logging(args: argparse.Namespace,
+                  fmt: str = "[%(levelname)s] %(funcName)s: %(message)s"
+):
+    """
+    Set up loggers and handlers programmatically.
+    Adjust the log level of the `jinja_logger` and `xpath_logger` based on verbosity.
+    """
+    # Ensures that if args.verbose is greater than 2 (==DEBUG), it will be set to DEBUG
+    verbosity = LOGLEVELS.get(min(args.verbose, 2), logging.WARNING)
+    jinja_level = LOGLEVELS.get(min(verbosity, len(LOGLEVELS) - 1), logging.INFO)
+    xpath_level = LOGLEVELS.get(min(verbosity + 1, len(LOGLEVELS) - 1), logging.INFO)
+
+    # If verbosity exceeds LOGLEVELS, set additional levels. "-1" for the "None" level
+    if verbosity > len(LOGLEVELS) - 1:
+        jinja_level = logging.DEBUG
+    if verbosity + 1 > len(LOGLEVELS) - 1:
+        xpath_level = logging.DEBUG
+
+    # Set up a queue to handle logging
+    log_queue = queue.Queue(-1)  # no limit on size
+
+    # Create formatters
+    standard_formatter = logging.Formatter(fmt)
+
+    # Create handlers
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(verbosity)  # Will be updated later
+    console_handler.setFormatter(standard_formatter)
+
+    # Check if log exists and should therefore be rolled
+    needRoll = Path(LOGFILE).exists()
+
+    rotating_file_handler = logging.handlers.RotatingFileHandler(
+        LOGFILE,
+        backupCount=4,  # Keep up to 4 backup log files
+    )
+    rotating_file_handler.setLevel(logging.DEBUG)  # Capture all logs to the file
+    rotating_file_handler.setFormatter(standard_formatter)
+
+    # Create QueueHandler and QueueListener
+    queue_handler = logging.handlers.QueueHandler(log_queue)
+    listener = logging.handlers.QueueListener(
+        log_queue,
+        console_handler, rotating_file_handler,
+        respect_handler_level=True,
+    )
+
+    # Start the listener
+    listener.start()
+
+    # Set up loggers
+    app_logger = logging.getLogger(LOGGERNAME)
+    app_logger.setLevel(verbosity)
+    app_logger.addHandler(queue_handler)
+
+    jinja_logger = logging.getLogger(JINJALOGGERNAME)
+    jinja_logger.setLevel(jinja_level)
+    jinja_logger.addHandler(queue_handler)
+
+    xpath_logger = logging.getLogger(XPATHLOGGERNAME)
+    xpath_logger.setLevel(xpath_level)
+    xpath_logger.addHandler(queue_handler)
+
+    # Optional: Disable propagation if needed
+    # app_logger.propagate = False
+    # jinja_logger.propagate = False
+    # xpath_logger.propagate = False
+
+    # Ensure the listener is stopped properly when the application ends
+    def stop_listener():
+        listener.stop()
+
+    import atexit
+    atexit.register(stop_listener)
+
+    # This is a stale log, so roll it
+    if needRoll:
+        # Roll over on application start
+        rotating_file_handler.doRollover()
 
 
 def parsecli(cliargs=None):
@@ -236,23 +328,25 @@ def parsecli(cliargs=None):
     # Positional arguments
     parser.add_argument("-o", "--output-dir",
                         metavar="OUTPUT-DIR",
+                        required=True,
                         help="Output directory for the index pages"
     )
     args = parser.parse_args(args=cliargs)
     args.parser = parser
 
     # Setup main logging and the log level according to the "-v" option
-    loglevel = LOGLEVELS.get(args.verbose, logging.DEBUG)
-    DEFAULT_LOGGING_DICT["handlers"]["console"]["level"] = loglevel
-    DEFAULT_LOGGING_DICT["loggers"][LOGGERNAME]["level"] = loglevel
+    #loglevel = LOGLEVELS.get(args.verbose, logging.DEBUG)
+    #DEFAULT_LOGGING_DICT["handlers"]["console"]["level"] = loglevel
+    #DEFAULT_LOGGING_DICT["loggers"][LOGGERNAME]["level"] = loglevel
 
     # Setup sub loggers
-    if args.verbose > len(LOGLEVELS):
-         DEFAULT_LOGGING_DICT["loggers"][JINJALOGGERNAME]["level"] = logging.DEBUG
-    if args.verbose +1 > len(LOGLEVELS):
-        DEFAULT_LOGGING_DICT["loggers"][XPATHLOGGERNAME]["level"] = logging.DEBUG
+    #if args.verbose > len(LOGLEVELS):
+    #     DEFAULT_LOGGING_DICT["loggers"][JINJALOGGERNAME]["level"] = logging.DEBUG
+    #if args.verbose +1 > len(LOGLEVELS):
+    #    DEFAULT_LOGGING_DICT["loggers"][XPATHLOGGERNAME]["level"] = logging.DEBUG
 
-    dictConfig(DEFAULT_LOGGING_DICT)
+    #dictConfig(DEFAULT_LOGGING_DICT)
+    setup_logging(args)
 
     if args.lifecycle == ["all"]:
         args.lifecycle = []
@@ -432,7 +526,7 @@ def render(args, tree, env):
     searchtmpl = env.get_template("search.html.jinja")
     error404tmp = env.get_template("404.html.jinja")
 
-    log.debug("""Variables used:
+    log.info("""Variables used:
          products: %s
  requesteddocsets: %s
         lifecycle: %s
@@ -594,13 +688,13 @@ def main(cliargs=None):
     """Main function"""
     try:
         args = parsecli(cliargs)
-        log.debug("=== Starting ===")
-        env = init_jinja_template(args.jinjatemplatedir.absolute())
-        log.debug("Arguments: %s", args)
-        env = init_jinja_template(args.jinjatemplatedir)
-        tree = etree.parse(args.stitch_file, etree.XMLParser())
-        render(args, tree, env)
-        log.debug("=== Finished ===")
+        with timer() as t:
+            log.info("=== Starting ===")
+            log.debug("Arguments: %s", args)
+
+            env = init_jinja_template(args.jinjatemplatedir.absolute())
+            tree = etree.parse(args.stitch_file, etree.XMLParser())
+            render(args, tree, env)
 
     except json.JSONDecodeError as err:
         log.error("Error decoding JSON file %s\nAbort.", err)
@@ -613,6 +707,15 @@ def main(cliargs=None):
     except ValueError as e:
         log.error("Error: %s", e)
         return 20
+
+    except KeyboardInterrupt:
+        log.error("Interrupted by user")
+        return 10
+
+    finally:
+        log.info("Elapsed time: %0.3f seconds", t.elapsed_time)
+        log.info("=== Finished ===")
+        # log.info("Elapsed time: %0.4f seconds", Timer.tim
 
     return 0
 

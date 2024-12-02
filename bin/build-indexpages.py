@@ -191,6 +191,13 @@ class ProductDocsetAction(argparse.Action):
                     f"Use the format 'productid/docsetid[/lang]'"
                 )
 
+            _, _, lang = match.groupdict()
+            if lang is not None and lang not in ALL_LANGUAGES:
+                parser.error(
+                    f"Invalid language: {lang!r} in {docsuite!r}. "
+                    f"(choose from {', '.join(sorted(ALL_LANGUAGES))})"
+                )
+
             includes.append(match.groupdict())
 
         # Should we check for duplicates? Or just silently ignore them?

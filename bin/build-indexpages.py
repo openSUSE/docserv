@@ -170,39 +170,6 @@ class LifecycleAction(argparse.Action):
             setattr(namespace, self.dest, lifecycles)
 
 
-class LangsAction(argparse.Action):
-    LANG_PATTERN = re.compile(r"[a-z]{2}-[a-z]{2}")
-    LANG_REGEX = re.compile(
-        rf'^({LANG_PATTERN.pattern}{SEPARATOR.pattern})*'
-        rf'{LANG_PATTERN.pattern}'
-        rf'$'
-    )
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        cls = type(self)
-        if values.lower() == "all":
-            languages = ALL_LANGUAGES
-        elif values.lower() == "all-en":
-            languages = tuple(x for x in ALL_LANGUAGES if x != 'en-us')
-        elif cls.LANG_REGEX.match(values):
-            languages = SEPARATOR.split(values)
-        else:
-            parser.error(
-                "Wrong syntax in --langs. "
-                "Each languages must to be in the format '[a-z]{2}-[a-z]{2}'. "
-                "More than one language need to be separated by commas."
-            )
-        print(">>> languages:", languages)
-        invalid_langs = set(languages) - set(ALL_LANGUAGES)
-        if invalid_langs:
-            parser.error(
-                f"Invalid language(s): {', '.join(invalid_langs)!r} "
-                f"(choose from {', '.join(sorted(ALL_LANGUAGES))})"
-            )
-
-        setattr(namespace, self.dest, languages)
-        return
-
 class ProductDocsetAction(argparse.Action):
     """Parse action for a doc suite productid/docsetid[lang]"""
     REGEX = re.compile(
@@ -364,21 +331,6 @@ def parsecli(cliargs=None):
             "Syntax: projectid1/docset1[/lang1][,projectid2/docset2[/lang2]]*"
         )
     )
-    # parser.add_argument("-p", "--products",
-    #                     #required=True,
-    #                     help="Products to process. Use comma, space, or semicolon for multiple products.")
-    # parser.add_argument("-d", "--docsets",
-    #                     #required=True,
-    #                     help="Docsets to process. Use comma, space, or semicolon for multiple docsets.")
-    # parser.add_argument("-l", "--langs",
-    #                    default=["en-us"],
-    #                    action=LangsAction,
-    #                    help=("Languages to process (defaults to %(default)r). "
-    #                          "Use comma or semicolon-separated list for multiple languages.\n"
-    #                          f"Use 'all' to process all languages ({', '.join(sorted(ALL_LANGUAGES))}). "
-    #                          f"Use 'all-en' to process all languages except 'en-us'."
-    #                          )
-    #                     )
     parser.add_argument("-c", "--lifecycle",
                         default=["supported"],
                         action=LifecycleAction,

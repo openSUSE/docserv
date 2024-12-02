@@ -15,6 +15,7 @@ For example:
 import argparse
 import aiofiles
 import asyncio
+import configparser
 from contextlib import contextmanager
 import time
 import json
@@ -291,6 +292,30 @@ def setup_logging(cliverbosity: int,
         rotating_file_handler.doRollover()
 
 
+def read_ini_file(inifile: Path, target="doc-suse-com") -> dict[str, Optional[str]]:
+    """
+    Read an INI file and return its content as a dictionary
+    """
+    config = configparser.ConfigParser()
+    config.read(inifile)
+
+    for section in config.sections():
+        name = config.get(section, "name", fallback="")
+        if name == target:
+            log.debug("Found target %r in section %r", target, section)
+            break
+    else:
+        raise RuntimeError(f"Target {target!r} not found in INI file {inifile}")
+
+    server = dict(config.items("server"))
+    result = dict(config.items(section))
+    result.update(repo_dir=server.get("repo_dir", None))
+    result.update(temp_repo_dir=server.get("temp_repo_dir", None))
+
+    log.debug("Read INI configuration file %r", str(inifile))
+    return result
+
+
 def parsecli(cliargs=None):
     """Parse CLI with :class:`argparse.ArgumentParser` and return parsed result
 
@@ -324,10 +349,13 @@ def parsecli(cliargs=None):
                         help="XML stitch file to use"
     )
     parser.add_argument("-D", "--docserv-config-dir",
-                        required=True,
-                        help="Docserv configuration file to use"
+        required=True,
+        help="Docserv configuration file to use"
     )
-
+    parser.add_argument("-t", "--target",
+        default="doc-suse-com",
+        help="Target to use in the configuration file"
+    )
     parser.add_argument("-pd", "--include-product-docset",
         default=[],
         action=DocUnitAction,
@@ -336,16 +364,15 @@ def parsecli(cliargs=None):
             "Syntax: projectid1/docset1[/lang1][,projectid2/docset2[/lang2]]*"
         )
     )
-    parser.add_argument("-C", "--docserv-ini",
-        required=True,
-        help="Path to the Docserv configuration file"
-    )
+    #parser.add_argument("-C", "--docserv-ini",
+    #    required=True,
+    #    help="Path to the Docserv configuration file"
+    #)
     parser.add_argument("-c", "--lifecycle",
                         default=["supported"],
                         action=LifecycleAction,
                         help=("Lifecycle to process (defaults to %(default)r)")
                         )
-    # Positional arguments
     parser.add_argument("-o", "--output-dir",
                         metavar="OUTPUT-DIR",
                         required=True,
@@ -356,12 +383,6 @@ def parsecli(cliargs=None):
 
     if args.lifecycle == ["all"]:
         args.lifecycle = []
-
-    args.docserv_ini = Path(args.docserv_ini)
-    if not args.docserv_ini.exists():
-        parser.error(
-            f"Docserv configuration file {str(args.docserv_ini)!r} does not exist"
-        )
 
     #if args.products is None and args.docsets is not None:
     #    parser.error("If you specify a docset, you must also specify a product")
@@ -403,8 +424,14 @@ def parsecli(cliargs=None):
     else:
         parser.error(f"Directory {docservconfigdir} does not exist or is missing 'json-portal-dsc/suseparts' subdirectory")
 
+    docserv_ini = docservconfigdir / "docserv.ini"
+    if not docserv_ini.exists():
+        parser.error(f"Docserv configuration file {str(docserv_ini)!r} not found")
+
     # Setup main logging and the log level according to the "-v" option
     setup_logging(args.verbose)
+
+    args.config = read_ini_file(docserv_ini)
 
     return args
 
@@ -809,7 +836,7 @@ async def main(cliargs=None):
         return 50
 
     except ValueError as e:
-        log.error("Error: %s", e)
+        log.error(e)
         return 20
 
     except KeyboardInterrupt:

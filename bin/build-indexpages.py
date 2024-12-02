@@ -301,15 +301,12 @@ def parsecli(cliargs=None):
         epilog="Version %s written by %s " % (__version__, __author__),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument(
-        "-v",
-        "--verbose",
+    parser.add_argument("-v", "--verbose",
         action="count",
         default=0,
         help="increase verbosity level",
     )
-    parser.add_argument(
-        "--version",
+    parser.add_argument("--version",
         action="version",
         version=(
             f"{__file__}\n"
@@ -338,6 +335,10 @@ def parsecli(cliargs=None):
             "Syntax: projectid1/docset1[/lang1][,projectid2/docset2[/lang2]]*"
         )
     )
+    parser.add_argument("-C", "--docserv-ini",
+        required=True,
+        help="Path to the Docserv configuration file"
+    )
     parser.add_argument("-c", "--lifecycle",
                         default=["supported"],
                         action=LifecycleAction,
@@ -354,6 +355,12 @@ def parsecli(cliargs=None):
 
     if args.lifecycle == ["all"]:
         args.lifecycle = []
+
+    args.docserv_ini = Path(args.docserv_ini)
+    if not args.docserv_ini.exists():
+        parser.error(
+            f"Docserv configuration file {str(args.docserv_ini)!r} does not exist"
+        )
 
     #if args.products is None and args.docsets is not None:
     #    parser.error("If you specify a docset, you must also specify a product")

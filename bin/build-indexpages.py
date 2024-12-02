@@ -13,6 +13,8 @@ For example:
 """
 
 import argparse
+import aiofiles
+import asyncio
 from contextlib import contextmanager
 import time
 import json
@@ -141,6 +143,7 @@ def timer(method=time.perf_counter):
         yield timer
     finally:
         timer.elapsed_time = method() - start_time
+
 
 class LifecycleAction(argparse.Action):
     CHOICES = set(("supported", "beta", "unsupported", "unpublished", "all"))
@@ -389,17 +392,6 @@ def parsecli(cliargs=None):
     )
     args = parser.parse_args(args=cliargs)
     args.parser = parser
-
-    # Setup main logging and the log level according to the "-v" option
-    #loglevel = LOGLEVELS.get(args.verbose, logging.DEBUG)
-    #DEFAULT_LOGGING_DICT["handlers"]["console"]["level"] = loglevel
-    #DEFAULT_LOGGING_DICT["loggers"][LOGGERNAME]["level"] = loglevel
-
-    # Setup sub loggers
-    #if args.verbose > len(LOGLEVELS):
-    #     DEFAULT_LOGGING_DICT["loggers"][JINJALOGGERNAME]["level"] = logging.DEBUG
-    #if args.verbose +1 > len(LOGLEVELS):
-    #    DEFAULT_LOGGING_DICT["loggers"][XPATHLOGGERNAME]["level"] = logging.DEBUG
 
     if args.lifecycle == ["all"]:
         args.lifecycle = []
@@ -739,7 +731,17 @@ products, requesteddocsets, lifecycle, requestedlangs, outputdir, jsondir, jinja
     return
 
 
-def main(cliargs=None):
+async def render_and_write_html(jinja_env, result, job_name, output_dir):
+    template = jinja_env.get_template('index.html')
+    output_html = template.render(result=result)
+
+    output_path = os.path.join(output_dir, f"{job_name.strip()}.html")
+
+    async with aiofiles.open(output_path, 'w') as f:
+        await f.write(output_html)
+
+
+def _main(cliargs=None):
     """Main function"""
     try:
         args = parsecli(cliargs)
@@ -775,5 +777,85 @@ def main(cliargs=None):
     return 0
 
 
+async def process_doc_unit(doc_unit: Dict[str, str]) -> None:
+    """
+    Process a single doc unit asynchronously.
+    """
+    # product, release, language = doc_unit["product"], doc_unit["release"], doc_unit["language"]
+    log.info(f"Processing %s", doc_unit)
+    await asyncio.sleep(1)  # Simulate async work
+    log.info(f"Completed %s", doc_unit)
+
+
+async def worker(queue: asyncio.Queue) -> None:
+    """
+    Async worker that processes doc units from the queue.
+    """
+    while not queue.empty():
+        doc_unit = await queue.get()  # Get a doc unit from the queue
+        try:
+            await process_doc_unit(doc_unit)
+        finally:
+            queue.task_done()  # Notify queue that task is complete
+
+
+async def main(cliargs=None):
+    """
+    Main function
+    """
+    try:
+        num_workers = 4
+        args = parsecli(cliargs)
+        q = asyncio.Queue()
+        with timer() as t:
+            log.info("=== Starting ===")
+            log.debug("Arguments: %s", args)
+
+            #env = init_jinja_template(args.jinjatemplatedir.absolute())
+            tree = etree.parse(args.stitch_file, etree.XMLParser())
+            for job in list_all_products(tree):
+                await q.put(job)
+
+            # Create worker tasks
+            tasks = [asyncio.create_task(worker(q))
+                     for _ in range(num_workers)]
+            # allow the logger to start
+            await asyncio.sleep(0)
+
+            # Wait until all items in the queue are processed:
+            await q.join()
+
+            # Cancel the workers once done
+            for task in tasks:
+                task.cancel()
+
+            #render(args, tree, env)
+
+        log.info("Elapsed time: %0.3f seconds", t.elapsed_time)
+
+    except json.JSONDecodeError as err:
+        log.error("Error decoding JSON file %s\nAbort.", err)
+        return 100
+
+    except FileNotFoundError as err:
+        log.error("File not found: %s.\nAbort", err)
+        return 50
+
+    except ValueError as e:
+        log.error("Error: %s", e)
+        return 20
+
+    except KeyboardInterrupt:
+        log.error("Interrupted by user")
+        return 10
+
+    finally:
+        log.info("=== Finished ===")
+        # log.info("Elapsed time: %0.4f seconds", Timer.tim
+
+    return 0
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    # sys.exit(main())
+    sys.exit(asyncio.run(main()))

@@ -201,7 +201,7 @@ class LangsAction(argparse.Action):
         return
 
 
-def setup_logging(args: argparse.Namespace,
+def setup_logging(cliverbosity: int,
                   fmt: str = "[%(levelname)s] %(funcName)s: %(message)s"
 ):
     """
@@ -209,7 +209,7 @@ def setup_logging(args: argparse.Namespace,
     Adjust the log level of the `jinja_logger` and `xpath_logger` based on verbosity.
     """
     # Ensures that if args.verbose is greater than 2 (==DEBUG), it will be set to DEBUG
-    verbosity = LOGLEVELS.get(min(args.verbose, 2), logging.WARNING)
+    verbosity = LOGLEVELS.get(min(cliverbosity, 2), logging.WARNING)
     jinja_level = LOGLEVELS.get(min(verbosity, len(LOGLEVELS) - 1), logging.INFO)
     xpath_level = LOGLEVELS.get(min(verbosity + 1, len(LOGLEVELS) - 1), logging.INFO)
 
@@ -364,9 +364,6 @@ def parsecli(cliargs=None):
     #if args.verbose +1 > len(LOGLEVELS):
     #    DEFAULT_LOGGING_DICT["loggers"][XPATHLOGGERNAME]["level"] = logging.DEBUG
 
-    #dictConfig(DEFAULT_LOGGING_DICT)
-    setup_logging(args)
-
     if args.lifecycle == ["all"]:
         args.lifecycle = []
 
@@ -410,6 +407,9 @@ def parsecli(cliargs=None):
         args.susepartsdir = docservconfigdir.joinpath("jinja-doc-suse-com", "suseparts")
     else:
         parser.error(f"Directory {docservconfigdir} does not exist or is missing 'json-portal-dsc/suseparts' subdirectory")
+
+    # Setup main logging and the log level according to the "-v" option
+    setup_logging(args.verbose)
 
     return args
 

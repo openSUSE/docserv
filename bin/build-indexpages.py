@@ -35,13 +35,23 @@ from jinja2.exceptions import TemplateNotFound
 __version__ = "0.3.0"
 __author__ = "Tom Schraitle"
 
+# --- Constants
+DEFAULT_LIFECYCLES = ("supported", "beta")
+POSSIBLE_LIFECYCLES = (
+    "supported",
+    "beta",
+    "unsupported",
+    "unpublished",
+)
+DEFAULT_LANGS = ("en-us",)
+#: All languages supported by the documentation portal
+ALL_LANGUAGES = frozenset(
+    "de-de en-us es-es fr-fr ja-jp ko-kr zh-cn".split()
+)
 
-# --- Variables
 PYTHON_VERSION: str = f"{sys.version_info.major}.{sys.version_info.minor}"
 
-#: Separator for multiple values
-SEPARATOR = re.compile(r"[,; ]")
-
+# --- Logging
 LOGGERNAME = "indexpages"
 JINJALOGGERNAME = f"{LOGGERNAME}.jinja"
 XPATHLOGGERNAME = f"{LOGGERNAME}.xpath"
@@ -102,11 +112,6 @@ DEFAULT_LOGGING_DICT = {
     },
 }
 
-#: All languages supported by the documentation portal
-ALL_LANGUAGES = frozenset(
-    "de-de en-us es-es fr-fr ja-jp ko-kr zh-cn".split(" ")
-)
-
 # in order for all messages to be delegated.
 logging.getLogger().setLevel(logging.NOTSET)
 
@@ -115,6 +120,18 @@ jinjalog = logging.getLogger(JINJALOGGERNAME)
 xpathlog = logging.getLogger(XPATHLOGGERNAME)
 
 
+# --- Regex for one or more languages, separated by comma:
+#: Separator for multiple values
+SEPARATOR = re.compile(r"[,; ]")
+
+SINGLE_LANG_REGEX = r'[a-z]{2}-[a-z]{2}'
+
+#: Regex for splitting a path into its components
+PRODUCT_REGEX = r"(?P<product>[\w\d_-]+)"  # |\*
+DOCSET_REGEX = r"(?P<docset>[\w\d\._-]+)"  # |\*
+
+
+# --- Classes and functions
 @contextmanager
 def timer(method=time.perf_counter):
     """Measures the time (implemented as context manager)"""

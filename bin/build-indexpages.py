@@ -200,6 +200,37 @@ class LangsAction(argparse.Action):
         setattr(namespace, self.dest, languages)
         return
 
+class ProductDocsetAction(argparse.Action):
+    """Parse action for a doc suite productid/docsetid[lang]"""
+    REGEX = re.compile(
+        # Watch for the "^" if you use .finditer
+        rf"^{PRODUCT_REGEX}/{DOCSET_REGEX}"
+        rf"(?:/(?P<lang>{SINGLE_LANG_REGEX}))?"
+    )
+
+    def __call__(self, parser, namespace, values: str, option_string=None):
+        includes = []
+        # We can't use self.REGEX.finditer() here, because a '*' for a product
+        # isn't recognized as a valid productid. So we need to split the values
+        # and check each part separately.
+        for docsuite in SEPARATOR.split(values):
+            match = self.REGEX.match(docsuite)
+            if not match:
+                parser.error(
+                    f"Invalid syntax in unit: {docsuite!r}. "
+                    f"Use the format 'productid/docsetid[/lang]'"
+                )
+
+            includes.append(match.groupdict())
+
+        # Should we check for duplicates? Or just silently ignore them?
+        # Should we allow */*/* as a valid unit?
+
+        if len(includes) != len(set(includes)):
+            parser.error("Each productid/docsetid unit can occur only once.")
+
+        setattr(namespace, self.dest, includes)
+
 
 def setup_logging(cliverbosity: int,
                   fmt: str = "[%(levelname)s] %(funcName)s: %(message)s"
@@ -322,23 +353,29 @@ def parsecli(cliargs=None):
                         help="Docserv configuration file to use"
     )
 
-    #parser.add_argument("-t", "--targets",
-    #                  help="Target server names")
-    parser.add_argument("-p", "--products",
-                        #required=True,
-                        help="Products to process. Use comma, space, or semicolon for multiple products.")
-    parser.add_argument("-d", "--docsets",
-                        #required=True,
-                        help="Docsets to process. Use comma, space, or semicolon for multiple docsets.")
-    parser.add_argument("-l", "--langs",
-                       default=["en-us"],
-                       action=LangsAction,
-                       help=("Languages to process (defaults to %(default)r). "
-                             "Use comma or semicolon-separated list for multiple languages.\n"
-                             f"Use 'all' to process all languages ({', '.join(sorted(ALL_LANGUAGES))}). "
-                             f"Use 'all-en' to process all languages except 'en-us'."
-                             )
-                        )
+    parser.add_argument("-pd", "--include-product-docset",
+        default=[],
+        action=ProductDocsetAction,
+        help=(
+            "Include only specific projects/docsets.\n"
+            "Syntax: projectid1/docset1[/lang1][,projectid2/docset2[/lang2]]*"
+        )
+    )
+    # parser.add_argument("-p", "--products",
+    #                     #required=True,
+    #                     help="Products to process. Use comma, space, or semicolon for multiple products.")
+    # parser.add_argument("-d", "--docsets",
+    #                     #required=True,
+    #                     help="Docsets to process. Use comma, space, or semicolon for multiple docsets.")
+    # parser.add_argument("-l", "--langs",
+    #                    default=["en-us"],
+    #                    action=LangsAction,
+    #                    help=("Languages to process (defaults to %(default)r). "
+    #                          "Use comma or semicolon-separated list for multiple languages.\n"
+    #                          f"Use 'all' to process all languages ({', '.join(sorted(ALL_LANGUAGES))}). "
+    #                          f"Use 'all-en' to process all languages except 'en-us'."
+    #                          )
+    #                     )
     parser.add_argument("-c", "--lifecycle",
                         default=["supported"],
                         action=LifecycleAction,
@@ -367,14 +404,13 @@ def parsecli(cliargs=None):
     if args.lifecycle == ["all"]:
         args.lifecycle = []
 
-    if args.products is None and args.docsets is not None:
-        parser.error("If you specify a docset, you must also specify a product")
+    #if args.products is None and args.docsets is not None:
+    #    parser.error("If you specify a docset, you must also specify a product")
 
-    # args.targets = [] if args.targets is None else SEPARATOR.split(args.targets)
-    if args.products is not None:
-        args.products = [] if args.products is None else SEPARATOR.split(args.products)
-    if args.docsets is not None:
-        args.docsets = [] if args.docsets is None else SEPARATOR.split(args.docsets)
+    # if args.products is not None:
+    #     args.products = [] if args.products is None else SEPARATOR.split(args.products)
+    # if args.docsets is not None:
+    #     args.docsets = [] if args.docsets is None else SEPARATOR.split(args.docsets)
     #if args.langs is not None:
     #    args.langs = [] if args.langs is None else SEPARATOR.split(args.langs)
 

@@ -47,6 +47,8 @@ JINJALOGGERNAME = f"{LOGGERNAME}.jinja"
 XPATHLOGGERNAME = f"{LOGGERNAME}.xpath"
 #: The log file to use
 LOGFILE = "/tmp/indexpages.log"
+#: How many log files to keep
+KEEP_LOGS = 4
 #: Map verbosity level (int) to log level
 LOGLEVELS = {
     None: logging.WARNING,  # fallback
@@ -216,7 +218,7 @@ def setup_logging(args: argparse.Namespace,
 
     rotating_file_handler = logging.handlers.RotatingFileHandler(
         LOGFILE,
-        backupCount=4,  # Keep up to 4 backup log files
+        backupCount=KEEP_LOGS,
     )
     rotating_file_handler.setLevel(logging.DEBUG)  # Capture all logs to the file
     rotating_file_handler.setFormatter(standard_formatter)

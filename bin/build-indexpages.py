@@ -170,8 +170,9 @@ class LifecycleAction(argparse.Action):
             setattr(namespace, self.dest, lifecycles)
 
 
-class ProductDocsetAction(argparse.Action):
-    """Parse action for a doc suite productid/docsetid[lang]"""
+class DocUnitAction(argparse.Action):
+    """Parse action for a doc suite productid/docsetid[/lang]"""
+    # TODO: Should we take into account lifecycle and the DC file?
     REGEX = re.compile(
         # Watch for the "^" if you use .finditer
         rf"^{PRODUCT_REGEX}/{DOCSET_REGEX}"
@@ -329,7 +330,7 @@ def parsecli(cliargs=None):
 
     parser.add_argument("-pd", "--include-product-docset",
         default=[],
-        action=ProductDocsetAction,
+        action=DocUnitAction,
         help=(
             "Include only specific projects/docsets.\n"
             "Syntax: projectid1/docset1[/lang1][,projectid2/docset2[/lang2]]*"

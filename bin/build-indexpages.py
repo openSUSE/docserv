@@ -829,24 +829,25 @@ async def main(cliargs=None):
     try:
         num_workers = 4
         args = parsecli(cliargs)
-        q = asyncio.Queue()
+        # allow the logger to start
+        await asyncio.sleep(0)
+        log.info("=== Starting ===")
+        que = asyncio.Queue()
+        args.config = read_ini_file(args.docserv_ini_config)
+
         with timer() as t:
-            log.info("=== Starting ===")
             log.debug("Arguments: %s", args)
 
-            #env = init_jinja_template(args.jinjatemplatedir.absolute())
-            tree = etree.parse(args.stitch_file, etree.XMLParser())
+            tree = etree.parse(args.docserv_stitch_file, etree.XMLParser())
             for job in list_all_products(tree):
-                await q.put(job)
+                await que.put(job)
 
             # Create worker tasks
-            tasks = [asyncio.create_task(worker(q))
+            tasks = [asyncio.create_task(worker(que))
                      for _ in range(num_workers)]
-            # allow the logger to start
-            await asyncio.sleep(0)
 
             # Wait until all items in the queue are processed:
-            await q.join()
+            await que.join()
 
             # Cancel the workers once done
             for task in tasks:

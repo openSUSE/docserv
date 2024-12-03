@@ -862,6 +862,14 @@ async def main(cliargs=None):
 
         log.info("Elapsed time: %0.3f seconds", t.elapsed_time)
 
+    except asyncio.CancelledError:
+        log.warning("Cancelled by user. Trying to shutdown gracefully.")
+        # Cancel all workers
+        for task in tasks:
+            task.cancel()
+        # Wait for workers to complete their shutdown
+        await asyncio.gather(*tasks, return_exceptions=True)
+
     except json.JSONDecodeError as err:
         log.error("Error decoding JSON file %s\nAbort.", err)
         return 100

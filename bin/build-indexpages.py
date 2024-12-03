@@ -365,6 +365,11 @@ def parsecli(cliargs=None):
               "(contains other directories like 'config.d', 'json-portal-dsc', etc.)"
               )
     )
+    group_path.add_argument("-R", "--docserv-repo-base-dir",
+        default=env.path("DOCSERV_REPO_BASE_DIR", None),
+        help=("Base directory for the repositories "
+              "(contains 'permanent-full' and 'temporary-branches' directories)")
+    )
     group_path.add_argument("-C", "--docserv-cache-dir",
         default=env.path("DOCSERV_CACHE_DIR", None),
         help="Directory for the cache"
@@ -423,6 +428,7 @@ def parsecli(cliargs=None):
         "docserv_cache_dir": "Missing Docserv cache directory",
         # "docserv_ini_config": "Missing Docserv INI configuration file",
         # "docserv_json_dir": "Missing Docserv JSON directory",
+        "docserv_repo_base_dir": "Missing Docserv repository base directory",
         "docserv_target": "Missing Docserv target string",
         "docserv_stitch_file": "Missing Docserv stitch file",
     }
@@ -451,15 +457,11 @@ def parsecli(cliargs=None):
         args.jinjatemplatedir,
         args.jinja_i18n_dir,
         args.susepartsdir,
+        args.docserv_repo_base_dir,
     ):
         if not obj.exists():
             df = "File" if obj.is_dir() else "Dir"
             parser.error(f"{df} {obj} does not exist")
-
-
-    #print(">>> args:", args)
-    #print(">>>  env:", env.dump())
-    #sys.exit(10)
 
     # Setup main logging and the log level according to the "-v" option
     setup_logging(args.verbose)

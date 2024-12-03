@@ -24,7 +24,7 @@ import logging
 import logging.handlers
 # from logging.config import dictConfig
 from pathlib import Path
-import os.path
+import os
 from typing import Any, ClassVar, Callable, Dict, Optional
 import queue
 import re
@@ -442,8 +442,9 @@ def jinja_path_exists(env, path: str) -> bool:
         jinjalog.debug("Checking if path %r exists in template dir(%r): %s",
                   path,
                   f,
-                  os.path.exists(os.path.join(f, path)))
-    return any([ os.path.exists(os.path.join(f, path)) for f in env.loader.searchpath])
+                  Path(f).joinpath(path).exists()
+        )
+    return any([ Path(f).joinpath(path).exists() for f in env.loader.searchpath])
 
 
 def jinja_current_dir() -> str:
@@ -660,7 +661,7 @@ products, requesteddocsets, lifecycle, requestedlangs, outputdir, jsondir, jinja
 
         # Create the output directory
         os.makedirs(path, exist_ok=True)
-        output = os.path.join(path, "index.html")
+        output = Path(path) / "index.html"
 
         with open(output, "w") as fh:
             content = template.render(data=context,
@@ -729,7 +730,7 @@ async def render_and_write_html(jinja_env, result, job_name, output_dir):
     template = jinja_env.get_template('index.html')
     output_html = template.render(result=result)
 
-    output_path = os.path.join(output_dir, f"{job_name.strip()}.html")
+    output_path = Path(output_dir) / f"{job_name.strip()}.html"
 
     async with aiofiles.open(output_path, 'w') as f:
         await f.write(output_html)

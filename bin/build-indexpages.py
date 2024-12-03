@@ -13,10 +13,11 @@ For example:
 """
 
 import argparse
-import aiofiles
 import asyncio
 import configparser
 from contextlib import contextmanager
+from dataclasses import dataclass, field
+from enum import StrEnum
 import time
 import json
 import itertools
@@ -30,12 +31,15 @@ import queue
 import re
 import sys
 
+import aiofiles
+from environs import Env
+
 from lxml import etree
 from jinja2 import Environment, FileSystemLoader, DebugUndefined
 from jinja2.exceptions import TemplateNotFound
 
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 __author__ = "Tom Schraitle"
 
 # --- Constants
@@ -132,6 +136,12 @@ SINGLE_LANG_REGEX = r'[a-z]{2}-[a-z]{2}'
 #: Regex for splitting a path into its components
 PRODUCT_REGEX = r"(?P<product>[\w\d_-]+)"  # |\*
 DOCSET_REGEX = r"(?P<docset>[\w\d\._-]+)"  # |\*
+
+
+# --- Handling of .env file
+# Inside the parsecli() function we set the default values for the CLI arguments
+env = Env()
+env.read_env()
 
 
 # --- Classes and functions
@@ -341,22 +351,45 @@ def parsecli(cliargs=None):
         ),
         help="shows the version of the script",
     )
-    parser.add_argument("-J", "--json-dir",
-                        help="Directory with JSON files"
+
+    group_path = parser.add_argument_group("Docserv related configuration",
+        description="Can also be set in the .env file"
     )
-    parser.add_argument("-S", "--stitch-file",
-                        required=True,
-                        help="XML stitch file to use"
+    group_path.add_argument("-D", "--docserv-config-dir",
+        # required=True,
+        default=env.path("DOCSERV_CONFIG_DIR", None),
+        help=("Basic Docserv configuration directory "
+              "(contains other directories like 'config.d', 'json-portal-dsc', etc.)"
+              )
     )
-    parser.add_argument("-D", "--docserv-config-dir",
-        required=True,
-        help="Docserv configuration file to use"
+    group_path.add_argument("-C", "--docserv-cache-dir",
+        default=env.path("DOCSERV_CACHE_DIR", None),
+        help="Directory for the cache"
     )
-    parser.add_argument("-t", "--target",
-        default="doc-suse-com",
-        help="Target to use in the configuration file"
+    group_path.add_argument("-I", "--docserv-ini-config",
+        default=env.path("DOCSERV_INI_CONFIG", None),
+        help=("Path to the Docserv INI configuration file. "
+              "Can be omitted, it will be searched in the config directory.")
     )
-    parser.add_argument("-pd", "--include-product-docset",
+    group_path.add_argument("-J", "--docserv-json-dir",
+        default=env.path("DOCSERV_JSON_DIR", None),
+        help=(
+            "Directory with JSON files. "
+            "Can be omitted, it will be searched in the config directory."
+        ),
+    )
+    group_path.add_argument("-T", "--docserv-target",
+        default=env.str("DOCSERV_TARGET", None),
+        help="Target to use in the configuration file",
+    )
+    group_path.add_argument("-S", "--docserv-stitch-file",
+        # required=True,
+        default=env.path("DOCSERV_STITCHFILE"),
+        help="XML stitch file to use",
+    )
+
+    group_build = parser.add_argument_group("Build options")
+    group_build.add_argument("-pd", "--include-product-docset",
         default=[],
         action=DocUnitAction,
         help=(
@@ -364,16 +397,12 @@ def parsecli(cliargs=None):
             "Syntax: projectid1/docset1[/lang1][,projectid2/docset2[/lang2]]*"
         )
     )
-    #parser.add_argument("-C", "--docserv-ini",
-    #    required=True,
-    #    help="Path to the Docserv configuration file"
-    #)
-    parser.add_argument("-c", "--lifecycle",
+    group_build.add_argument("-c", "--lifecycle",
                         default=["supported"],
                         action=LifecycleAction,
                         help=("Lifecycle to process (defaults to %(default)r)")
                         )
-    parser.add_argument("-o", "--output-dir",
+    group_build.add_argument("-o", "--output-dir",
                         metavar="OUTPUT-DIR",
                         required=True,
                         help="Output directory for the index pages"
@@ -381,57 +410,56 @@ def parsecli(cliargs=None):
     args = parser.parse_args(args=cliargs)
     args.parser = parser
 
+    # Handling of the CLI arguments
     if args.lifecycle == ["all"]:
         args.lifecycle = []
 
-    #if args.products is None and args.docsets is not None:
-    #    parser.error("If you specify a docset, you must also specify a product")
 
-    # if args.products is not None:
-    #     args.products = [] if args.products is None else SEPARATOR.split(args.products)
-    # if args.docsets is not None:
-    #     args.docsets = [] if args.docsets is None else SEPARATOR.split(args.docsets)
-    #if args.langs is not None:
-    #    args.langs = [] if args.langs is None else SEPARATOR.split(args.langs)
+    mappings = {
+        "docserv_config_dir": "Missing Docserv configuration directory",
+        "docserv_cache_dir": "Missing Docserv cache directory",
+        # "docserv_ini_config": "Missing Docserv INI configuration file",
+        # "docserv_json_dir": "Missing Docserv JSON directory",
+        "docserv_target": "Missing Docserv target string",
+        "docserv_stitch_file": "Missing Docserv stitch file",
+    }
 
-    args.stitch_file = Path(args.stitch_file)
-    if not args.stitch_file.exists():
-        parser.error(f"XML stitch file {str(args.stitch_file)!r} does not exist")
+    # Test all required arguments if they are None (=not set)
+    for key, message in mappings.items():
+        if getattr(args, key) is None:
+            parser.error(message)
 
-    docservconfigdir = Path(args.docserv_config_dir).expanduser()
-    if docservconfigdir.joinpath("config.d").exists():
-        args.configddir = docservconfigdir.joinpath("config.d")
-    else:
-        parser.error(f"Directory {docservconfigdir} does not exist or is missing 'config.d' subdirectory")
+    baseconfigdir = Path(args.docserv_config_dir).expanduser()
+    docservconfigdir = baseconfigdir / "config.d"
+    args.jinjatemplatedir = baseconfigdir / "jinja-doc-suse-com"
+    args.jinja_i18n_dir = baseconfigdir.joinpath("jinja-doc-suse-com", "i18n")
+    args.susepartsdir = baseconfigdir.joinpath("jinja-doc-suse-com", "suseparts")
+    if args.docserv_ini_config is None:
+        args.docserv_ini_config = baseconfigdir / "docserv.ini"
 
-    if docservconfigdir.joinpath("jinja-doc-suse-com").exists():
-        args.jinjatemplatedir = docservconfigdir.joinpath("jinja-doc-suse-com")
-    else:
-        parser.error(f"Directory {docservconfigdir} does not exist or is missing 'jinja-doc-suse-com' subdirectory")
+    if args.docserv_json_dir is None:
+        args.docserv_json_dir = baseconfigdir / "json-portal-dsc"
 
-    if docservconfigdir.joinpath("json-portal-dsc").exists():
-        args.jsondir = docservconfigdir.joinpath("json-portal-dsc")
-    else:
-        parser.error(f"Directory {docservconfigdir} does not exist or is missing 'json-portal-dsc' subdirectory")
+    for obj in (
+        args.docserv_ini_config,
+        args.docserv_json_dir,
+        args.docserv_stitch_file,
+        docservconfigdir,
+        args.jinjatemplatedir,
+        args.jinja_i18n_dir,
+        args.susepartsdir,
+    ):
+        if not obj.exists():
+            df = "File" if obj.is_dir() else "Dir"
+            parser.error(f"{df} {obj} does not exist")
 
-    if docservconfigdir.joinpath("jinja-doc-suse-com", "i18n").exists():
-        args.jinja_i18n_dir = docservconfigdir.joinpath("jinja-doc-suse-com", "i18n")
-    else:
-        parser.error(f"Directory {docservconfigdir} does not exist or is missing 'json-portal-dsc/i18n' subdirectory")
 
-    if docservconfigdir.joinpath("jinja-doc-suse-com", "suseparts").exists():
-        args.susepartsdir = docservconfigdir.joinpath("jinja-doc-suse-com", "suseparts")
-    else:
-        parser.error(f"Directory {docservconfigdir} does not exist or is missing 'json-portal-dsc/suseparts' subdirectory")
-
-    docserv_ini = docservconfigdir / "docserv.ini"
-    if not docserv_ini.exists():
-        parser.error(f"Docserv configuration file {str(docserv_ini)!r} not found")
+    #print(">>> args:", args)
+    #print(">>>  env:", env.dump())
+    #sys.exit(10)
 
     # Setup main logging and the log level according to the "-v" option
     setup_logging(args.verbose)
-
-    args.config = read_ini_file(docserv_ini)
 
     return args
 
@@ -745,7 +773,7 @@ def _main(cliargs=None):
             log.debug("Arguments: %s", args)
 
             env = init_jinja_template(args.jinjatemplatedir.absolute())
-            tree = etree.parse(args.stitch_file, etree.XMLParser())
+            tree = etree.parse(args.docserv_stitch_file, etree.XMLParser())
             render(args, tree, env)
 
     except json.JSONDecodeError as err:

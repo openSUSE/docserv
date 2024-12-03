@@ -203,20 +203,23 @@ class DocUnitAction(argparse.Action):
                     f"Use the format 'productid/docsetid[/lang]'"
                 )
 
-            _, _, lang = match.groupdict()
+            lang = match.group("lang")
             if lang is not None and lang not in ALL_LANGUAGES:
                 parser.error(
                     f"Invalid language: {lang!r} in {docsuite!r}. "
                     f"(choose from {', '.join(sorted(ALL_LANGUAGES))})"
                 )
+            else:
+                # default language
+                lang = "en-us"
 
             includes.append(match.groupdict())
 
         # Should we check for duplicates? Or just silently ignore them?
         # Should we allow */*/* as a valid unit?
 
-        if len(includes) != len(set(includes)):
-            parser.error("Each productid/docsetid unit can occur only once.")
+        #if len(includes) != len(set(includes)):
+        #    parser.error("Each productid/docsetid unit can occur only once.")
 
         setattr(namespace, self.dest, includes)
 

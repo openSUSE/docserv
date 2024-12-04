@@ -352,6 +352,7 @@ async def run_git(command: str, cwd: Path|None = None) -> int|None:
     process = await asyncio.create_subprocess_shell(
         command,
         cwd=cwd,
+        env={"LANG": "C", "LC_ALL": "C"},
         # Setting this doesn't work; the command isn't called
         # text="True",
         stdout=asyncio.subprocess.PIPE,
@@ -912,24 +913,42 @@ async def process_doc_unit(doc_unit: Dict[str, str]) -> None:
     log.info(f"Completed %s", doc_unit)
 
 
-async def clone_git_repo(repo: str, repo_base_dir: str|Path) -> None:
+async def update_git_repo(repo: str|Path) -> None:
+    """
+    Update a Git repository asynchronously.
+
+    :param repo: The repo URL or path.
+    """
+    log.info(f"Updating {repo}")
+    command = f"git -C {str(repo)} -c core.progress=1 pull -vr"
+    result = await run_git(command)
+    if result:
+        raise RuntimeError(f"Error updating {repo}")
+
+
+async def clone_git_repo(repo: str|Path,
+                         repopath: str|Path,
+                         branch:str|None=None) -> None:
     """
     Clone a Git repository asynchronously.
+
+    :param repo: The repo URL or path.
+    :param repopath: where to store the cloned repository.
+    :param branch: The branch to clone
     """
-    path = repo.translate(str.maketrans({":": "_", "/": "_", "-": "_", ".": "_"}))
-    repopath = Path(repo_base_dir).joinpath("permanent-full", path)
+    log.info(f"Cloning {repo} to {repopath}")
+    if branch:
+        command = (
+            f"git -c core.progress=1 clone --branch {branch} "
+            f"{str(repo)} {str(repopath)}"
+        )
+    else:
+        command = f"git -c core.progress=1 clone {str(repo)} {str(repopath)}"
 
-    if not repopath.exists():
-        # repopath.mkdir(parents=True)
-        log.info(f"Cloning {repo} to {repopath}")
-        # result = await run_command(f"git -c core.progress=1 clone {repo} {repopath}")
-        result = await run_git(f"git -c core.progress=1 clone {repo} {repopath}")
-        if result:
-            raise RuntimeError(f"Error cloning {repo} to {repopath}")
-
-        # log.debug("Result from cloning %s: %s", repo, result)
-
-    log.debug("Cloning finished for %s", repo)
+    # result = await run_command(command)
+    result = await run_git(command)
+    if result:
+        raise RuntimeError(f"Error cloning {repo} to {repopath}")
 
 
 async def worker(args: argparse.Namespace, queue: asyncio.Queue) -> None:

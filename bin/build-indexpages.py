@@ -289,8 +289,8 @@ def setup_logging(cliverbosity: int,
 
     # Optional: Disable propagation if needed
     # app_logger.propagate = False
-    # jinja_logger.propagate = False
-    # xpath_logger.propagate = False
+    jinja_logger.propagate = False
+    xpath_logger.propagate = False
 
     # Ensure the listener is stopped properly when the application ends
     def stop_listener():

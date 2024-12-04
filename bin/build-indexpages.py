@@ -29,6 +29,7 @@ import os
 from typing import Any, Dict, Optional, Sequence
 import queue
 import re
+import shlex
 import sys
 
 import aiofiles
@@ -965,31 +966,32 @@ async def main(cliargs=None):
             log.debug("Arguments: %s", args)
 
             tree = etree.parse(args.docserv_stitch_file, etree.XMLParser())
-            for job in list_all_products(tree):
-                await que.put(job)
+            for docset in list_all_products(tree,
+                                            args.lifecycle,
+                                            args.include_product_docset):
+                product = docset.getparent().attrib.get("productid")
+                docsetid = docset.attrib.get("setid")
+                git = docset.find("builddocs/git")
+                if git is None:
+                    log.warning("No Git information found for %s/%s", product, docsetid)
+                    continue
+
+                log.info("Adding %s/%s to the queue", product, docsetid)
+                await que.put((git.attrib.get("remote"), product, docset) )
 
             # Create worker tasks
-            tasks = [asyncio.create_task(worker(que))
+            tasks = [asyncio.create_task(worker(args, que))
                      for _ in range(num_workers)]
 
             # Wait until all items in the queue are processed:
             await que.join()
 
-            # Cancel the workers once done
-            for task in tasks:
-                task.cancel()
-
             #render(args, tree, env)
 
         log.info("Elapsed time: %0.3f seconds", t.elapsed_time)
 
-    except asyncio.CancelledError:
-        log.warning("Cancelled by user. Trying to shutdown gracefully.")
-        # Cancel all workers
-        for task in tasks:
-            task.cancel()
-        # Wait for workers to complete their shutdown
-        await asyncio.gather(*tasks, return_exceptions=True)
+    #except asyncio.CancelledError:
+    #    log.warning("Cancelled by user. Trying to shutdown gracefully.")
 
     except json.JSONDecodeError as err:
         log.error("Error decoding JSON file %s\nAbort.", err)
@@ -1003,13 +1005,18 @@ async def main(cliargs=None):
         log.error(e)
         return 20
 
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, asyncio.CancelledError):
         log.error("Interrupted by user")
         return 10
 
     finally:
+        # Cancel all workers
+        for task in tasks:
+            task.cancel()
+        # Wait for workers to complete their shutdown
+        await asyncio.gather(*tasks, return_exceptions=True)
+        # log.info("Elapsed time: %0.3f seconds", t.elapsed_time)
         log.info("=== Finished ===")
-        # log.info("Elapsed time: %0.4f seconds", Timer.tim
 
     return 0
 

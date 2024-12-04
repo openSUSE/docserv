@@ -959,11 +959,43 @@ async def worker(args: argparse.Namespace, queue: asyncio.Queue) -> None:
         # Get a doc unit from the queue
         doc_unit = await queue.get()
         repo, productid, docset = doc_unit
-        # Clone the Git repository
-        log.info(f"Processing {productid}/{docset.attrib.get('setid')}...")
+        docsetid = docset.attrib.get("setid")
+
+        log.info(f"Processing {productid}/{docsetid}...")
         try:
-            await clone_git_repo(repo, args.docserv_repo_base_dir)
+            path = repo.translate(
+                str.maketrans({":": "_", "/": "_", "-": "_", ".": "_"})
+            )
+            repopath = Path(args.docserv_repo_base_dir).joinpath(
+                "permanent-full", path
+            )
+            if not repopath.exists():
+                await clone_git_repo(repo, repopath)
+            else:
+                # update the repo
+                await update_git_repo(repopath)
+
+            # Get the branch
+            # TODO: Check if this is correct?
+            branch = docset.find("builddocs/language/branch")
+            if branch is None:
+                log.error("No branch found for %s/%s", productid, )
+                # Remove the job from the queue
+                queue.task_done()
+                continue
+
+            tmpbasedir = Path(args.docserv_repo_base_dir).joinpath(
+                "temporary-branches",
+            )
+            tmpbasedir.mkdir(parents=True, exist_ok=True)
+            tmpdir = tempfile.mkdtemp(dir=tmpbasedir,
+                                      prefix=f"{productid}-{docsetid}_")
+            await clone_git_repo(repopath, tmpdir, branch.text.strip())
+
             await process_doc_unit(doc_unit)
+
+            # Remove the temporary directory
+            # shutil.rmtree(tmpdir)
         finally:
             queue.task_done()  # Notify queue that task is complete
 

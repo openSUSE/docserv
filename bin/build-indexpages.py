@@ -1009,8 +1009,9 @@ async def main(cliargs=None):
 
         log.info("Elapsed time: %0.3f seconds", t.elapsed_time)
 
-    #except asyncio.CancelledError:
-    #    log.warning("Cancelled by user. Trying to shutdown gracefully.")
+    except RuntimeError as e:
+        log.critical(e)
+        return 200
 
     except json.JSONDecodeError as err:
         log.error("Error decoding JSON file %s\nAbort.", err)

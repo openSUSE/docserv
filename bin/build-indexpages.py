@@ -985,8 +985,8 @@ async def worker(args: argparse.Namespace, queue: asyncio.Queue) -> None:
     while not queue.empty():
         # Get a Deliverable from the queue
         deli: Deliverable = await queue.get()
-        productid, docsetid = deli.productid, deli.docsetid
-        branch = deli.branch
+        productid, docsetid, branch = deli.productid, deli.docsetid, deli.branch
+        lang = deli.lang
 
         log.info(f"Processing {productid}/{docsetid}...")
         try:
@@ -1003,7 +1003,7 @@ async def worker(args: argparse.Namespace, queue: asyncio.Queue) -> None:
                 await update_git_repo(repopath)
 
             # Get the branch
-            # TODO: Check if this is correct?
+            # TODO: Is that needed?
             if branch is None:
                 log.error("No branch found for %s/%s", deli.productid, deli.docsetid)
                 # Remove the job from the queue
@@ -1014,11 +1014,13 @@ async def worker(args: argparse.Namespace, queue: asyncio.Queue) -> None:
                 "temporary-branches",
             )
             tmpbasedir.mkdir(parents=True, exist_ok=True)
-            tmpdir = tempfile.mkdtemp(dir=tmpbasedir,
-                                      prefix=f"{productid}-{docsetid}_")
+            tmpdir = Path(tempfile.mkdtemp(
+                dir=tmpbasedir,
+                prefix=f"{productid}-{docsetid}-{lang}_")
+            )
             await clone_git_repo(repopath, tmpdir, branch)
 
-            await process_doc_unit(deli)
+            await process_doc_unit(deli, tmpdir)
 
             # Remove the temporary directory
             # shutil.rmtree(tmpdir)

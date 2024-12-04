@@ -884,13 +884,38 @@ async def process_doc_unit(doc_unit: Dict[str, str]) -> None:
     log.info(f"Completed %s", doc_unit)
 
 
-async def worker(queue: asyncio.Queue) -> None:
+async def clone_git_repo(repo: str, repo_base_dir: str|Path) -> None:
+    """
+    Clone a Git repository asynchronously.
+    """
+    path = repo.translate(str.maketrans({":": "_", "/": "_", "-": "_", ".": "_"}))
+    repopath = Path(repo_base_dir).joinpath("permanent-full", path)
+
+    if not repopath.exists():
+        # repopath.mkdir(parents=True)
+        log.info(f"Cloning {repo} to {repopath}")
+        # result = await run_command(f"git -c core.progress=1 clone {repo} {repopath}")
+        result = await run_git(f"git -c core.progress=1 clone {repo} {repopath}")
+        if result:
+            raise RuntimeError(f"Error cloning {repo} to {repopath}")
+
+        # log.debug("Result from cloning %s: %s", repo, result)
+
+    log.debug("Cloning finished for %s", repo)
+
+
+async def worker(args: argparse.Namespace, queue: asyncio.Queue) -> None:
     """
     Async worker that processes doc units from the queue.
     """
     while not queue.empty():
-        doc_unit = await queue.get()  # Get a doc unit from the queue
+        # Get a doc unit from the queue
+        doc_unit = await queue.get()
+        repo, productid, docset = doc_unit
+        # Clone the Git repository
+        log.info(f"Processing {productid}/{docset.attrib.get('setid')}...")
         try:
+            await clone_git_repo(repo, args.docserv_repo_base_dir)
             await process_doc_unit(doc_unit)
         finally:
             queue.task_done()  # Notify queue that task is complete

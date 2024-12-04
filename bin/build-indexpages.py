@@ -940,7 +940,7 @@ async def process_doc_unit(doc_unit: Deliverable) -> None:
     log.info("Completed %s", doc_unit)
 
 
-async def update_git_repo(repo: str|Path) -> None:
+async def update_git_repo(repo: str|Path) -> int|None:
     """
     Update a Git repository asynchronously.
 
@@ -951,6 +951,8 @@ async def update_git_repo(repo: str|Path) -> None:
     result = await run_git(command)
     if result:
         raise RuntimeError(f"Error updating {repo}")
+
+    return result
 
 
 async def clone_git_repo(repo: str|Path,

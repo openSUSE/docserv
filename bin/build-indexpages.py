@@ -342,7 +342,7 @@ async def run_command(command: str) -> int:
         The return code of the command.
     """
     process = await asyncio.create_subprocess_shell(
-        shlex.quote(command),
+        command,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )

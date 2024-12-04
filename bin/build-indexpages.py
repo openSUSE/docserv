@@ -305,6 +305,76 @@ def setup_logging(cliverbosity: int,
         rotating_file_handler.doRollover()
 
 
+async def run_command(command: str) -> int:
+    """
+    Runs a command asynchronously, streams output to logging, and returns the return code.
+
+    Args:
+        command: The shell command to run.
+
+    Returns:
+        The return code of the command.
+    """
+    process = await asyncio.create_subprocess_shell(
+        shlex.quote(command),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+
+    async def log_stream(stream, level):
+        """
+        Asynchronously logs the output of a stream line by line.
+        """
+        async for line in stream:
+            log.log(level, line.strip())
+
+    # Run both stdout and stderr logging concurrently
+    stdout_task = asyncio.create_task(log_stream(process.stdout, logging.INFO))
+    stderr_task = asyncio.create_task(log_stream(process.stderr, logging.ERROR))
+
+    # Wait for the process to complete
+    return_code = await process.wait()
+
+    # Ensure all output is logged before returning
+    await asyncio.gather(stdout_task, stderr_task)
+
+    log.info(f"Command {command!r} exited with return code {return_code}")
+    return return_code
+
+
+async def run_git(command: str, cwd: Path|None = None) -> int|None:
+    """
+    Run a git command asynchronously in a specific directory
+
+    Args:
+        command: The git command to run.
+        cwd: The directory where the git command should be
+    """
+    log.info("Running git command %r in %r", command, cwd)
+    process = await asyncio.create_subprocess_shell(
+        command,
+        cwd=cwd,
+        # Setting this doesn't work; the command isn't called
+        # text="True",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await process.communicate()
+    # We manually convert the bytes into strings:
+    stdout = stdout if stdout is None else stdout.decode()
+    stderr = stderr if stderr is None else stderr.decode()
+    log.debug(
+        "Results of git clone: %s %s => %i",
+        stdout,
+        stderr,
+        process.returncode,
+    )
+    if process.returncode != 0:
+        log.error(stderr)
+    # log.debug(stdout)
+    return process.returncode
+
+
 def read_ini_file(inifile: Path, target="doc-suse-com") -> dict[str, Optional[str]]:
     """
     Read an INI file and return its content as a dictionary

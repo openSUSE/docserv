@@ -26,6 +26,7 @@ import logging.handlers
 # from logging.config import dictConfig
 from pathlib import Path
 import os
+import tempfile
 from typing import Any, Dict, Optional, Sequence
 import queue
 import re
@@ -40,7 +41,7 @@ from jinja2 import Environment, FileSystemLoader, DebugUndefined
 from jinja2.exceptions import TemplateNotFound
 
 
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 __author__ = "Tom Schraitle"
 
 # --- Constants
@@ -63,8 +64,9 @@ PYTHON_VERSION: str = f"{sys.version_info.major}.{sys.version_info.minor}"
 LOGGERNAME = "indexpages"
 JINJALOGGERNAME = f"{LOGGERNAME}.jinja"
 XPATHLOGGERNAME = f"{LOGGERNAME}.xpath"
+GITLOGGERNAME = f"{LOGGERNAME}.git"
 #: The log file to use
-LOGFILE = "/tmp/indexpages.log"
+LOGFILE = f"/tmp/{LOGGERNAME}.log"
 #: How many log files to keep
 KEEP_LOGS = 4
 #: Map verbosity level (int) to log level
@@ -75,57 +77,15 @@ LOGLEVELS = {
     2: logging.DEBUG,
 }
 
-#: The dictionary, passed to :class:`logging.config.dictConfig`,
-#: is used to setup your logging formatters, handlers, and loggers
-#: For details, see https://docs.python.org/3.4/library/logging.config.html#configuration-dictionary-schema
-DEFAULT_LOGGING_DICT = {
-    "version": 1,
-    "disable_existing_loggers": True,
-    "formatters": {
-        "standard": {"format": "[%(levelname)s] %(funcName)s: %(message)s"},
-    },
-    "handlers": {
-        "console": {
-            "level": "NOTSET",  # will be set later
-            "formatter": "standard",
-            "class": "logging.StreamHandler",
-        },
-        "file": {
-            "level": "DEBUG",  # we want all in the log file
-            "formatter": "standard",
-            "class": "logging.FileHandler",
-            "filename": LOGFILE,
-            "mode": "w",
-        },
-    },
-    "loggers": {
-        LOGGERNAME: {
-            "handlers": ["console", "file"],
-            "level": "DEBUG",
-            # 'propagate': True
-        },
-        JINJALOGGERNAME: {
-            "handlers": ["console", "file"],
-            "level": "INFO",
-            # 'propagate': True
-        },
-        XPATHLOGGERNAME: {
-            "handlers": ["console", "file"],
-            "level": "INFO",
-            # 'propagate': True
-        },
-        "": {
-            "level": "NOTSET",
-        },
-    },
-}
-
+#: Logging details, see https://docs.python.org/3.11/library/logging.config.html
+#
 # in order for all messages to be delegated.
 logging.getLogger().setLevel(logging.NOTSET)
 
 log = logging.getLogger(LOGGERNAME)
 jinjalog = logging.getLogger(JINJALOGGERNAME)
 xpathlog = logging.getLogger(XPATHLOGGERNAME)
+gitlog = logging.getLogger(GITLOGGERNAME)
 
 
 # --- Regex for one or more languages, separated by comma:
@@ -233,23 +193,32 @@ def setup_logging(cliverbosity: int,
     verbosity = LOGLEVELS.get(min(cliverbosity, 2), logging.WARNING)
     jinja_level = LOGLEVELS.get(min(verbosity, len(LOGLEVELS) - 1), logging.INFO)
     xpath_level = LOGLEVELS.get(min(verbosity + 1, len(LOGLEVELS) - 1), logging.INFO)
+    git_level = LOGLEVELS.get(min(verbosity + 1, len(LOGLEVELS) - 1), logging.INFO)
 
     # If verbosity exceeds LOGLEVELS, set additional levels. "-1" for the "None" level
     if verbosity > len(LOGLEVELS) - 1:
         jinja_level = logging.DEBUG
     if verbosity + 1 > len(LOGLEVELS) - 1:
         xpath_level = logging.DEBUG
+    if verbosity + 2 > len(LOGLEVELS) - 1:
+        git_level = logging.DEBUG
 
     # Set up a queue to handle logging
     log_queue = queue.Queue(-1)  # no limit on size
 
     # Create formatters
     standard_formatter = logging.Formatter(fmt)
+    git_formatter = logging.Formatter("[%(levelname)s] [Git] - %(message)s")
 
     # Create handlers
     console_handler = logging.StreamHandler()
     console_handler.setLevel(verbosity)  # Will be updated later
     console_handler.setFormatter(standard_formatter)
+
+    # Create a separate console handler for the git logger with a different formatter
+    git_console_handler = logging.StreamHandler()
+    git_console_handler.setLevel(git_level)
+    git_console_handler.setFormatter(git_formatter)
 
     # Check if log exists and should therefore be rolled
     needRoll = Path(LOGFILE).exists()
@@ -265,7 +234,8 @@ def setup_logging(cliverbosity: int,
     queue_handler = logging.handlers.QueueHandler(log_queue)
     listener = logging.handlers.QueueListener(
         log_queue,
-        console_handler, rotating_file_handler,
+        console_handler, # git_console_handler,
+        rotating_file_handler,
         respect_handler_level=True,
     )
 
@@ -285,10 +255,16 @@ def setup_logging(cliverbosity: int,
     xpath_logger.setLevel(xpath_level)
     xpath_logger.addHandler(queue_handler)
 
+    git_logger = logging.getLogger(GITLOGGERNAME)
+    git_logger.setLevel(git_level)
+    # git_logger.addHandler(queue_handler)
+    git_logger.addHandler(git_console_handler)
+
     # Optional: Disable propagation if needed
     # app_logger.propagate = False
     jinja_logger.propagate = False
     xpath_logger.propagate = False
+    git_logger.propagate = False
 
     # Ensure the listener is stopped properly when the application ends
     def stop_listener():
@@ -324,7 +300,7 @@ async def run_command(command: str) -> int:
         Asynchronously logs the output of a stream line by line.
         """
         async for line in stream:
-            log.log(level, line.strip())
+            gitlog.log(level, line.strip())
 
     # Run both stdout and stderr logging concurrently
     stdout_task = asyncio.create_task(log_stream(process.stdout, logging.INFO))
@@ -336,7 +312,7 @@ async def run_command(command: str) -> int:
     # Ensure all output is logged before returning
     await asyncio.gather(stdout_task, stderr_task)
 
-    log.info(f"Command {command!r} exited with return code {return_code}")
+    gitlog.info(f"Command {command!r} exited with return code {return_code}")
     return return_code
 
 
@@ -348,7 +324,7 @@ async def run_git(command: str, cwd: Path|None = None) -> int|None:
         command: The git command to run.
         cwd: The directory where the git command should be
     """
-    log.info("Running git command %r in %r", command, cwd)
+    gitlog.info("Running git command %r in %r", command, cwd)
     process = await asyncio.create_subprocess_shell(
         command,
         cwd=cwd,
@@ -362,15 +338,15 @@ async def run_git(command: str, cwd: Path|None = None) -> int|None:
     # We manually convert the bytes into strings:
     stdout = stdout if stdout is None else stdout.decode()
     stderr = stderr if stderr is None else stderr.decode()
-    log.debug(
+    gitlog.debug(
         "Results of git clone: %s %s => %i",
         stdout,
         stderr,
         process.returncode,
     )
     if process.returncode != 0:
-        log.error(stderr)
-    # log.debug(stdout)
+        gitlog.error(stderr)
+    # gitlog.debug(stdout)
     return process.returncode
 
 

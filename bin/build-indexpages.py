@@ -475,7 +475,7 @@ def parsecli(cliargs=None):
             "Syntax: projectid1/docset1[/lang1][,projectid2/docset2[/lang2]]*"
         )
     )
-    group_build.add_argument("-c", "--lifecycle",
+    group_build.add_argument("-l", "--lifecycle",
                         default=["supported"],
                         action=LifecycleAction,
                         help=("Lifecycle to process (defaults to %(default)r)")
@@ -490,8 +490,7 @@ def parsecli(cliargs=None):
 
     # Handling of the CLI arguments
     if args.lifecycle == ["all"]:
-        args.lifecycle = []
-
+        args.lifecycle = POSSIBLE_LIFECYCLES
 
     mappings = {
         "docserv_config_dir": "Missing Docserv configuration directory",

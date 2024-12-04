@@ -18,6 +18,7 @@ import configparser
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import StrEnum
+from functools import cached_property
 import time
 import json
 import itertools
@@ -27,7 +28,7 @@ import logging.handlers
 from pathlib import Path
 import os
 import tempfile
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Dict, Generator, Optional, Sequence
 import queue
 import re
 import shlex
@@ -106,6 +107,57 @@ env.read_env()
 
 
 # --- Classes and functions
+@dataclass
+class Deliverable:
+    """
+    A class to represent a deliverable
+    """
+    _node: etree._Element = field(repr=False)
+
+    @cached_property
+    def productid(self) -> str:
+        return list(self._node.iterancestors("product"))[0].attrib.get("productid")
+
+    @cached_property
+    def docsetid(self) -> str:
+        return list(self._node.iterancestors("docset"))[0].attrib.get("setid")
+
+    @cached_property
+    def lang(self) -> str:
+        return self._node.getparent().attrib.get("lang").strip()
+
+    @cached_property
+    def branch(self) -> str|None:
+        node = self._node.getparent().find("branch")
+        if node is not None:
+            return node.text.strip()
+
+    @cached_property
+    def subdir(self) -> str|None:
+        node = self._node.getparent().find("subdir")
+        if node is not None:
+            return node.text.strip()
+
+    @cached_property
+    def git(self) -> str:
+        node = self._node.getparent().getparent().find("git")
+        if node is not None:
+            return node.attrib.get("remote").strip()
+        raise ValueError(f"No git remote found for {self.productid}/{self.docsetid}/{self.lang}/{self.dcfile}")
+
+    @cached_property
+    def dcfile(self) -> str:
+        return self._node.find("dc", namespaces=None).text.strip()
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}(productid={self.productid!r}, "
+            f"docsetid={self.docsetid!r}, "
+            f"lang={self.lang!r}, "
+            f"dcfile={self.dcfile!r})"
+        )
+
+
 @contextmanager
 def timer(method=time.perf_counter):
     """Measures the time (implemented as context manager)"""
@@ -544,47 +596,46 @@ def init_jinja_template(path: str) -> Environment:
     return env
 
 
-def list_all_products(tree: etree._Element|etree._ElementTree,
-                      lifecycle: Sequence|None=None,
-                      docsuite=None,
-                      ):
-    """List all products
+def list_all_deliverables(tree: etree._Element|etree._ElementTree,
+                          lifecycle: Sequence|None=None,
+                          docsuite=None,
+                          ) -> Generator[etree._Element, None, None]:
+    """List all deliverables from the stitched Docserv config
 
     :param tree: the XML tree from the stitched Docserv config
     :param docsuite: a list of
     :yield: a string with the product ID
     """
+    xpath_lifecycle = ""
+    if lifecycle is not None:
+        xpath_lifecycle = " or ".join([f"@lifecycle='{l}'" for l in lifecycle])
+        xpath_lifecycle = f"[{xpath_lifecycle}]"
+
     if docsuite is not None:
         log.debug("Filtering for docset %r", docsuite)
         for suite in docsuite:
-            p, d, l = suite["product"], suite["docset"], suite["lang"]
+            p, d, lang = suite["product"], suite["docset"], suite["lang"]
             xpath = (
-                f"/*/product[@productid={p!r}]/docset[@setid={d!r}]"
+                f"/*/product[@productid={p!r}]"
+                f"/docset{xpath_lifecycle}[@setid={d!r}]"
+                f"/builddocs/language"
             )
-            if l is not None:
-                xpath += f"[builddocs/language/@lang={l!r}]"
+            if lang is not None:
+                xpath += f"[@lang={lang!r}]"
+            xpath += "/deliverable"
             xpathlog.debug("XPath: %r", xpath)
-            node = tree.xpath(xpath)
-            if node:
-                yield node[0]
-
-            # -------
-            # p = suite["product"]
-            # xpath = f"/*/product[@productid={p!r}]"
-            # xpathlog.debug("XPath: %r", xpath)
-            # if tree.xpath(xpath):
-            #     yield p
+            for node in tree.xpath(xpath):
+                yield node
 
     else:
-        # Replaces list-all-products.xsl
-        # for product in tree.iter("product"):
-        #     productid = product.attrib.get("productid", None)
-        #     if productid:
-        #         yield productid
-        for docset in tree.iter("docset"):
-            if docset.attrib.get("lifecycle") in lifecycle:
-                yield docset
-
+        # TODO: do we need all languages? How to handle non-en-us languages?
+        xpath = (
+            f"/*/product/docset{xpath_lifecycle}"
+            f"/builddocs/language[@lang='en-us']/deliverable"
+        )
+        xpathlog.debug("XPath: %r", xpath)
+        for deliverable in tree.xpath(xpath):
+            yield deliverable
 
 
 def get_docsets_from_product(tree, productid, lifecycle):
@@ -879,14 +930,14 @@ def _main(cliargs=None):
     return 0
 
 
-async def process_doc_unit(doc_unit: Dict[str, str]) -> None:
+async def process_doc_unit(doc_unit: Deliverable) -> None:
     """
     Process a single doc unit asynchronously.
     """
     # product, release, language = doc_unit["product"], doc_unit["release"], doc_unit["language"]
-    log.info(f"Processing %s", doc_unit)
+    log.info("Processing %s", doc_unit)
     await asyncio.sleep(1)  # Simulate async work
-    log.info(f"Completed %s", doc_unit)
+    log.info("Completed %s", doc_unit)
 
 
 async def update_git_repo(repo: str|Path) -> None:
@@ -932,30 +983,29 @@ async def worker(args: argparse.Namespace, queue: asyncio.Queue) -> None:
     Async worker that processes doc units from the queue.
     """
     while not queue.empty():
-        # Get a doc unit from the queue
-        doc_unit = await queue.get()
-        repo, productid, docset = doc_unit
-        docsetid = docset.attrib.get("setid")
+        # Get a Deliverable from the queue
+        deli: Deliverable = await queue.get()
+        productid, docsetid = deli.productid, deli.docsetid
+        branch = deli.branch
 
         log.info(f"Processing {productid}/{docsetid}...")
         try:
-            path = repo.translate(
+            path = deli.git.translate(
                 str.maketrans({":": "_", "/": "_", "-": "_", ".": "_"})
             )
             repopath = Path(args.docserv_repo_base_dir).joinpath(
                 "permanent-full", path
             )
             if not repopath.exists():
-                await clone_git_repo(repo, repopath)
+                await clone_git_repo(deli.git, repopath)
             else:
                 # update the repo
                 await update_git_repo(repopath)
 
             # Get the branch
             # TODO: Check if this is correct?
-            branch = docset.find("builddocs/language/branch")
             if branch is None:
-                log.error("No branch found for %s/%s", productid, )
+                log.error("No branch found for %s/%s", deli.productid, deli.docsetid)
                 # Remove the job from the queue
                 queue.task_done()
                 continue
@@ -966,9 +1016,9 @@ async def worker(args: argparse.Namespace, queue: asyncio.Queue) -> None:
             tmpbasedir.mkdir(parents=True, exist_ok=True)
             tmpdir = tempfile.mkdtemp(dir=tmpbasedir,
                                       prefix=f"{productid}-{docsetid}_")
-            await clone_git_repo(repopath, tmpdir, branch.text.strip())
+            await clone_git_repo(repopath, tmpdir, branch)
 
-            await process_doc_unit(doc_unit)
+            await process_doc_unit(deli)
 
             # Remove the temporary directory
             # shutil.rmtree(tmpdir)
@@ -993,18 +1043,21 @@ async def main(cliargs=None):
             log.debug("Arguments: %s", args)
 
             tree = etree.parse(args.docserv_stitch_file, etree.XMLParser())
-            for docset in list_all_products(tree,
+            for deliverable in list_all_deliverables(tree,
                                             args.lifecycle,
                                             args.include_product_docset):
-                product = docset.getparent().attrib.get("productid")
-                docsetid = docset.attrib.get("setid")
-                git = docset.find("builddocs/git")
-                if git is None:
-                    log.warning("No Git information found for %s/%s", product, docsetid)
+                deli: Deliverable = Deliverable(deliverable)
+                if deli.git is None:
+                    log.warning(
+                        "No Git information found for %s/%s",
+                        deli.productid, deli.docsetid
+                    )
                     continue
 
-                log.info("Adding %s/%s to the queue", product, docsetid)
-                await que.put((git.attrib.get("remote"), product, docset) )
+                log.info("Adding %s/%s/%s/%s to the queue",
+                         deli.productid, deli.docsetid, deli.lang, deli.dcfile
+                )
+                await que.put(deli)
 
             # Create worker tasks
             tasks = [asyncio.create_task(worker(args, que))

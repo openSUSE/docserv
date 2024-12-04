@@ -26,7 +26,7 @@ import logging.handlers
 # from logging.config import dictConfig
 from pathlib import Path
 import os
-from typing import Any, ClassVar, Callable, Dict, Optional
+from typing import Any, Dict, Optional, Sequence
 import queue
 import re
 import sys
@@ -209,9 +209,6 @@ class DocUnitAction(argparse.Action):
                     f"Invalid language: {lang!r} in {docsuite!r}. "
                     f"(choose from {', '.join(sorted(ALL_LANGUAGES))})"
                 )
-            else:
-                # default language
-                lang = "en-us"
 
             includes.append(match.groupdict())
 
@@ -569,17 +566,47 @@ def init_jinja_template(path: str) -> Environment:
     return env
 
 
-def list_all_products(tree: etree._Element|etree._ElementTree):
+def list_all_products(tree: etree._Element|etree._ElementTree,
+                      lifecycle: Sequence|None=None,
+                      docsuite=None,
+                      ):
     """List all products
 
     :param tree: the XML tree from the stitched Docserv config
+    :param docsuite: a list of
     :yield: a string with the product ID
     """
-    # Replaces list-all-products.xsl
-    for product in tree.iter("product"):
-        productid = product.attrib.get("productid", None)
-        if productid:
-            yield productid
+    if docsuite is not None:
+        log.debug("Filtering for docset %r", docsuite)
+        for suite in docsuite:
+            p, d, l = suite["product"], suite["docset"], suite["lang"]
+            xpath = (
+                f"/*/product[@productid={p!r}]/docset[@setid={d!r}]"
+            )
+            if l is not None:
+                xpath += f"[builddocs/language/@lang={l!r}]"
+            xpathlog.debug("XPath: %r", xpath)
+            node = tree.xpath(xpath)
+            if node:
+                yield node[0]
+
+            # -------
+            # p = suite["product"]
+            # xpath = f"/*/product[@productid={p!r}]"
+            # xpathlog.debug("XPath: %r", xpath)
+            # if tree.xpath(xpath):
+            #     yield p
+
+    else:
+        # Replaces list-all-products.xsl
+        # for product in tree.iter("product"):
+        #     productid = product.attrib.get("productid", None)
+        #     if productid:
+        #         yield productid
+        for docset in tree.iter("docset"):
+            if docset.attrib.get("lifecycle") in lifecycle:
+                yield docset
+
 
 
 def get_docsets_from_product(tree, productid, lifecycle):

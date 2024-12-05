@@ -930,14 +930,36 @@ def _main(cliargs=None):
     return 0
 
 
-async def process_doc_unit(doc_unit: Deliverable) -> None:
+async def process_doc_unit(deliverable: Deliverable, tmpdir: str | Path) -> int | None:
     """
-    Process a single doc unit asynchronously.
+    Process a single doc deliverable asynchronously.
     """
-    # product, release, language = doc_unit["product"], doc_unit["release"], doc_unit["language"]
-    log.info("Processing %s", doc_unit)
-    await asyncio.sleep(1)  # Simulate async work
-    log.info("Completed %s", doc_unit)
+    subdir = deliverable.subdir
+    if subdir:
+        # log.debug("Subdir found: %r", subdir)
+        tmpdir = Path(tmpdir) / subdir
+
+    command = f"daps -d {deliverable.dcfile} metadata" # --output {tmpdir}
+    log.debug("Running Daps command %r in %s", command, tmpdir)
+    process = await asyncio.create_subprocess_shell(
+        command,
+        cwd=tmpdir,
+        # shell=True,
+        env={"LANG": "C", "LC_ALL": "C"},
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await process.communicate()
+    # We manually convert the bytes into strings:
+    stdout = stdout if stdout is None else stdout.decode()
+    stderr = stderr if stderr is None else stderr.decode()
+    if process.returncode != 0:
+        log.error("Daps problem: %s", stderr)
+        # FIXME: Should we raise an exception here?
+        return process.returncode
+
+    log.debug("Daps output: %s", stdout)
+    return process.returncode
 
 
 async def update_git_repo(repo: str|Path) -> int|None:

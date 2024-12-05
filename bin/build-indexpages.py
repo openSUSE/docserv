@@ -1081,6 +1081,7 @@ async def main(cliargs=None):
     """
     Main function
     """
+    tasks = []
     try:
         num_workers = 4
         args = parsecli(cliargs)
@@ -1140,6 +1141,9 @@ async def main(cliargs=None):
     except (KeyboardInterrupt, asyncio.CancelledError):
         log.error("Interrupted by user")
         return 10
+
+    except SystemExit:
+        return 5
 
     finally:
         # Cancel all workers

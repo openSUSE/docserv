@@ -97,7 +97,7 @@ SINGLE_LANG_REGEX = r'[a-z]{2}-[a-z]{2}'
 
 #: Regex for splitting a path into its components
 PRODUCT_REGEX = r"(?P<product>[\w\d_-]+)"  # |\*
-DOCSET_REGEX = r"(?P<docset>[\w\d\._-]+)"  # |\*
+DOCSET_REGEX = r"(?P<docset>[\w\d\._-]+|\*)"  # |\*
 
 
 # --- Handling of .env file
@@ -197,10 +197,11 @@ class LifecycleAction(argparse.Action):
 class DocUnitAction(argparse.Action):
     """Parse action for a doc suite productid/docsetid[/lang]"""
     # TODO: Should we take into account lifecycle and the DC file?
+    # Allows "sles", "sles/*", "sles/*/en-us", "sles/sle-15-sp3", etc.
     REGEX = re.compile(
         # Watch for the "^" if you use .finditer
-        rf"^{PRODUCT_REGEX}/{DOCSET_REGEX}"
-        rf"(?:/(?P<lang>{SINGLE_LANG_REGEX}))?"
+        rf"^{PRODUCT_REGEX}(?:/{DOCSET_REGEX}"
+        rf"(?:/(?P<lang>{SINGLE_LANG_REGEX}))?)?$"
     )
 
     def __call__(self, parser, namespace, values: str, option_string=None):
@@ -630,14 +631,20 @@ def list_all_deliverables(tree: etree._Element|etree._ElementTree,
     if docsuite is not None:
         log.debug("Filtering for docset %r", docsuite)
         for suite in docsuite:
+            # Gradually build the XPath expression
             p, d, lang = suite["product"], suite["docset"], suite["lang"]
             xpath = (
                 f"/*/product[@productid={p!r}]"
-                f"/docset{xpath_lifecycle}[@setid={d!r}]"
-                f"/builddocs/language"
+                f"/docset{xpath_lifecycle}"
             )
+            if d not in (None, "*"):
+                xpath += f"[@setid={d!r}]"
+
+            xpath += "/builddocs/language"
+
             if lang is not None:
                 xpath += f"[@lang={lang!r}]"
+
             xpath += "/deliverable"
             xpathlog.debug("XPath: %r", xpath)
             for node in tree.xpath(xpath):

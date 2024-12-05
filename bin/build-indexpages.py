@@ -946,7 +946,9 @@ def _main(cliargs=None):
     return 0
 
 
-async def process_doc_unit(deliverable: Deliverable, tmpdir: str | Path) -> int | None:
+async def process_doc_unit(args: argparse.Namespace,
+                           deliverable: Deliverable,
+                           tmpdir: str | Path) -> int | None:
     """
     Process a single doc deliverable asynchronously.
     """
@@ -955,7 +957,14 @@ async def process_doc_unit(deliverable: Deliverable, tmpdir: str | Path) -> int 
         # log.debug("Subdir found: %r", subdir)
         tmpdir = Path(tmpdir) / subdir
 
-    command = f"daps -d {deliverable.dcfile} metadata" # --output {tmpdir}
+    # Create the nested structure for the metadata
+    metadir = (args.docserv_daps_meta_dir
+               / deliverable.lang / deliverable.productid / deliverable.docsetid
+    )
+    metadir.mkdir(parents=True, exist_ok=True)
+    metafile = metadir / f"{deliverable.dcfile}.meta"
+
+    command = f"daps -d {deliverable.dcfile} metadata --output {metafile}"
     log.debug("Running Daps command %r in %s", command, tmpdir)
     process = await asyncio.create_subprocess_shell(
         command,
@@ -1060,7 +1069,7 @@ async def worker(args: argparse.Namespace, queue: asyncio.Queue) -> None:
             )
             await clone_git_repo(repopath, tmpdir, branch)
 
-            await process_doc_unit(deli, tmpdir)
+            await process_doc_unit(args, deli, tmpdir)
 
             # Remove the temporary directory
             # shutil.rmtree(tmpdir)

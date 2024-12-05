@@ -483,6 +483,10 @@ def parsecli(cliargs=None):
             "Can be omitted, it will be searched in the config directory."
         ),
     )
+    group_path.add_argument("-M", "--docserv-daps-meta-dir",
+        default=env.path("DOCSERV_DAPS_META_DIR", None),
+        help="Directory to store 'daps metadata' output",
+    )
     group_path.add_argument("-T", "--docserv-target",
         default=env.str("DOCSERV_TARGET", None),
         help="Target to use in the configuration file",
@@ -524,6 +528,7 @@ def parsecli(cliargs=None):
         "docserv_cache_dir": "Missing Docserv cache directory",
         # "docserv_ini_config": "Missing Docserv INI configuration file",
         # "docserv_json_dir": "Missing Docserv JSON directory",
+        # "docserv_daps_meta_dir": "Missing Docserv DAPS metadata directory",
         "docserv_repo_base_dir": "Missing Docserv repository base directory",
         "docserv_target": "Missing Docserv target string",
         "docserv_stitch_file": "Missing Docserv stitch file",
@@ -545,6 +550,14 @@ def parsecli(cliargs=None):
     if args.docserv_json_dir is None:
         args.docserv_json_dir = baseconfigdir / "json-portal-dsc"
 
+    args.docserv_cache_dir = Path(args.docserv_cache_dir)
+    if args.docserv_daps_meta_dir is None:
+        # If not set, use the cache directory
+        args.docserv_daps_meta_dir = args.docserv_cache_dir / "daps-meta"
+    else:
+        # Convert it to a Path object
+        args.docserv_daps_meta_dir = Path(args.docserv_daps_meta_dir)
+
     for obj in (
         args.docserv_ini_config,
         args.docserv_json_dir,
@@ -561,6 +574,9 @@ def parsecli(cliargs=None):
 
     # Setup main logging and the log level according to the "-v" option
     setup_logging(args.verbose)
+
+    # Create the file structure
+    args.docserv_daps_meta_dir.mkdir(parents=True, exist_ok=True)
 
     return args
 

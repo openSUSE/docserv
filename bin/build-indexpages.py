@@ -332,7 +332,11 @@ def setup_logging(cliverbosity: int,
         rotating_file_handler.doRollover()
 
 
+# --- Exceptions
+class GitError(RuntimeError):
+    """A custom exception for Git errors"""
 
+# --- Functions
 def read_ini_file(inifile: Path, target="doc-suse-com") -> dict[str, Optional[str]]:
     """
     Read an INI file and return its content as a dictionary
@@ -346,7 +350,7 @@ def read_ini_file(inifile: Path, target="doc-suse-com") -> dict[str, Optional[st
             log.debug("Found target %r in section %r", target, section)
             break
     else:
-        raise RuntimeError(f"Target {target!r} not found in INI file {inifile}")
+        raise GitError(f"Target {target!r} not found in INI file {inifile}")
 
     server = dict(config.items("server"))
     result = dict(config.items(section))
@@ -1019,7 +1023,7 @@ async def update_git_repo(repo: str|Path) -> int|None:
     command = f"git -C {str(repo)} -c core.progress=1 fetch --prune"
     result, output = await run_git(command)
     if result:
-        raise RuntimeError(f"Error updating {repo}: {output}")
+        raise GitError(f"Error updating {repo}: {output}")
 
     return result
 
@@ -1210,7 +1214,7 @@ async def main(cliargs=None):
 
         log.info("Elapsed time: %0.3f seconds", t.elapsed_time)
 
-    except RuntimeError as e:
+    except GitError as e:
         log.critical(e)
         return 200
 

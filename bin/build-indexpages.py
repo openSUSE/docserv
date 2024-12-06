@@ -1027,6 +1027,7 @@ async def update_git_repo(repo: str|Path|None) -> tuple[int|None, str]:
     if result:
         raise GitError(f"Error updating {repo}: {output}")
 
+    return result, output
 
 
 async def clone_git_repo(
@@ -1143,16 +1144,16 @@ async def main(cliargs=None):
     """
     Main function
     """
-    tasks = []
+    # tasks = []
     repo_urls = set()
     try:
-        num_workers = 6
+        # num_workers = 6
         args = parsecli(cliargs)
         # allow the logger to start
         await asyncio.sleep(0)
         log.info("=== Starting ===")
         # que = asyncio.Queue(-1)
-        repo_queue = asyncio.Queue()
+        # repo_queue = asyncio.Queue()
         args.config = read_ini_file(args.docserv_ini_config)
 
         with timer() as t:
@@ -1178,30 +1179,12 @@ async def main(cliargs=None):
                 # await que.put(deli)
 
             # Add repo URLs to the repo queue
-            log.info("Cloning GitHub repos...")
-            # for r in repo_urls:
-            #     await repo_queue.put(r)
-
-            # # Create worker tasks for cloning/updating repositories
-            # for _ in range(num_workers):
-            #     task = asyncio.create_task(
-            #         git_worker(repo_queue, Path(args.docserv_repo_base_dir)),
-            #         name="github_clone"
-            #     )
-            #     tasks.append(task)
-            async def force_terminate_task_group():
-                """Used to force termination of a task group."""
-                raise TerminateTaskGroup()
+            log.info("Cloning/updating GitHub repos...")
 
             async with asyncio.TaskGroup() as tg:
                 for repo in repo_urls:
                     tg.create_task(git_worker(repo, args.docserv_repo_base_dir))
-                # await asyncio.sleep(0)
-                # tg.create_task(force_terminate_task_group())
-
-            # Wait for the repo queue to be processed
-            # await repo_queue.join()
-            log.info("Completed cloning all GitHub repos...")
+            log.info("Completed cloning/updating all GitHub repos...")
 
             # Create worker tasks
             #tasks = [asyncio.create_task(worker(args, que))

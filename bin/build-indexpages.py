@@ -916,6 +916,7 @@ async def process_doc_unit(args: argparse.Namespace,
         stderr=asyncio.subprocess.PIPE,
     )
     stdout, stderr = await process.communicate()
+
     # We manually convert the bytes into strings:
     stdout = stdout if stdout is None else stdout.decode()
     stderr = stderr if stderr is None else stderr.decode()
@@ -984,7 +985,7 @@ async def log_output(stream: asyncio.StreamReader, repo_name: str | None = None)
     # gitlog.debug("=== End output for %s ===\n", repo_name)
 
 
-async def run_git(command: str, cwd: Path | None = None) -> tuple[int | None, str]:
+async def run_git(command: str, cwd: str|Path| None = None) -> tuple[int | None, str]:
     """
     Run a git command asynchronously in a specific directory
 
@@ -1013,7 +1014,7 @@ async def run_git(command: str, cwd: Path | None = None) -> tuple[int | None, st
     return returncode, output
 
 
-async def update_git_repo(repo: str|Path) -> int|None:
+async def update_git_repo(repo: str|Path|None) -> tuple[int|None, str]:
     """
     Update a Git repository asynchronously.
 

@@ -549,7 +549,7 @@ def init_jinja_template(path: str) -> Environment:
 
 def list_all_deliverables(tree: etree._Element|etree._ElementTree,
                           lifecycle: Sequence|None=None,
-                          docsuite=None,
+                          docsuite:Sequence|None=None,
                           ) -> Generator[etree._Element, None, None]:
     """List all deliverables from the stitched Docserv config
 
@@ -581,8 +581,11 @@ def list_all_deliverables(tree: etree._Element|etree._ElementTree,
 
             xpath += "/deliverable"
             xpathlog.debug("XPath: %r", xpath)
-            for node in tree.xpath(xpath):
-                yield node
+            nodes = tree.xpath(xpath)
+            if nodes:
+                yield from nodes
+            else:
+                log.warning("No deliverables found for %r", suite)
 
     else:
         # TODO: do we need all languages? How to handle non-en-us languages?
@@ -591,8 +594,7 @@ def list_all_deliverables(tree: etree._Element|etree._ElementTree,
             f"/builddocs/language[@lang='en-us']/deliverable"
         )
         xpathlog.debug("XPath: %r", xpath)
-        for deliverable in tree.xpath(xpath):
-            yield deliverable
+        yield from tree.xpath(xpath)
 
 
 def get_docsets_from_product(tree, productid, lifecycle):

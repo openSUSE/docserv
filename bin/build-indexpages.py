@@ -28,7 +28,7 @@ import logging.handlers
 from pathlib import Path
 import os
 import tempfile
-from typing import Any, Dict, Generator, Optional, Sequence
+from typing import cast, Any, Dict, Generator, Optional, Sequence
 import queue
 import re
 import shlex
@@ -331,76 +331,6 @@ def setup_logging(cliverbosity: int,
         # Roll over on application start
         rotating_file_handler.doRollover()
 
-
-async def run_command(command: str) -> int:
-    """
-    Runs a command asynchronously, streams output to logging, and returns the return code.
-
-    Args:
-        command: The shell command to run.
-
-    Returns:
-        The return code of the command.
-    """
-    process = await asyncio.create_subprocess_shell(
-        command,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
-
-    async def log_stream(stream, level):
-        """
-        Asynchronously logs the output of a stream line by line.
-        """
-        async for line in stream:
-            gitlog.log(level, line.strip())
-
-    # Run both stdout and stderr logging concurrently
-    stdout_task = asyncio.create_task(log_stream(process.stdout, logging.INFO))
-    stderr_task = asyncio.create_task(log_stream(process.stderr, logging.ERROR))
-
-    # Wait for the process to complete
-    return_code = await process.wait()
-
-    # Ensure all output is logged before returning
-    await asyncio.gather(stdout_task, stderr_task)
-
-    gitlog.info(f"Command {command!r} exited with return code {return_code}")
-    return return_code
-
-
-async def run_git(command: str, cwd: Path|None = None) -> int|None:
-    """
-    Run a git command asynchronously in a specific directory
-
-    Args:
-        command: The git command to run.
-        cwd: The directory where the git command should be
-    """
-    gitlog.info("Running git command %r in %r", command, cwd)
-    process = await asyncio.create_subprocess_shell(
-        command,
-        cwd=cwd,
-        env={"LANG": "C", "LC_ALL": "C"},
-        # Setting this doesn't work; the command isn't called
-        # text="True",
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    stdout, stderr = await process.communicate()
-    # We manually convert the bytes into strings:
-    stdout = stdout if stdout is None else stdout.decode()
-    stderr = stderr if stderr is None else stderr.decode()
-    gitlog.debug(
-        "Results of git clone: %s %s => %i",
-        stdout,
-        stderr,
-        process.returncode,
-    )
-    if process.returncode != 0:
-        gitlog.error(stderr)
-    # gitlog.debug(stdout)
-    return process.returncode
 
 
 def read_ini_file(inifile: Path, target="doc-suse-com") -> dict[str, Optional[str]]:
@@ -994,6 +924,91 @@ async def process_doc_unit(args: argparse.Namespace,
     return process.returncode
 
 
+##
+async def run_command(command: str) -> int:
+    """
+    Runs a command asynchronously, streams output to logging, and returns the return code.
+
+    Args:
+        command: The shell command to run.
+
+    Returns:
+        The return code of the command.
+    """
+    process = await asyncio.create_subprocess_shell(
+        command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        env={"LANG": "C", "LC_ALL": "C"},
+    )
+
+    async def log_stream(stream, level):
+        """
+        Asynchronously logs the output of a stream line by line.
+        """
+        async for line in stream:
+            gitlog.log(level, line.strip())
+
+    # Run both stdout and stderr logging concurrently
+    stdout_task = asyncio.create_task(log_stream(process.stdout, logging.INFO))
+    stderr_task = asyncio.create_task(log_stream(process.stderr, logging.ERROR))
+
+    # Wait for the process to complete
+    return_code = await process.wait()
+
+    # Ensure all output is logged before returning
+    await asyncio.gather(stdout_task, stderr_task)
+
+    gitlog.info(f"Command {command!r} exited with return code {return_code}")
+    return return_code
+
+
+async def log_output(stream: asyncio.StreamReader, repo_name: str | None = None):
+    # async with sem:
+    # gitlog.debug(f"\n=== Output for %s ===", repo_name)
+    result = []
+    while True:
+        try:
+            line = await stream.readuntil(b"\n")
+            line = line.decode().strip()
+            if line:
+                result.append(line)
+                gitlog.debug(line)
+        except asyncio.IncompleteReadError:
+            break
+    return "\n".join(result)
+    # gitlog.debug("=== End output for %s ===\n", repo_name)
+
+
+async def run_git(command: str, cwd: Path | None = None) -> tuple[int | None, str]:
+    """
+    Run a git command asynchronously in a specific directory
+
+    Args:
+        command: The git command to run.
+        cwd: The directory where the git command should be
+    """
+    gitlog.info("Running git command %r", command)
+    process = await asyncio.create_subprocess_shell(
+        command,
+        cwd=cwd,
+        env={
+            "LANG": "C",
+            "LC_ALL": "C",
+            "GIT_TERMINAL_PROMPT": "0",
+            "GIT_PROGRESS_FORCE": "1",
+        },
+        # Setting this doesn't work; the command isn't called
+        # text="True",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+    )
+    output = await log_output(cast(asyncio.StreamReader, process.stdout))
+    returncode = await process.wait()
+
+    return returncode, output
+
+
 async def update_git_repo(repo: str|Path) -> int|None:
     """
     Update a Git repository asynchronously.
@@ -1001,17 +1016,20 @@ async def update_git_repo(repo: str|Path) -> int|None:
     :param repo: The repo URL or path.
     """
     log.info(f"Updating {repo}")
-    command = f"git -C {str(repo)} -c core.progress=1 pull -vr"
-    result = await run_git(command)
+    command = f"git -C {str(repo)} -c core.progress=1 fetch --prune"
+    result, output = await run_git(command)
     if result:
-        raise RuntimeError(f"Error updating {repo}")
+        raise RuntimeError(f"Error updating {repo}: {output}")
 
     return result
 
 
-async def clone_git_repo(repo: str|Path,
-                         repopath: str|Path,
-                         branch:str|None=None) -> None:
+async def clone_git_repo(
+    repo: str | Path,
+    repopath: str | Path,
+    branch: str | None = None,
+    default_branch: str = "main",
+) -> None:
     """
     Clone a Git repository asynchronously.
 
@@ -1019,19 +1037,31 @@ async def clone_git_repo(repo: str|Path,
     :param repopath: where to store the cloned repository.
     :param branch: The branch to clone
     """
-    log.info(f"Cloning {repo} to {repopath}")
+    command = "git -c color.ui=never -c core.progress=1 clone --progress --quiet "
+    log.info(f"Cloning {repo} => {repopath}")
     if branch:
-        command = (
-            f"git -c core.progress=1 clone --branch {branch} "
-            f"{str(repo)} {str(repopath)}"
+        command += (
+            f"--single-branch --branch {branch} "
+            f"{str(repo)} {str(repopath)} && git -C {str(repopath)} checkout {branch}"
         )
     else:
-        command = f"git -c core.progress=1 clone {str(repo)} {str(repopath)}"
+        command += f"{str(repo)} {str(repopath)}"
 
-    # result = await run_command(command)
-    result = await run_git(command)
+    result, output = await run_git(command)
     if result:
-        raise RuntimeError(f"Error cloning {repo} to {repopath}")
+        raise RuntimeError(f"Error cloning {repo} => {repopath}: {output}")
+
+
+async def clone_or_update_git_repo(
+    repo: str | Path,
+    repopath: str | Path,
+    branch: str | None = None,
+    default_branch: str = "main",
+):
+    """
+    """
+    if Path(repopath).exists():
+        pass
 
 
 async def worker(args: argparse.Namespace, queue: asyncio.Queue) -> None:
@@ -1052,11 +1082,10 @@ async def worker(args: argparse.Namespace, queue: asyncio.Queue) -> None:
             repopath = Path(args.docserv_repo_base_dir).joinpath(
                 "permanent-full", path
             )
-            if not repopath.exists():
-                await clone_git_repo(deli.git, repopath)
-            else:
-                # update the repo
+            if repopath.exists():
                 await update_git_repo(repopath)
+            else:
+                await clone_git_repo(deli.git, repopath)
 
             # Get the branch
             # TODO: Is that needed?
@@ -1074,9 +1103,12 @@ async def worker(args: argparse.Namespace, queue: asyncio.Queue) -> None:
                 dir=tmpbasedir,
                 prefix=f"{productid}-{docsetid}-{lang}_")
             )
+
+            # TODO: Check return value?
             await clone_git_repo(repopath, tmpdir, branch)
 
             await process_doc_unit(args, deli, tmpdir)
+
 
             # Remove the temporary directory
             # shutil.rmtree(tmpdir)
@@ -1084,18 +1116,39 @@ async def worker(args: argparse.Namespace, queue: asyncio.Queue) -> None:
             queue.task_done()  # Notify queue that task is complete
 
 
+async def git_worker(repo_url: str, base_dir: Path):
+    """
+    Worker function to process the GitHub queue.
+    """
+    path = repo_url.translate(
+        str.maketrans({":": "_", "/": "_", "-": "_", ".": "_"})
+    )
+    repopath = Path(base_dir).joinpath("permanent-full", path)
+    gitlog.info("Cloning %s => %s...", repo_url, repopath)
+
+    if repopath.exists():
+        # await update_git_repo(repopath)
+        log.debug("Nothing to do for %s", repopath)
+    else:
+        await clone_git_repo(repo_url, repopath)
+
+    gitlog.debug("Finished cloning %s", repo_url)
+
+
 async def main(cliargs=None):
     """
     Main function
     """
     tasks = []
+    repo_urls = set()
     try:
-        num_workers = 4
+        num_workers = 6
         args = parsecli(cliargs)
         # allow the logger to start
         await asyncio.sleep(0)
         log.info("=== Starting ===")
-        que = asyncio.Queue()
+        # que = asyncio.Queue(-1)
+        repo_queue = asyncio.Queue()
         args.config = read_ini_file(args.docserv_ini_config)
 
         with timer() as t:
@@ -1112,18 +1165,46 @@ async def main(cliargs=None):
                         deli.productid, deli.docsetid
                     )
                     continue
+                else:
+                    repo_urls.add(deli.git)
 
-                log.info("Adding %s/%s/%s/%s to the queue",
-                         deli.productid, deli.docsetid, deli.lang, deli.dcfile
-                )
-                await que.put(deli)
+                #log.info("Adding %s/%s/%s/%s to the queue",
+                #         deli.productid, deli.docsetid, deli.lang, deli.dcfile
+                #)
+                # await que.put(deli)
+
+            # Add repo URLs to the repo queue
+            log.info("Cloning GitHub repos...")
+            # for r in repo_urls:
+            #     await repo_queue.put(r)
+
+            # # Create worker tasks for cloning/updating repositories
+            # for _ in range(num_workers):
+            #     task = asyncio.create_task(
+            #         git_worker(repo_queue, Path(args.docserv_repo_base_dir)),
+            #         name="github_clone"
+            #     )
+            #     tasks.append(task)
+            async def force_terminate_task_group():
+                """Used to force termination of a task group."""
+                raise TerminateTaskGroup()
+
+            async with asyncio.TaskGroup() as tg:
+                for repo in repo_urls:
+                    tg.create_task(git_worker(repo, args.docserv_repo_base_dir))
+                # await asyncio.sleep(0)
+                # tg.create_task(force_terminate_task_group())
+
+            # Wait for the repo queue to be processed
+            # await repo_queue.join()
+            log.info("Completed cloning all GitHub repos...")
 
             # Create worker tasks
-            tasks = [asyncio.create_task(worker(args, que))
-                     for _ in range(num_workers)]
+            #tasks = [asyncio.create_task(worker(args, que))
+            #         for _ in range(num_workers)]
 
             # Wait until all items in the queue are processed:
-            await que.join()
+            #await que.join()
 
             #render(args, tree, env)
 
@@ -1145,7 +1226,7 @@ async def main(cliargs=None):
         log.error(e)
         return 20
 
-    except (KeyboardInterrupt, asyncio.CancelledError):
+    except (KeyboardInterrupt): # , asyncio.CancelledError
         log.error("Interrupted by user")
         return 10
 
@@ -1153,11 +1234,12 @@ async def main(cliargs=None):
         return 5
 
     finally:
+
         # Cancel all workers
-        for task in tasks:
-            task.cancel()
+        #for task in tasks:
+        #    task.cancel()
         # Wait for workers to complete their shutdown
-        await asyncio.gather(*tasks, return_exceptions=True)
+        # await asyncio.gather(*tasks, return_exceptions=True)
         # log.info("Elapsed time: %0.3f seconds", t.elapsed_time)
         log.info("=== Finished ===")
 
@@ -1166,4 +1248,8 @@ async def main(cliargs=None):
 
 if __name__ == "__main__":
     # sys.exit(main())
-    sys.exit(asyncio.run(main()))
+    sys.exit(
+        asyncio.run(main(),
+                    # debug=True
+                    )
+    )

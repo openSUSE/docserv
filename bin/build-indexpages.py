@@ -993,6 +993,7 @@ async def run_git(command: str, cwd: str|Path| None = None) -> tuple[int | None,
         command: The git command to run.
         cwd: The directory where the git command should be
     """
+    command = f"git -c color.ui=never -c core.progress=1 {command}"
     gitlog.info("Running git command %r", command)
     process = await asyncio.create_subprocess_shell(
         command,
@@ -1021,12 +1022,11 @@ async def update_git_repo(repo: str|Path|None) -> tuple[int|None, str]:
     :param repo: The repo URL or path.
     """
     log.info(f"Updating {repo}")
-    command = f"git -C {str(repo)} -c core.progress=1 fetch --prune"
-    result, output = await run_git(command)
+    command = "fetch --progress --prune"
+    result, output = await run_git(command, repo)
     if result:
         raise GitError(f"Error updating {repo}: {output}")
 
-    return result
 
 
 async def clone_git_repo(
@@ -1042,7 +1042,7 @@ async def clone_git_repo(
     :param repopath: where to store the cloned repository.
     :param branch: The branch to clone
     """
-    command = "git -c color.ui=never -c core.progress=1 clone --progress --quiet "
+    command = "clone --progress --quiet "
     log.info(f"Cloning {repo} => {repopath}")
     if branch:
         command += (
@@ -1054,7 +1054,7 @@ async def clone_git_repo(
 
     result, output = await run_git(command)
     if result:
-        raise RuntimeError(f"Error cloning {repo} => {repopath}: {output}")
+        raise GitError(f"Error cloning {repo} => {repopath}: {output}")
 
 
 async def clone_or_update_git_repo(
@@ -1132,12 +1132,11 @@ async def git_worker(repo_url: str, base_dir: Path):
     gitlog.info("Cloning %s => %s...", repo_url, repopath)
 
     if repopath.exists():
-        # await update_git_repo(repopath)
-        log.debug("Nothing to do for %s", repopath)
+        await update_git_repo(repopath)
+        gitlog.debug("Finished updating %s", repo_url)
     else:
         await clone_git_repo(repo_url, repopath)
-
-    gitlog.debug("Finished cloning %s", repo_url)
+        gitlog.debug("Finished cloning %s", repo_url)
 
 
 async def main(cliargs=None):

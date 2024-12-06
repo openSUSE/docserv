@@ -969,22 +969,22 @@ async def run_command(command: str) -> int:
     gitlog.info(f"Command {command!r} exited with return code {return_code}")
     return return_code
 
+# We are only interested in one command at a time
+sem = asyncio.Semaphore(1)
 
 async def log_output(stream: asyncio.StreamReader, repo_name: str | None = None):
-    # async with sem:
-    # gitlog.debug(f"\n=== Output for %s ===", repo_name)
-    result = []
-    while True:
-        try:
-            line = await stream.readuntil(b"\n")
-            line = line.decode().strip()
-            if line:
-                result.append(line)
-                gitlog.debug(line)
-        except asyncio.IncompleteReadError:
-            break
-    return "\n".join(result)
-    # gitlog.debug("=== End output for %s ===\n", repo_name)
+    async with sem:
+        result = []
+        while True:
+            try:
+                line = await stream.readuntil(b"\n")
+                line = line.decode().strip()
+                if line:
+                    result.append(line)
+                    gitlog.debug(line)
+            except asyncio.IncompleteReadError:
+                break
+        return "\n".join(result)
 
 
 async def run_git(command: str, cwd: str|Path| None = None) -> tuple[int | None, str]:

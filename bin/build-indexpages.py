@@ -367,6 +367,25 @@ def read_ini_file(inifile: Path, target="doc-suse-com") -> dict[str, Optional[st
     return result
 
 
+def is_dir_empty(directory: Path) -> bool:
+    """
+    Check if the specified directory is empty.
+
+    Parameters:
+    directory (Path): The path to the directory to check.
+
+    Returns:
+    bool: True if the directory is empty, False otherwise.
+
+    Raises:
+    ValueError: If the provided path is not a directory.
+    """
+    if not directory.is_dir():
+        raise ValueError(f"The path {directory} is not a directory.")
+
+    return not any(directory.iterdir())
+
+
 def parsecli(cliargs=None):
     """Parse CLI with :class:`argparse.ArgumentParser` and return parsed result
 

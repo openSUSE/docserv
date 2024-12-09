@@ -1107,13 +1107,11 @@ async def git_worker(
     """
     Worker function to process the GitHub queue.
     """
-    path = repo_url.translate(str.maketrans({":": "_", "/": "_", "-": "_", ".": "_"}))
-    repopath = Path(base_dir).joinpath("permanent-full", path)
-    gitlog.info("Cloning %s => %s...", repo_url, repopath)
+    gitlog.info("Cloning %s => %s...", source, target)
 
-    if repopath.exists():
-        await update_git_repo(repopath)
-        gitlog.debug("Finished updating %s", repo_url)
+    # We need to check if the target directory is empty
+    # as tempdir creates already a directory with a random name
+    if target.exists() and not is_dir_empty(target):
         result = await update_git_repo(target)
         gitlog.debug("Finished updating %s", source)
     else:
@@ -1135,16 +1133,12 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> None:
 
     log.info(f"Processing {productid}/{docsetid}...")
     try:
-        repopath = Path(args.docserv_repo_base_dir).joinpath(
-            "permanent-full", deliverable.repo_path
-        )
-        await git_worker(deliverable.git, args.docserv_repo_base_dir)
-
         # Get the branch
-        # TODO: Is that needed?
+        # TODO: Is that check needed?
         if branch is None:
-            log.error("No branch found for %s/%s", productid, docsetid)
-            return
+            log.warning("No branch found for %s/%s => default to 'main'",
+                        productid, docsetid)
+            branch = "main"
 
         tmpbasedir = Path(args.docserv_repo_base_dir).joinpath(
             "temporary-branches",
@@ -1154,15 +1148,17 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> None:
             dir=tmpbasedir,
             prefix=f"{productid}-{docsetid}-{lang}_")
         )
-
+        repopath = Path(args.docserv_repo_base_dir).joinpath(
+                        "permanent-full", deliverable.repo_path
+        )
         # TODO: Check return value?
-        # await clone_git_repo(repopath, tmpdir, branch)
         await git_worker(repopath, tmpdir, branch)
 
         await process_doc_unit(args, deliverable, tmpdir)
 
         # Remove the temporary directory
         # shutil.rmtree(tmpdir)
+
     finally:
         # queue.task_done()  # Notify queue that task is complete
         pass

@@ -1078,56 +1078,49 @@ async def clone_or_update_git_repo(
         pass
 
 
-async def worker(args: argparse.Namespace, queue: asyncio.Queue) -> None:
+async def worker(deliverable: Deliverable, args: argparse.Namespace) -> None:
     """
     Async worker that processes doc units from the queue.
     """
-    while not queue.empty():
-        # Get a Deliverable from the queue
-        deli: Deliverable = await queue.get()
-        productid, docsetid, branch = deli.productid, deli.docsetid, deli.branch
-        lang = deli.lang
+    productid, docsetid, branch, lang = (deliverable.productid,
+                                   deliverable.docsetid,
+                                   deliverable.branch,
+                                   deliverable.lang
+                                   )
 
-        log.info(f"Processing {productid}/{docsetid}...")
-        try:
-            path = deli.git.translate(
-                str.maketrans({":": "_", "/": "_", "-": "_", ".": "_"})
-            )
-            repopath = Path(args.docserv_repo_base_dir).joinpath(
-                "permanent-full", path
-            )
-            if repopath.exists():
-                await update_git_repo(repopath)
-            else:
-                await clone_git_repo(deli.git, repopath)
+    log.info(f"Processing {productid}/{docsetid}...")
+    try:
+        repopath = Path(args.docserv_repo_base_dir).joinpath(
+            "permanent-full", deliverable.repo_path
+        )
+        await git_worker(deliverable.git, args.docserv_repo_base_dir)
 
-            # Get the branch
-            # TODO: Is that needed?
-            if branch is None:
-                log.error("No branch found for %s/%s", deli.productid, deli.docsetid)
-                # Remove the job from the queue
-                queue.task_done()
-                continue
+        # Get the branch
+        # TODO: Is that needed?
+        if branch is None:
+            log.error("No branch found for %s/%s", productid, docsetid)
+            return
 
-            tmpbasedir = Path(args.docserv_repo_base_dir).joinpath(
-                "temporary-branches",
-            )
-            tmpbasedir.mkdir(parents=True, exist_ok=True)
-            tmpdir = Path(tempfile.mkdtemp(
-                dir=tmpbasedir,
-                prefix=f"{productid}-{docsetid}-{lang}_")
-            )
+        tmpbasedir = Path(args.docserv_repo_base_dir).joinpath(
+            "temporary-branches",
+        )
+        tmpbasedir.mkdir(parents=True, exist_ok=True)
+        tmpdir = Path(tempfile.mkdtemp(
+            dir=tmpbasedir,
+            prefix=f"{productid}-{docsetid}-{lang}_")
+        )
 
-            # TODO: Check return value?
-            await clone_git_repo(repopath, tmpdir, branch)
+        # TODO: Check return value?
+        # await clone_git_repo(repopath, tmpdir, branch)
+        await git_worker(repopath, tmpdir, branch)
 
-            await process_doc_unit(args, deli, tmpdir)
+        await process_doc_unit(args, deliverable, tmpdir)
 
-
-            # Remove the temporary directory
-            # shutil.rmtree(tmpdir)
-        finally:
-            queue.task_done()  # Notify queue that task is complete
+        # Remove the temporary directory
+        # shutil.rmtree(tmpdir)
+    finally:
+        # queue.task_done()  # Notify queue that task is complete
+        pass
 
 
 async def git_worker(repo_url: str, base_dir: Path):
@@ -1152,26 +1145,32 @@ async def main(cliargs=None):
     """
     Main function
     """
-    # tasks = []
     repo_urls = set()
     try:
-        # num_workers = 6
         args = parsecli(cliargs)
         # allow the logger to start
         await asyncio.sleep(0)
         log.info("=== Starting ===")
-        # que = asyncio.Queue(-1)
-        # repo_queue = asyncio.Queue()
         args.config = read_ini_file(args.docserv_ini_config)
 
         with timer() as t:
             log.debug("Arguments: %s", args)
 
             tree = etree.parse(args.docserv_stitch_file, etree.XMLParser())
-            for deliverable in list_all_deliverables(tree,
-                                            args.lifecycle,
-                                            args.include_product_docset):
-                deli: Deliverable = Deliverable(deliverable)
+            # Seems not to be very efficient as I have to iterate over the list
+            # of deliverables twice:
+            # first to get the Git URLs and then to process them.
+            # Second iteration is done in the worker function.
+            deliverable_queue = []
+
+            # First take care of the GitHub repos to clone or update them
+            for deliverable in list_all_deliverables(
+                tree,
+                args.lifecycle,
+                args.include_product_docset
+            ):
+                deli = Deliverable(deliverable)
+
                 if deli.git is None:
                     log.warning(
                         "No Git information found for %s/%s",
@@ -1179,22 +1178,20 @@ async def main(cliargs=None):
                     )
                     continue
                 else:
+                    deliverable_queue.append(deli)
                     repo_urls.add(deli.git)
-
-                #log.info("Adding %s/%s/%s/%s to the queue",
-                #         deli.productid, deli.docsetid, deli.lang, deli.dcfile
-                #)
-                # await que.put(deli)
 
             # Add repo URLs to the repo queue
             log.info("Cloning/updating GitHub repos...")
 
-            async with asyncio.TaskGroup() as tg:
-                for repo in repo_urls:
-                    tg.create_task(git_worker(repo, args.docserv_repo_base_dir))
+            for deliverable in deliverable_queue:
+                async with asyncio.TaskGroup() as tg:
+                    for repo in repo_urls:
+                        tg.create_task(worker(repo, args.docserv_repo_base_dir))
+
             log.info("Completed cloning/updating all GitHub repos...")
 
-            # Create worker tasks
+            # Create
             #tasks = [asyncio.create_task(worker(args, que))
             #         for _ in range(num_workers)]
 
@@ -1229,12 +1226,6 @@ async def main(cliargs=None):
         return 5
 
     finally:
-
-        # Cancel all workers
-        #for task in tasks:
-        #    task.cancel()
-        # Wait for workers to complete their shutdown
-        # await asyncio.gather(*tasks, return_exceptions=True)
         # log.info("Elapsed time: %0.3f seconds", t.elapsed_time)
         log.info("=== Finished ===")
 

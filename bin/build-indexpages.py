@@ -1062,7 +1062,7 @@ async def clone_git_repo(
     repopath: str | Path,
     branch: str | None = None,
     default_branch: str = "main",
-) -> None:
+) -> tuple[int | None, str]:
     """
     Clone a Git repository asynchronously.
 
@@ -1084,6 +1084,8 @@ async def clone_git_repo(
     if result:
         raise GitError(f"Error cloning {repo} => {repopath}: {output}")
 
+    return result, output
+
 
 async def clone_or_update_git_repo(
     repo: str | Path,
@@ -1097,7 +1099,11 @@ async def clone_or_update_git_repo(
         pass
 
 
-async def git_worker(repo_url: str, base_dir: Path):
+async def git_worker(
+    source: str|Path,
+    target: Path,
+    branch: str | None = None
+) -> tuple[int|None, str]:
     """
     Worker function to process the GitHub queue.
     """
@@ -1108,9 +1114,13 @@ async def git_worker(repo_url: str, base_dir: Path):
     if repopath.exists():
         await update_git_repo(repopath)
         gitlog.debug("Finished updating %s", repo_url)
+        result = await update_git_repo(target)
+        gitlog.debug("Finished updating %s", source)
     else:
-        await clone_git_repo(repo_url, repopath)
-        gitlog.debug("Finished cloning %s", repo_url)
+        result = await clone_git_repo(source, target, branch)
+        gitlog.debug("Finished cloning %s", source)
+
+    return result
 
 
 async def worker(deliverable: Deliverable, args: argparse.Namespace) -> None:

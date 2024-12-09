@@ -1185,41 +1185,41 @@ async def main(cliargs=None):
             # first to get the Git URLs and then to process them.
             # Second iteration is done in the worker function.
             deliverable_queue = []
+            repo_urls = set()
 
             # First take care of the GitHub repos to clone or update them
-            for deliverable in list_all_deliverables(
-                tree,
-                args.lifecycle,
-                args.include_product_docset
-            ):
-                deli = Deliverable(deliverable)
+            async with asyncio.TaskGroup() as tg:
+                for deliverable in list_all_deliverables(
+                    tree,
+                    args.lifecycle,
+                    args.include_product_docset
+                ):
+                    deli = Deliverable(deliverable)
 
-                if deli.git is None:
-                    log.warning(
-                        "No Git information found for %s/%s",
-                        deli.productid, deli.docsetid
-                    )
-                    continue
-                else:
+                    if deli.git is None:
+                        log.warning(
+                            "No Git information found for %s/%s",
+                            deli.productid, deli.docsetid
+                        )
+                        continue
+
                     deliverable_queue.append(deli)
+                    if deli.git in repo_urls:
+                        # Don't clone already existing repos
+                        continue
                     repo_urls.add(deli.git)
+                    repopath = Path(args.docserv_repo_base_dir).joinpath(
+                        "permanent-full", deli.repo_path
+                    )
+                    tg.create_task(git_worker(deli.git, repopath))
 
             # Add repo URLs to the repo queue
             log.info("Cloning/updating GitHub repos...")
 
-            for deliverable in deliverable_queue:
-                async with asyncio.TaskGroup() as tg:
-                    for repo in repo_urls:
-                        tg.create_task(worker(repo, args.docserv_repo_base_dir))
-
-            log.info("Completed cloning/updating all GitHub repos...")
-
-            # Create
-            #tasks = [asyncio.create_task(worker(args, que))
-            #         for _ in range(num_workers)]
-
-            # Wait until all items in the queue are processed:
-            #await que.join()
+            log.info("Processing deliverables...")
+            async with asyncio.TaskGroup() as tg:
+                for deliverable in deliverable_queue:
+                    tg.create_task(worker(deliverable, args))
 
             #render(args, tree, env)
 

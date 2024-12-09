@@ -149,6 +149,12 @@ class Deliverable:
     def dcfile(self) -> str:
         return self._node.find("dc", namespaces=None).text.strip()
 
+    @cached_property
+    def repo_path(self) -> Path:
+        return Path(self.git.translate(
+            str.maketrans({":": "_", "/": "_", "-": "_", ".": "_"})
+        ))
+
     def __repr__(self) -> str:
         return (
             f"{self.__class__.__name__}(productid={self.productid!r}, "

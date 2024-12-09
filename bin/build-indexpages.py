@@ -1078,6 +1078,22 @@ async def clone_or_update_git_repo(
         pass
 
 
+async def git_worker(repo_url: str, base_dir: Path):
+    """
+    Worker function to process the GitHub queue.
+    """
+    path = repo_url.translate(str.maketrans({":": "_", "/": "_", "-": "_", ".": "_"}))
+    repopath = Path(base_dir).joinpath("permanent-full", path)
+    gitlog.info("Cloning %s => %s...", repo_url, repopath)
+
+    if repopath.exists():
+        await update_git_repo(repopath)
+        gitlog.debug("Finished updating %s", repo_url)
+    else:
+        await clone_git_repo(repo_url, repopath)
+        gitlog.debug("Finished cloning %s", repo_url)
+
+
 async def worker(deliverable: Deliverable, args: argparse.Namespace) -> None:
     """
     Async worker that processes doc units from the queue.
@@ -1121,24 +1137,6 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> None:
     finally:
         # queue.task_done()  # Notify queue that task is complete
         pass
-
-
-async def git_worker(repo_url: str, base_dir: Path):
-    """
-    Worker function to process the GitHub queue.
-    """
-    path = repo_url.translate(
-        str.maketrans({":": "_", "/": "_", "-": "_", ".": "_"})
-    )
-    repopath = Path(base_dir).joinpath("permanent-full", path)
-    gitlog.info("Cloning %s => %s...", repo_url, repopath)
-
-    if repopath.exists():
-        await update_git_repo(repopath)
-        gitlog.debug("Finished updating %s", repo_url)
-    else:
-        await clone_git_repo(repo_url, repopath)
-        gitlog.debug("Finished cloning %s", repo_url)
 
 
 async def main(cliargs=None):

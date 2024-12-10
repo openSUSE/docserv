@@ -31,7 +31,7 @@ import tempfile
 from typing import cast, Any, Dict, Generator, Optional, Sequence
 import queue
 import re
-import shlex
+import shutil
 import sys
 
 import aiofiles
@@ -1152,7 +1152,7 @@ async def git_worker(
     return result
 
 
-async def worker(deliverable: Deliverable, args: argparse.Namespace) -> None:
+async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict:
     """
     Async worker that processes doc units from the queue.
     """
@@ -1184,8 +1184,12 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> None:
         repopath = Path(args.docserv_repo_base_dir).joinpath(
                         "permanent-full", deliverable.repo_path
         )
+
         # TODO: Check return value?
         await git_worker(repopath, tmpdir, branch)
+
+        if not (tmpdir / deliverable.dcfile).exists():
+            raise FileNotFoundError(f"File {deliverable.dcfile} not found in {tmpdir}")
 
         await process_doc_unit(args, deliverable, tmpdir)
 

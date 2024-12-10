@@ -934,10 +934,14 @@ async def process_doc_unit(args: argparse.Namespace,
     """
     Process a single doc deliverable asynchronously.
     """
+    tmpdir = Path(tmpdir)
     subdir = deliverable.subdir
     if subdir:
         # log.debug("Subdir found: %r", subdir)
         tmpdir = Path(tmpdir) / subdir
+
+    if not tmpdir.exists():
+        raise FileNotFoundError(f"Directory {tmpdir} does not exist")
 
     # Create the nested structure for the metadata
     metadir = (args.docserv_daps_meta_dir

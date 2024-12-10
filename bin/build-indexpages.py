@@ -1252,7 +1252,8 @@ async def main(cliargs=None):
                     repopath = Path(args.docserv_repo_base_dir).joinpath(
                         "permanent-full", deli.repo_path
                     )
-                    tg.create_task(git_worker(deli.git, repopath))
+                    tg.create_task(git_worker(deli.git, repopath),
+                                   name="git_worker")
 
             # Add repo URLs to the repo queue
             log.info("Cloning/updating GitHub repos...")
@@ -1260,7 +1261,8 @@ async def main(cliargs=None):
             log.info("Processing deliverables...")
             async with asyncio.TaskGroup() as tg:
                 for deliverable in deliverable_queue:
-                    task = tg.create_task(worker(deliverable, args))
+                    task = tg.create_task(worker(deliverable, args),
+                                          name="worker")
                     process_results.append(task)
 
             process_output = [task.result() for task in process_results]

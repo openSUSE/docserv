@@ -169,6 +169,9 @@ class Deliverable:
     def node(self) -> etree._Element:
         return self._node
 
+    def __hash__(self) -> int:
+        return hash((self.productid, self.docsetid, self.lang, self.dcfile))
+
     def __repr__(self) -> str:
         return (
             f"{self.__class__.__name__}(productid={self.productid!r}, "

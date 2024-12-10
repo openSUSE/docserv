@@ -113,6 +113,7 @@ class Deliverable:
     A class to represent a deliverable
     """
     _node: etree._Element = field(repr=False)
+    _metafile: str|None = field(repr=False, default=None)
 
     @cached_property
     def productid(self) -> str:
@@ -168,6 +169,14 @@ class Deliverable:
     @cached_property
     def node(self) -> etree._Element:
         return self._node
+
+    @property
+    def metafile(self) -> str|None:
+        return self._metafile
+
+    @metafile.setter
+    def metafile(self, value: str):
+        self._metafile = value
 
     def __hash__(self) -> int:
         return hash((self.productid, self.docsetid, self.lang, self.dcfile))

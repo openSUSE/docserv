@@ -966,7 +966,8 @@ async def process_doc_unit(args: argparse.Namespace,
     stdout = stdout if stdout is None else stdout.decode()
     stderr = stderr if stderr is None else stderr.decode()
     if process.returncode != 0:
-        log.error("Daps problem: %s", stderr)
+        docsuite = f"{deliverable.productid}/{deliverable.docsetid}/{deliverable.lang}:{deliverable.dcfile}"
+        log.error("Daps problem for %r: %s", docsuite, stderr)
         # FIXME: Should we raise an exception here?
         return process.returncode
 
@@ -1175,14 +1176,14 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> None:
         await process_doc_unit(args, deliverable, tmpdir)
 
         # Remove the temporary directory
-        # shutil.rmtree(tmpdir)
+        shutil.rmtree(tmpdir)
 
     except FileNotFoundError as err:
-        log.critical("Processing %s/%s: %s", productid, docsetid, err)
+        docsuite = f"{productid}/{docsetid}/{lang}:{deliverable.dcfile}"
+        log.critical("Processing %s: %s", docsuite, err)
         # return 50
 
     finally:
-        # queue.task_done()  # Notify queue that task is complete
         pass
 
 

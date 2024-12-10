@@ -155,6 +155,20 @@ class Deliverable:
             str.maketrans({":": "_", "/": "_", "-": "_", ".": "_"})
         ))
 
+    @cached_property
+    def format(self) -> dict[str, str]:
+        dc = self.dcfile
+        node = self._node.xpath(
+            f"(format|../../language[@lang='en-us']/deliverable[dc[{dc!r} = .]]/format)[last()]"
+        )
+        if not node:
+            raise ValueError(f"No format found for {self.productid}/{self.docsetid}/{self.lang}/{self.dcfile}")
+        return node[0].attrib
+
+    @cached_property
+    def node(self) -> etree._Element:
+        return self._node
+
     def __repr__(self) -> str:
         return (
             f"{self.__class__.__name__}(productid={self.productid!r}, "

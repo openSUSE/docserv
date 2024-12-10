@@ -1265,8 +1265,22 @@ async def main(cliargs=None):
                                           name="worker")
                     process_results.append(task)
 
-            process_output = [task.result() for task in process_results]
-            log.debug("Process output: %s", process_output)
+            # process_output = [task.result() for task in process_results]
+            successes = 0
+            failures = 0
+            for task in process_results:
+                x: dict[Deliverable, bool] = await task  #.result()
+                deli, result = x.popitem()
+                if result:
+                    successes += 1
+                else:
+                    failures += 1
+                log.info("Result: %s => %s", deli, result)
+            log.info("Summary (%i tasks): %i successful, %i failed",
+                     successes + failures,
+                     successes, failures)
+
+            # log.debug("Process output: %s", process_output)
             #render(args, tree, env)
 
         log.info("Elapsed time: %0.3f seconds", t.elapsed_time)

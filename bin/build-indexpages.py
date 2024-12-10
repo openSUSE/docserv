@@ -1161,8 +1161,10 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> None:
                                    deliverable.branch,
                                    deliverable.lang
                                    )
+    docsuite = f"{productid}/{docsetid}/{lang}:{deliverable.dcfile}"
+    result = True
 
-    log.info(f"Processing {productid}/{docsetid}...")
+    log.info(f"Processing %s...", docsuite)
     try:
         # Get the branch
         # TODO: Is that check needed?
@@ -1192,11 +1194,10 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> None:
 
     except FileNotFoundError as err:
         docsuite = f"{productid}/{docsetid}/{lang}:{deliverable.dcfile}"
-        log.critical("Processing %s: %s", docsuite, err)
-        # return 50
+        log.critical("Problem with %s: %s", docsuite, err)
+        result = False
 
-    finally:
-        pass
+    return {deliverable: result}
 
 
 async def main(cliargs=None):

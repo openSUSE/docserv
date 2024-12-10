@@ -1209,6 +1209,7 @@ async def main(cliargs=None):
     Main function
     """
     repo_urls = set()
+    process_results = []
     try:
         args = parsecli(cliargs)
         # allow the logger to start
@@ -1259,8 +1260,11 @@ async def main(cliargs=None):
             log.info("Processing deliverables...")
             async with asyncio.TaskGroup() as tg:
                 for deliverable in deliverable_queue:
-                    tg.create_task(worker(deliverable, args))
+                    task = tg.create_task(worker(deliverable, args))
+                    process_results.append(task)
 
+            process_output = [task.result() for task in process_results]
+            log.debug("Process output: %s", process_output)
             #render(args, tree, env)
 
         log.info("Elapsed time: %0.3f seconds", t.elapsed_time)

@@ -1173,6 +1173,10 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> None:
         # Remove the temporary directory
         # shutil.rmtree(tmpdir)
 
+    except FileNotFoundError as err:
+        log.critical("Processing %s/%s: %s", productid, docsetid, err)
+        # return 50
+
     finally:
         # queue.task_done()  # Notify queue that task is complete
         pass

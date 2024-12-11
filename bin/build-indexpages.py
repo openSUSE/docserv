@@ -128,6 +128,10 @@ class Deliverable:
         return self._node.getparent().attrib.get("lang").strip()
 
     @cached_property
+    def docsuite(self) -> str:
+        return f"{self.productid}/{self.docsetid}/{self.lang}:{self.dcfile}"
+
+    @cached_property
     def branch(self) -> str|None:
         node = self._node.getparent().find("branch")
         if node is not None:
@@ -179,7 +183,7 @@ class Deliverable:
         self._metafile = value
 
     def __hash__(self) -> int:
-        return hash((self.productid, self.docsetid, self.lang, self.dcfile))
+        return hash(self.docsuite)
 
     def __repr__(self) -> str:
         return (
@@ -600,7 +604,7 @@ def init_jinja_template(path: str) -> Environment:
 
 def list_all_deliverables(tree: etree._Element|etree._ElementTree,
                           lifecycle: Sequence|None=None,
-                          docsuite:Sequence|None=None,
+                          docsuites:Sequence|None=None,
                           ) -> Generator[etree._Element, None, None]:
     """List all deliverables from the stitched Docserv config
 
@@ -613,9 +617,9 @@ def list_all_deliverables(tree: etree._Element|etree._ElementTree,
         xpath_lifecycle = " or ".join([f"@lifecycle='{l}'" for l in lifecycle])
         xpath_lifecycle = f"[{xpath_lifecycle}]"
 
-    if docsuite is not None:
-        log.debug("Filtering for docset %r", docsuite)
-        for suite in docsuite:
+    if docsuites is not None:
+        log.debug("Filtering for docset %r", docsuites)
+        for suite in docsuites:
             # Gradually build the XPath expression
             p, d, lang = suite["product"], suite["docset"], suite["lang"]
             xpath = (
@@ -978,8 +982,7 @@ async def process_doc_unit(args: argparse.Namespace,
     stdout = stdout if stdout is None else stdout.decode()
     stderr = stderr if stderr is None else stderr.decode()
     if process.returncode != 0:
-        docsuite = f"{deliverable.productid}/{deliverable.docsetid}/{deliverable.lang}:{deliverable.dcfile}"
-        log.error("Daps problem for %r: %s", docsuite, stderr)
+        log.error("Daps problem for %r: %s", deliverable.docsuite, stderr)
         # FIXME: Should we raise an exception here?
         return process.returncode
 
@@ -1161,7 +1164,7 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict:
                                    deliverable.branch,
                                    deliverable.lang
                                    )
-    docsuite = f"{productid}/{docsetid}/{lang}:{deliverable.dcfile}"
+    docsuite = deliverable.docsuite
     result = True
 
     log.info(f"Processing %s...", docsuite)
@@ -1197,7 +1200,6 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict:
         shutil.rmtree(tmpdir)
 
     except FileNotFoundError as err:
-        docsuite = f"{productid}/{docsetid}/{lang}:{deliverable.dcfile}"
         log.critical("Problem with %s: %s", docsuite, err)
         result = False
 

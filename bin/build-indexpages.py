@@ -1270,6 +1270,7 @@ async def main(cliargs=None):
             # process_output = [task.result() for task in process_results]
             successes = 0
             failures = 0
+            failed_tasks = []
             for task in process_results:
                 x: dict[Deliverable, bool] = await task  #.result()
                 deli, result = x.popitem()
@@ -1277,10 +1278,13 @@ async def main(cliargs=None):
                     successes += 1
                 else:
                     failures += 1
-                log.info("Result: %s => %s", deli, result)
-            log.info("Summary (%i tasks): %i successful, %i failed",
+                    failed_tasks.append(deli)
+
+            log.info("=== Summary (%i tasks): %i successful, %i failed",
                      successes + failures,
                      successes, failures)
+            for deli in failed_tasks:
+                log.error("Failed deliverable: %s", deli.docsuite)
 
             # log.debug("Process output: %s", process_output)
             #render(args, tree, env)

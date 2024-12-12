@@ -953,13 +953,12 @@ async def process_doc_unit(args: argparse.Namespace,
     Process a single doc deliverable asynchronously.
     """
     tmpdir = Path(tmpdir)
-    subdir = deliverable.subdir
-    if subdir:
-        # log.debug("Subdir found: %r", subdir)
-        tmpdir = Path(tmpdir) / subdir
 
     if not tmpdir.exists():
         raise FileNotFoundError(f"Directory {tmpdir} does not exist")
+
+    if not (tmpdir /deliverable.dcfile).exists():
+        raise FileNotFoundError(f"File {deliverable.dcfile} does not exist in {tmpdir}")
 
     # Create the nested structure for the metadata
     metadir = (args.docserv_daps_meta_dir
@@ -1193,7 +1192,8 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict:
         # TODO: Check return value?
         await git_worker(repopath, tmpdir, branch)
 
-        if not (tmpdir / deliverable.dcfile).exists():
+        tmpdir = tmpdir / deliverable.subdir
+        if not ( tmpdir / deliverable.dcfile).exists():
             raise FileNotFoundError(f"File {deliverable.dcfile} not found in {tmpdir}")
 
         await process_doc_unit(args, deliverable, tmpdir)

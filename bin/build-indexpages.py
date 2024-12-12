@@ -1049,8 +1049,8 @@ async def log_output(stream: asyncio.StreamReader, repo_name: str | None = None)
         while True:
             try:
                 line = await stream.readuntil(b"\n")
-                line = line.decode().strip()
                 if line:
+                    line = line.decode().strip()
                     result.append(line)
                     gitlog.debug(line)
             except asyncio.IncompleteReadError:

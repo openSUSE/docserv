@@ -977,7 +977,7 @@ async def process_doc_unit(args: argparse.Namespace,
         # shell=True,
         env={"LANG": "C", "LC_ALL": "C", "PATH": os.environ["PATH"]},
         stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
     )
     stdout, stderr = await process.communicate()
 

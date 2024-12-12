@@ -138,10 +138,12 @@ class Deliverable:
             return node.text.strip()
 
     @cached_property
-    def subdir(self) -> str|None:
+    def subdir(self) -> str:
         node = self._node.getparent().find("subdir")
         if node is not None:
             return node.text.strip()
+        else:
+            return ""
 
     @cached_property
     def git(self) -> str:

@@ -1122,18 +1122,6 @@ async def clone_git_repo(
     return result, output
 
 
-async def clone_or_update_git_repo(
-    repo: str | Path,
-    repopath: str | Path,
-    branch: str | None = None,
-    default_branch: str = "main",
-):
-    """
-    """
-    if Path(repopath).exists():
-        pass
-
-
 async def git_worker(
     source: str|Path,
     target: Path,

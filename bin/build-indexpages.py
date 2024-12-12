@@ -951,6 +951,14 @@ async def process_doc_unit(args: argparse.Namespace,
                            tmpdir: str | Path) -> int | None:
     """
     Process a single doc deliverable asynchronously.
+
+    Args:
+        args (argparse.Namespace): The command-line arguments.
+        deliverable (Deliverable): The deliverable object containing metadata.
+        tmpdir (str | Path): The temporary directory path.
+
+    Returns:
+        int | None: The return code of the Daps command, or None if successful.
     """
     tmpdir = Path(tmpdir)
 
@@ -990,6 +998,9 @@ async def process_doc_unit(args: argparse.Namespace,
         return process.returncode
 
     log.debug("Daps output: %s", stdout)
+
+    # Render Jinja templates
+
     return process.returncode
 
 
@@ -1139,7 +1150,15 @@ async def git_worker(
     branch: str | None = None
 ) -> tuple[int|None, str]:
     """
-    Worker function to process the GitHub queue.
+    Clone or update a Git repository asynchronously.
+
+    Args:
+        source (str | Path): The source repository URL or path.
+        target (Path): The target directory path where the repository will be cloned or updated.
+        branch (str | None, optional): The branch to checkout. Defaults to None.
+
+    Returns:
+        tuple[int | None, str]: A tuple containing the result code (or None) and a status message.
     """
     gitlog.info("Cloning %s => %s...", source, target)
 
@@ -1157,7 +1176,17 @@ async def git_worker(
 
 async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict:
     """
-    Async worker that processes doc units from the queue.
+    Async worker that processes documentation units from the queue.
+
+    Args:
+        deliverable (Deliverable): The deliverable object containing product, docset, branch, and language information.
+        args (argparse.Namespace): The command-line arguments namespace.
+
+    Returns:
+        dict: A dictionary with the deliverable as the key and a boolean indicating success or failure as the value.
+
+    Raises:
+        FileNotFoundError: If the specified documentation file is not found in the temporary directory.
     """
     productid, docsetid, branch, lang = (deliverable.productid,
                                    deliverable.docsetid,
@@ -1167,7 +1196,7 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict:
     docsuite = deliverable.docsuite
     result = True
 
-    log.info(f"Processing %s...", docsuite)
+    log.info("Processing %s...", docsuite)
     try:
         # Get the branch
         # TODO: Is that check needed?
@@ -1209,7 +1238,28 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict:
 
 async def main(cliargs=None):
     """
-    Main function
+    Main function to process deliverables and clone/update GitHub repositories.
+
+    Args:
+        cliargs (list, optional): Command line arguments. Defaults to None.
+
+    Returns:
+        int: Exit code indicating the result of the execution.
+             0 - Success
+             5 - SystemExit
+             10 - Interrupted by user
+             20 - ValueError
+             50 - FileNotFoundError
+             100 - JSONDecodeError
+             200 - GitError
+
+    Raises:
+        GitError: If there is an error related to Git operations.
+        json.JSONDecodeError: If there is an error decoding a JSON file.
+        FileNotFoundError: If a required file is not found.
+        ValueError: If there is a value error.
+        KeyboardInterrupt: If the process is interrupted by the user.
+        SystemExit: If the system exits unexpectedly.
     """
     repo_urls = set()
     process_results = []

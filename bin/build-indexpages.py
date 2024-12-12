@@ -994,7 +994,13 @@ async def process_doc_unit(args: argparse.Namespace,
 
 
 ##
-async def run_command(command: str) -> int:
+async def run_command(
+    command: str,
+    *,
+    stdout: int = asyncio.subprocess.PIPE,
+    stderr: int = asyncio.subprocess.PIPE,
+    env: dict|None = None,
+) -> int:
     """
     Runs a command asynchronously, streams output to logging, and returns the return code.
 
@@ -1004,11 +1010,14 @@ async def run_command(command: str) -> int:
     Returns:
         The return code of the command.
     """
+    if env is None:
+        env = {"LANG": "C", "LC_ALL": "C", "PATH": os.environ["PATH"]}
+
     process = await asyncio.create_subprocess_shell(
         command,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-        env={"LANG": "C", "LC_ALL": "C"},
+        stdout=stdout,
+        stderr=stderr,
+        env=env,
     )
 
     async def log_stream(stream, level):

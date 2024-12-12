@@ -960,12 +960,14 @@ async def process_doc_unit(args: argparse.Namespace,
     if not (tmpdir /deliverable.dcfile).exists():
         raise FileNotFoundError(f"File {deliverable.dcfile} does not exist in {tmpdir}")
 
-    # Create the nested structure for the metadata
+    # Create the nested structure for the metadata and store it in the deliverable
+    # instance
     metadir = (args.docserv_daps_meta_dir
                / deliverable.lang / deliverable.productid / deliverable.docsetid
     )
     metadir.mkdir(parents=True, exist_ok=True)
     metafile = metadir / f"{deliverable.dcfile}.meta"
+    deliverable.metafile = metafile
 
     command = f"daps -d {deliverable.dcfile} metadata --output {metafile}"
     log.debug("Running Daps command %r in %s", command, tmpdir)

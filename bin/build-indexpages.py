@@ -550,6 +550,9 @@ def parsecli(cliargs=None):
         # Convert it to a Path object
         args.docserv_daps_meta_dir = Path(args.docserv_daps_meta_dir)
 
+    # Initialize Jinja environment with None for later use:
+    args.jinja_env = None
+
     for obj in (
         args.docserv_ini_config,
         args.docserv_json_dir,

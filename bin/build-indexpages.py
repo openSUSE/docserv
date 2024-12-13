@@ -811,7 +811,7 @@ products, requesteddocsets, lifecycle, requestedlangs, outputdir, jsondir, jinja
         transfile = jinja_i18n_dir / f"{lang.replace('-', '_')}.json"
         jsonfile = jsondir / product / f"{docset}.json"
         template = workdata[product]["template"]
-        args = workdata[product]["render_args"]
+        render_args = workdata[product]["render_args"]
 
         if susepartsdir.joinpath(f"head_{lang}.html").exists():
             log.debug("Found head file for lang=%r", lang)
@@ -841,13 +841,15 @@ products, requesteddocsets, lifecycle, requestedlangs, outputdir, jsondir, jinja
         output = Path(path) / "index.html"
 
         with open(output, "w") as fh:
-            content = template.render(data=context,
-                                        # debug=True,
-                                        translations=transdata,
-                                        lang=lang.replace("_", "-"),
-                                        **args)
+            content = template.render(
+                data=context,
+                # debug=True,
+                translations=transdata,
+                lang=lang.replace("_", "-"),
+                **render_args,
+            )
             fh.write(content)
-        log.debug("Wrote %s with args=%s", output, args)
+        log.debug("Wrote %s with args=%s", output, render_args)
 
 
     # Load the homepage.json as context

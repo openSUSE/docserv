@@ -905,16 +905,6 @@ products, requesteddocsets, lifecycle, requestedlangs, outputdir, jsondir, jinja
     return
 
 
-async def render_and_write_html(jinja_env, result, job_name, output_dir):
-    template = jinja_env.get_template('index.html')
-    output_html = template.render(result=result)
-
-    output_path = Path(output_dir) / f"{job_name.strip()}.html"
-
-    async with aiofiles.open(output_path, 'w') as f:
-        await f.write(output_html)
-
-
 def _main(cliargs=None):
     """Main function"""
     try:
@@ -951,6 +941,8 @@ def _main(cliargs=None):
     return 0
 
 
+
+# --- Asynchronous functions
 async def process_doc_unit(args: argparse.Namespace,
                            deliverable: Deliverable,
                            tmpdir: str | Path) -> int | None:
@@ -1179,6 +1171,91 @@ async def git_worker(
     return result
 
 
+def create_workdata(tree: etree._Element|etree._ElementTree,
+                    hometmpl: str,
+                    indextmpl: str) -> dict:
+    """
+    Create the workdata dictionary for the products
+    """
+    # Create directories for all products
+    workdata = {}
+    # Homepage
+    workdata[""] = {
+        # targetconfig['jinjacontext_home'],
+        "meta": "homepage.json",
+        "template": hometmpl,
+        "render_args": {},
+    }
+
+    for w in tree.xpath("/*/product/@productid"):
+        # Handle product exceptions
+        if w == "smart":
+            jinjacontext = {
+                "render_args": {"isSmartDocs": True},
+                "template": indextmpl,
+            }
+        elif w == "trd":
+            jinjacontext = {
+                "render_args": {"isTRD": True},
+                "template": indextmpl,
+                "meta": "trd_metadata.json",
+            }
+        elif w == "sbp":
+            jinjacontext = {
+                "render_args": {"isSBP": True},
+                "template": indextmpl,
+            }
+        else:
+            jinjacontext = {
+                "render_args": {"isProduct": True},
+                "template": indextmpl,
+            }
+
+        workdata[w] = jinjacontext
+
+    return workdata
+
+
+async def render_and_write_html(
+    deliverable: Deliverable,
+    args: argparse.Namespace,
+):
+    """
+    Render the Jinja template and write the HTML output to a file.
+    """
+    env = args.jinja_env
+    # products = deliverable.productid
+    #requesteddocsets = args.docsets
+    #requestedlangs = args.langs
+    lifecycle = args.lifecycle
+    outputdir = Path(args.output_dir)
+    #
+    # jsondir = args.jsondir
+    jinja_i18n_dir = args.jinja_i18n_dir
+    susepartsdir = args.susepartsdir
+    indextmpl = env.get_template("index.html.jinja")
+    hometmpl = env.get_template("home.html.jinja")
+    searchtmpl = env.get_template("search.html.jinja")
+    error404tmp = env.get_template("404.html.jinja")
+
+    log.debug("Metafile: %s", deliverable.metafile)
+
+    workdata = create_workdata(deliverable.node.getroottree(), hometmpl, indextmpl)
+    # print(workdata)
+
+
+
+    # async with aiofiles.open(output, "w") as fh:
+    #     content = await template.render_async(
+    #         data=context,
+    #         # debug=True,
+    #         translations=transdata,
+    #         lang=lang.replace("_", "-"),
+    #         **render_args,
+    #     )
+    #     await fh.write(content)
+
+
 async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict:
     """
     Async worker that processes documentation units from the queue.
@@ -1231,6 +1308,8 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict:
 
         await process_doc_unit(args, deliverable, tmpdir)
 
+        await render_and_write_html(deliverable, args)
+
         # Remove the temporary directory
         shutil.rmtree(tmpdir)
 
@@ -1239,6 +1318,55 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict:
         result = False
 
     return {deliverable: result}
+
+async def process_github_repos(tree: etree._Element|etree._ElementTree,
+                               args: argparse.Namespace
+) -> list[Deliverable]:
+    """
+    Process the cloning/updating of GitHub repositories asynchronously
+    """
+    deliverable_queue = []
+    repo_urls = set()
+    async with asyncio.TaskGroup() as tg:
+        for deliverable in list_all_deliverables(
+            tree, args.lifecycle, args.include_product_docset
+        ):
+            deli = Deliverable(deliverable)
+
+            if deli.git is None:
+                log.warning(
+                    "No Git information found for %s/%s", deli.productid, deli.docsetid
+                )
+                continue
+
+            deliverable_queue.append(deli)
+            if deli.git in repo_urls:
+                # Don't clone already existing repos
+                continue
+            repo_urls.add(deli.git)
+            repopath = Path(args.docserv_repo_base_dir).joinpath(
+                "permanent-full", deli.repo_path
+            )
+            tg.create_task(git_worker(deli.git, repopath), name="git_worker")
+
+    return deliverable_queue
+
+
+async def process_retrieve_metadata(deliverables: list[Deliverable],
+                                    args: argparse.Namespace
+) -> list[asyncio.Task]:
+    """
+    Retrieve metadata from the DAPS command
+    """
+    log.info("Processing deliverables...")
+    process_results = []
+    async with asyncio.TaskGroup() as tg:
+        for deliverable in deliverables:
+            task = tg.create_task(worker(deliverable, args),
+                                    name="worker")
+            process_results.append(task)
+
+    return process_results
 
 
 async def main(cliargs=None):
@@ -1266,7 +1394,6 @@ async def main(cliargs=None):
         KeyboardInterrupt: If the process is interrupted by the user.
         SystemExit: If the system exits unexpectedly.
     """
-    repo_urls = set()
     process_results = []
     try:
         args = parsecli(cliargs)
@@ -1283,52 +1410,23 @@ async def main(cliargs=None):
             # of deliverables twice:
             # first to get the Git URLs and then to process them.
             # Second iteration is done in the worker function.
-            deliverable_queue = []
-            repo_urls = set()
-
-            # First take care of the GitHub repos to clone or update them
-            async with asyncio.TaskGroup() as tg:
-                for deliverable in list_all_deliverables(
-                    tree,
-                    args.lifecycle,
-                    args.include_product_docset
-                ):
-                    deli = Deliverable(deliverable)
-
-                    if deli.git is None:
-                        log.warning(
-                            "No Git information found for %s/%s",
-                            deli.productid, deli.docsetid
-                        )
-                        continue
-
-                    deliverable_queue.append(deli)
-                    if deli.git in repo_urls:
-                        # Don't clone already existing repos
-                        continue
-                    repo_urls.add(deli.git)
-                    repopath = Path(args.docserv_repo_base_dir).joinpath(
-                        "permanent-full", deli.repo_path
-                    )
-                    tg.create_task(git_worker(deli.git, repopath),
-                                   name="git_worker")
+            #
+            # Step 1: Get the deliverables and the Git URLs
+            deliverables = await process_github_repos(tree, args)
 
             # Add repo URLs to the repo queue
-            log.info("Cloning/updating GitHub repos...")
+            # log.info("Cloning/updating GitHub repos...")
+            args.jinja_env = init_jinja_template(args.jinjatemplatedir.absolute())
 
-            log.info("Processing deliverables...")
-            async with asyncio.TaskGroup() as tg:
-                for deliverable in deliverable_queue:
-                    task = tg.create_task(worker(deliverable, args),
-                                          name="worker")
-                    process_results.append(task)
+            # Step 2: Process the deliverables with "daps metadata"
+            process_results = await process_retrieve_metadata(deliverables, args)
 
             # process_output = [task.result() for task in process_results]
             successes = 0
             failures = 0
             failed_tasks = []
             for task in process_results:
-                x: dict[Deliverable, bool] = await task  #.result()
+                x: dict[Deliverable, bool] = await task
                 deli, result = x.popitem()
                 if result:
                     successes += 1
@@ -1339,11 +1437,9 @@ async def main(cliargs=None):
             log.info("=== Summary (%i tasks): %i successful, %i failed",
                      successes + failures,
                      successes, failures)
+
             for deli in failed_tasks:
                 log.error("Failed deliverable: %s", deli.docsuite)
-
-            # log.debug("Process output: %s", process_output)
-            #render(args, tree, env)
 
         log.info("Elapsed time: %0.3f seconds", t.elapsed_time)
 

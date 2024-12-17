@@ -109,6 +109,61 @@ env.read_env()
 
 # --- Classes and functions
 @dataclass
+class Metadata:
+    """
+    A class to represent the metadata of a deliverable
+    """
+    title: str | None = field(default=None)
+    rootid: str | None = field(default=None)
+    description: str | None = field(default=None)
+    dateModified: str | None = field(default=None)
+    tasks: list[str] | None = field(default=None)
+    products: list[dict] | None = field(default=None)
+    docTypes: list[str] | None = field(default=None)
+    archives: list[str] | None = field(default=None)
+    series: str | None = field(default=None)
+    category: str | None = field(default=None)
+    #
+    _match: ClassVar[re.Pattern] = re.compile(r"productname=\[(.*?)\](.*)")
+
+    def read(self, metafile: Path):
+        """
+        Read the metadata from a file
+        """
+        lines = metafile.open().readlines()
+        for line in lines:
+            if line.lstrip().startswith("#"):
+                continue
+            key, value = line.split("=", 1)
+            key, value = key.strip(), value.strip()
+
+            match key:
+                case "category":
+                    if value:
+                        self.category = value
+                case "seo-title":
+                    self.title = value
+                case "seo-description":
+                    self.description = value
+                case "dateModified":
+                    self.dateModified = value
+                case "rootid":
+                    self.rootid = value
+                case "tasks":
+                    self.tasks = [task.strip() for task in value.split(";")]
+                case "productname":
+                    mtch = self._match.match(value)
+                    if mtch:
+                        self.products = [{"name": mtch.group(1), "url": mtch.group(2)}]
+                case "rootid":
+                    if value:
+                        self.rootid = value
+                case "series":
+                    if value:
+                        self.series = value
+
+
+@dataclass
 class Deliverable:
     """
     A class to represent a deliverable

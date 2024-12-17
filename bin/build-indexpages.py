@@ -170,18 +170,32 @@ class Deliverable:
     """
     _node: etree._Element = field(repr=False)
     _metafile: str|None = field(repr=False, default=None)
+    _product_node: etree._Element|None = field(repr=False, default=None)
+    _meta: Metadata | None = None
 
     @cached_property
     def productid(self) -> str:
+        # ancestor::product/@productid
         return list(self._node.iterancestors("product"))[0].attrib.get("productid")
 
     @cached_property
     def docsetid(self) -> str:
+        # ancestor::docset/@setid
         return list(self._node.iterancestors("docset"))[0].attrib.get("setid")
 
     @cached_property
     def lang(self) -> str:
+        # ../../builddocs/language/@lang
         return self._node.getparent().attrib.get("lang").strip()
+
+    @cached_property
+    def lang_is_default(self) -> bool:
+        # ../language/@default
+        content = self._node.getparent().attrib.get("default").strip()
+        map = {"1": True, "0": False,
+               "on": True, "off": False,
+               "true": True, "false": False}
+        return map.get(content, False)
 
     @cached_property
     def docsuite(self) -> str:
@@ -189,12 +203,14 @@ class Deliverable:
 
     @cached_property
     def branch(self) -> str|None:
+        # preceding-sibling::branch
         node = self._node.getparent().find("branch")
         if node is not None:
             return node.text.strip()
 
     @cached_property
     def subdir(self) -> str:
+        # precding-sibling::subdir
         node = self._node.getparent().find("subdir")
         if node is not None:
             return node.text.strip()
@@ -203,6 +219,7 @@ class Deliverable:
 
     @cached_property
     def git(self) -> str:
+        # ../preceding-sibling::git/@remote
         node = self._node.getparent().getparent().find("git")
         if node is not None:
             return node.attrib.get("remote").strip()
@@ -210,6 +227,7 @@ class Deliverable:
 
     @cached_property
     def dcfile(self) -> str:
+        # ./dc
         return self._node.find("dc", namespaces=None).text.strip()
 
     @cached_property
@@ -220,6 +238,7 @@ class Deliverable:
 
     @cached_property
     def format(self) -> dict[str, str]:
+        # ./format
         dc = self.dcfile
         node = self._node.xpath(
             f"(format|../../language[@lang='en-us']/deliverable[dc[{dc!r} = .]]/format)[last()]"
@@ -232,6 +251,49 @@ class Deliverable:
     def node(self) -> etree._Element:
         return self._node
 
+    @cached_property
+    def productname(self) -> str:
+        # anecstor::product/name
+        return self.product_node.find("name", namespaces=None).text.strip()
+
+    @cached_property
+    def acronym(self) -> str:
+        # ancestor::product/acronym
+        node = self.docset_node.find("acronym", namespaces=None)
+        if node:
+            return node
+        return ""
+
+    @cached_property
+    def version(self) -> str:
+        # ancestor::docset/version
+        return (
+            self._node.getparent()
+            .getparent()
+            .getparent()
+            .getparent()
+            .find("version")
+            .text.strip()
+        )
+
+    @cached_property
+    def lifecycle(self) -> str:
+        # ancestor::docset/@lifecycle
+        return self.docset_node.attrib.get("lifecycle")
+
+    # --- Node handling
+    @cached_property
+    def product_node(self) -> etree._Element:
+        # There is always a <product> node
+        return cast(
+            etree._Element, self._node.getparent().getparent().getparent().getparent()
+        )
+
+    @cached_property
+    def docset_node(self) -> etree._Element:
+        # There is always a <docset> node
+        return cast(etree._Element, self._node.getparent().getparent().getparent())
+
     @property
     def metafile(self) -> str|None:
         return self._metafile
@@ -239,6 +301,14 @@ class Deliverable:
     @metafile.setter
     def metafile(self, value: str):
         self._metafile = value
+
+    @property
+    def meta(self) -> Metadata|None:
+        return self._meta
+
+    @meta.setter
+    def meta(self, value: Metadata):
+        self._meta = value
 
     def __hash__(self) -> int:
         return hash(self.docsuite)

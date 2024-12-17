@@ -10,6 +10,8 @@ For example:
         docset1/
            index.html  <- index page
 
+Requires Python >=3.11
+
 """
 
 import argparse
@@ -17,7 +19,6 @@ import asyncio
 import configparser
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from enum import StrEnum
 from functools import cached_property
 import time
 import json
@@ -28,7 +29,7 @@ import logging.handlers
 from pathlib import Path
 import os
 import tempfile
-from typing import cast, Any, Dict, Generator, Optional, Sequence
+from typing import cast, Any, ClassVar, Dict, Generator, Optional, Sequence
 import queue
 import re
 import shutil

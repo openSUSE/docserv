@@ -1191,7 +1191,7 @@ async def log_output(stream: asyncio.StreamReader, repo_name: str | None = None)
         return "\n".join(result)
 
 
-async def run_git(command: str, cwd: str|Path| None = None) -> tuple[int | None, str]:
+async def run_git(command: str, cwd: str|Path| None = None) -> tuple[int, str]:
     """
     Run a git command asynchronously in a specific directory
 
@@ -1253,11 +1253,12 @@ async def clone_git_repo(
     log.info(f"Cloning {repo} => {repopath}")
     if branch:
         command += (
+            # TODO:
             f"--single-branch --branch {branch} "
             f"{str(repo)} {str(repopath)} && git -C {str(repopath)} checkout {branch}"
         )
     else:
-        command += f"{str(repo)} {str(repopath)}"
+        command += f"--no-single-branch {str(repo)} {str(repopath)}"
 
     result, output = await run_git(command)
     if result:

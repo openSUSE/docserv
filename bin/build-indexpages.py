@@ -1445,6 +1445,35 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict:
 
     return {deliverable: result}
 
+
+async def checkout_maintenance_branches(repopath: Path) -> int:
+    """
+    Checkout all maintenance branches asynchronously
+    """
+    # Get default branch:
+    exitcode, origin = await run_git("remote show")
+    if exitcode:
+        raise GitError(f"No remote origin found in {repopath}")
+    origin = origin.strip()
+    gitlog.debug("Remote origin: %r", origin)
+
+    exitcode, branches = await run_git(
+        (
+            "for-each-ref --format='%(refname:strip=3)' "
+            f"refs/remotes/{origin}/maintenance/*"
+        ),
+        repopath,
+    )
+    if exitcode:
+        raise GitError(f"No maintenance branches found in {repopath}")
+    branches = branches.strip()
+
+    for branch in branches.splitlines():
+        await run_git(f"checkout {branch}", repopath)
+
+    return exitcode
+
+
 async def process_github_repos(tree: etree._Element|etree._ElementTree,
                                args: argparse.Namespace
 ) -> list[Deliverable]:
@@ -1474,6 +1503,7 @@ async def process_github_repos(tree: etree._Element|etree._ElementTree,
                 "permanent-full", deli.repo_path
             )
             tg.create_task(git_worker(deli.git, repopath), name="git_worker")
+            # tg.create_task(checkout_maintenance_branches(repopath), name="git-checkout")
 
     return deliverable_queue
 

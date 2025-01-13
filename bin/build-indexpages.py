@@ -152,8 +152,7 @@ class Metadata:
                 case "tasks":
                     self.tasks = [task.strip() for task in value.split(";")]
                 case "productname":
-                    mtch = self._match.match(value)
-                    if mtch:
+                    if mtch := self._match.match(value)
                         self.products = [{"name": mtch.group(1), "url": mtch.group(2)}]
                 case "rootid":
                     if value:
@@ -726,7 +725,7 @@ def init_jinja_template(path: str) -> Environment:
                       trim_blocks=True,
                       lstrip_blocks=True,
                       undefined=DebugUndefined,
-                      extensions=['jinja2.ext.debug']
+                      extensions=['jinja2.ext.debug'],
                       )
     env.filters['file_exists'] = lambda p: jinja_path_exists(env, p)
     env.filters['current_dir'] = jinja_current_dir

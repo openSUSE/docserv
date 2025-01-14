@@ -1202,6 +1202,7 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict:
         # TODO: Check return value?
         await git_worker(repopath, tmpdir, branch)
 
+        orig_tmpdir = tmpdir
         tmpdir = tmpdir / deliverable.subdir
         if not ( tmpdir / deliverable.dcfile).exists():
             raise FileNotFoundError(f"File {deliverable.dcfile} not found in {tmpdir}")
@@ -1211,7 +1212,8 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict:
         await render_and_write_html(deliverable, args)
 
         # Remove the temporary directory
-        shutil.rmtree(tmpdir)
+        log.debug("Removing %s", orig_tmpdir)
+        shutil.rmtree(orig_tmpdir)
 
     except FileNotFoundError as err:
         log.critical("Problem with %s: %s", docsuite, err)

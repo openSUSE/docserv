@@ -200,6 +200,10 @@ class Deliverable:
         return self._node.getparent().attrib.get("lang").strip()
 
     @cached_property
+    def pdlang(self) -> str:
+        return f"{self.productid}/{self.docsetid}/{self.lang}"
+
+    @cached_property
     def lang_is_default(self) -> bool:
         # ../language/@default
         content = self._node.getparent().attrib.get("default").strip()
@@ -210,7 +214,7 @@ class Deliverable:
 
     @cached_property
     def docsuite(self) -> str:
-        return f"{self.productid}/{self.docsetid}/{self.lang}:{self.dcfile}"
+        return f"{self.pdlang}:{self.dcfile}"
 
     @cached_property
     def branch(self) -> str|None:

@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "aiofiles",
+#     "environs",
+#     "jinja2",
+#     "lxml",
+# ]
+# ///
 
 """
 Script to generate index and homepage pages for the documentation portal

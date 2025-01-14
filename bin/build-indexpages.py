@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+
+
 """
 Script to generate index and homepage pages for the documentation portal
 
@@ -45,6 +47,7 @@ from jinja2.exceptions import TemplateNotFound
 
 __version__ = "0.3.2"
 __author__ = "Tom Schraitle"
+
 
 # --- Constants
 DEFAULT_LIFECYCLES = ("supported", "beta")
@@ -733,6 +736,7 @@ def init_jinja_template(path: str) -> Environment:
     return env
 
 
+# --- XML handling
 def list_all_deliverables(tree: etree._Element|etree._ElementTree,
                           lifecycle: Sequence|None=None,
                           docsuites:Sequence|None=None,
@@ -783,67 +787,7 @@ def list_all_deliverables(tree: etree._Element|etree._ElementTree,
         yield from tree.xpath(xpath)
 
 
-def get_docsets_from_product(tree, productid, lifecycle):
-    """
-    Get all docsets from a product
-    """
-    xpath = f"./product[@productid={productid!r}]/"
-    if lifecycle:
-        lc=" or ".join([f"@lifecycle={lc!r}" for lc in lifecycle])
-        xpath += f"docset[{lc}]"
-    else:
-        xpath += f"docset"
-    log.debug("XPath: %s", xpath)
-    yield from tree.xpath(xpath)
-
-
-def get_translations(tree: etree._Element|etree._ElementTree,
-                     product: str,
-                     docset: str|None,
-                     lifecycle) -> list[str]:
-    """
-    Get all translations for a specific product/docset
-
-    :param tree: the XML tree of the stitched Docserv config
-    :param product: the product ID
-    :param docset: the docset ID
-    :return: a list of all translations
-    """
-    # xpath = f"./builddocs/language/@lang | ./external/link/language/@lang"
-    xpath = f"/*/product[@productid={product!r}]/docset"
-    if docset:
-        xpath += f"[@setid={docset!r}]"
-    if lifecycle:
-        lc=" or ".join([f"@lifecycle={lc!r}" for lc in lifecycle])
-        xpath += f"[{lc}]"
-
-    # xpath += f"{docsetxpath}"
-    docset = tree.xpath(xpath)
-    xpathlog.debug("XPath: %s => %i", xpath, len(docset))
-    if not docset:
-        log.error("No docset found for product=%r docset=%r with lifecylce=%s",
-                  product, docset, lifecycle)
-        return []
-
-    xpath = f"./builddocs/language/@lang | ./external/link/language/@lang"
-    xpathlog.debug("XPath: %s", xpath)
-    return list(set(docset[0].xpath(xpath)))
-
-
-def iter_product_docset_lang(tree, products, requested_docsets, lifecycle):
-    """
-    Iterate over all products, docsets, and languages
-    """
-    for product in products:
-        for docsetelement in get_docsets_from_product(tree, product, lifecycle):
-            docset = docsetelement.attrib.get("setid")
-            if requested_docsets and docset not in requested_docsets:
-                log.debug("Skipping docset %r", docset)
-                continue
-            #for lang in get_translations(tree, product, docset, lifecycle):
-            yield product, docset
-
-
+# --- JSON handling
 def load_json_from_file(jsonfile: Path) -> dict:
     """
     Load a JSON file and return the content
@@ -851,221 +795,6 @@ def load_json_from_file(jsonfile: Path) -> dict:
     with open(jsonfile) as fh:
         content = json.load(fh)
     return content
-
-
-def render(args, tree, env):
-    """
-    Render the index pages
-    """
-    products = args.products
-    requesteddocsets = args.docsets
-    requestedlangs = args.langs
-    lifecycle = args.lifecycle
-    outputdir = Path(args.output_dir)
-    #
-    jsondir = args.jsondir
-    jinja_i18n_dir = args.jinja_i18n_dir
-    susepartsdir = args.susepartsdir
-    indextmpl = env.get_template("index.html.jinja")
-    hometmpl = env.get_template("home.html.jinja")
-    searchtmpl = env.get_template("search.html.jinja")
-    error404tmp = env.get_template("404.html.jinja")
-
-    log.info("""Variables used:
-         products: %s
- requesteddocsets: %s
-        lifecycle: %s
-   requestedlangs: %s
-        outputdir: %s
-          jsondir: %s
-   jinja_i18n_dir: %s
-     susepartsdir: %s
-""",
-products, requesteddocsets, lifecycle, requestedlangs, outputdir, jsondir, jinja_i18n_dir, susepartsdir
-    )
-
-    # Create output directory:
-    outputdir.mkdir(parents=True, exist_ok=True)
-
-    # Create directories for all products
-    workdata = {}
-    # Homepage
-    workdata[""] = {
-            # targetconfig['jinjacontext_home'],
-            "meta": "homepage.json",
-            "template": hometmpl,
-            "render_args": {},
-        }
-
-    for w in list_all_products(tree):
-        # Handle product exceptions
-        if w == "smart":
-            jinjacontext = {
-                "render_args": {"isSmartDocs": True},
-                "template": indextmpl,
-                }
-        elif w == "trd":
-            jinjacontext = {
-                "render_args": {"isTRD": True},
-                "template": indextmpl,
-                "meta": "trd_metadata.json"
-                }
-        elif w == "sbp":
-            jinjacontext = {
-                "render_args": {"isSBP": True},
-                "template": indextmpl,
-                }
-        else:
-            jinjacontext = {
-                "render_args": {"isProduct": True},
-                "template": indextmpl,
-                }
-
-        workdata[w] = jinjacontext
-
-    # If we don't have defined any products, use all products
-    if not products:
-        products = [p for p in workdata.keys() if p]
-
-    for (product, docset), lang in itertools.product(
-        iter_product_docset_lang(tree, products, requesteddocsets, lifecycle),
-        requestedlangs
-    ):
-        log.debug("Processing product=%r for docset=%r lang=%r",
-                    product, docset, lang)
-        path = outputdir / lang / product / docset
-        transfile = jinja_i18n_dir / f"{lang.replace('-', '_')}.json"
-        jsonfile = jsondir / product / f"{docset}.json"
-        template = workdata[product]["template"]
-        render_args = workdata[product]["render_args"]
-
-        if susepartsdir.joinpath(f"head_{lang}.html").exists():
-            log.debug("Found head file for lang=%r", lang)
-        else:
-            log.warning("Head file for lang=%r not found", lang)
-
-        # Load translation file
-        try:
-            # TODO: It is loaded multiple times. Certainly there are
-            # better ways to do this.
-            transdata = load_json_from_file(transfile)
-            log.debug("Successfully loaded translation file %r", transfile)
-        except FileNotFoundError as err:
-            transfile = jinja_i18n_dir / "en_us.json"
-            transdata = load_json_from_file(transfile)
-            log.info("Fallback to English for lang=%r", lang)
-
-        try:
-            context = load_json_from_file(jsonfile)
-            log.debug("Successfully loaded JSON context %r", jsonfile)
-        except FileNotFoundError as err:
-            log.error("Error loading JSON file %s. Continue with next product/docset", err)
-            continue
-
-        # Create the output directory
-        os.makedirs(path, exist_ok=True)
-        output = Path(path) / "index.html"
-
-        with open(output, "w") as fh:
-            content = template.render(
-                data=context,
-                # debug=True,
-                translations=transdata,
-                lang=lang.replace("_", "-"),
-                **render_args,
-            )
-            fh.write(content)
-        log.debug("Wrote %s with args=%s", output, render_args)
-
-
-    # Load the homepage.json as context
-    homepagejsonfile = jsondir / "homepage.json"
-    with open(homepagejsonfile) as fh:
-        homepagecontext = json.load(fh)
-    log.debug("Successfully loaded JSON context %r", homepagejsonfile)
-
-
-    for product, lang in itertools.product(products, requestedlangs):
-        transfile = jinja_i18n_dir / f"{lang.replace('-', '_')}.json"
-        try:
-            transdata = load_json_from_file(transfile)
-        except FileNotFoundError:
-            # Use English as fallback if the translation cannot be found:
-            log.warning("Translation file for %s not found. Using English as fallback", lang)
-            transdata = load_json_from_file(jinja_i18n_dir / "en_us.json")
-
-        firstleveldata = {
-            "index.html": {
-                "template": hometmpl,
-                "render_args": {},
-            },
-            "search.html": {
-                "template": searchtmpl,
-                "render_args": {},
-            },
-        }
-
-        for data, part in itertools.product(firstleveldata.keys(), ("", lang)):
-            output = outputdir / part
-            output.mkdir(parents=True, exist_ok=True)
-            output = output / data
-            log.debug("Trying to write to %s", str(output))
-            template = firstleveldata[data]["template"]
-            render_args = firstleveldata[data]["render_args"]
-            with open(output, "w") as fh:
-                content = template.render(
-                    data=homepagecontext,
-                    translations=transdata,
-                    lang=lang,
-                    **render_args
-                )
-                fh.write(content)
-                log.debug("Wrote %s", output)
-
-    output = outputdir / "404.html"
-    with output.open("w") as fh:
-        content = error404tmp.render(lang="en-us")
-        fh.write(content)
-        log.debug("Wrote %s", output)
-
-    return
-
-
-def _main(cliargs=None):
-    """Main function"""
-    try:
-        args = parsecli(cliargs)
-        with timer() as t:
-            log.info("=== Starting ===")
-            log.debug("Arguments: %s", args)
-
-            env = init_jinja_template(args.jinjatemplatedir.absolute())
-            tree = etree.parse(args.docserv_stitch_file, etree.XMLParser())
-            render(args, tree, env)
-
-    except json.JSONDecodeError as err:
-        log.error("Error decoding JSON file %s\nAbort.", err)
-        return 100
-
-    except FileNotFoundError as err:
-        log.error("File not found: %s.\nAbort", err)
-        return 50
-
-    except ValueError as e:
-        log.error("Error: %s", e)
-        return 20
-
-    except KeyboardInterrupt:
-        log.error("Interrupted by user")
-        return 10
-
-    finally:
-        log.info("Elapsed time: %0.3f seconds", t.elapsed_time)
-        log.info("=== Finished ===")
-        # log.info("Elapsed time: %0.4f seconds", Timer.tim
-
-    return 0
-
 
 
 # --- Asynchronous functions

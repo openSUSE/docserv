@@ -502,6 +502,15 @@ def setup_logging(cliverbosity: int,
 class GitError(RuntimeError):
     """A custom exception for Git errors"""
 
+
+class ScriptBaseError(Exception):
+    """Base class for all exceptions in this script"""
+
+
+class DapsError(ScriptBaseError):
+    """A custom exception for Daps errors"""
+
+
 # --- Functions
 def read_ini_file(inifile: Path, target="doc-suse-com") -> dict[str, Optional[str]]:
     """
@@ -800,7 +809,7 @@ def load_json_from_file(jsonfile: Path) -> dict:
 # --- Asynchronous functions
 async def process_doc_unit(args: argparse.Namespace,
                            deliverable: Deliverable,
-                           tmpdir: str | Path) -> int | None:
+                           tmpdir: str | Path) -> tuple[int | None, Metadata]:
     """
     Process a single doc deliverable asynchronously.
 
@@ -811,6 +820,7 @@ async def process_doc_unit(args: argparse.Namespace,
 
     Returns:
         int | None: The return code of the Daps command, or None if successful.
+        Metadata: The metadata object.
     """
     tmpdir = Path(tmpdir)
 
@@ -846,12 +856,14 @@ async def process_doc_unit(args: argparse.Namespace,
     stderr = stderr if stderr is None else stderr.decode()
     if process.returncode != 0:
         log.error("Daps problem for %r: %s", deliverable.docsuite, stderr)
-        # FIXME: Should we raise an exception here?
-        return process.returncode
+        raise DapsError(
+            f"Daps problem for {deliverable.docsuite}(exit = {process.returncode}): {stderr}"
+        )
 
     gitlog.debug("Daps output: %s", stdout)
+    meta = Metadata().read(metafile)
 
-    return process.returncode
+    return process.returncode, meta
 
 
 ##
@@ -1207,7 +1219,10 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict:
         if not ( tmpdir / deliverable.dcfile).exists():
             raise FileNotFoundError(f"File {deliverable.dcfile} not found in {tmpdir}")
 
-        await process_doc_unit(args, deliverable, tmpdir)
+        _, meta = await process_doc_unit(args, deliverable, tmpdir)
+
+        # Add the metadata to the deliverable object
+        deliverable.meta = meta
 
         await render_and_write_html(deliverable, args)
 
@@ -1245,7 +1260,7 @@ async def checkout_maintenance_branches(repopath: Path) -> int:
     branches = branches.strip()
 
     for branch in branches.splitlines():
-        await run_git(f"checkout {branch}", repopath)
+        exitcode, _ = await run_git(f"checkout {branch}", repopath)
 
     return exitcode
 

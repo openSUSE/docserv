@@ -186,25 +186,30 @@ class Deliverable:
 
     @cached_property
     def productid(self) -> str:
+        """Return the product ID"""
         # ancestor::product/@productid
         return list(self._node.iterancestors("product"))[0].attrib.get("productid")
 
     @cached_property
     def docsetid(self) -> str:
+        """Return the docset ID"""
         # ancestor::docset/@setid
         return list(self._node.iterancestors("docset"))[0].attrib.get("setid")
 
     @cached_property
     def lang(self) -> str:
+        """Returns the language"""
         # ../../builddocs/language/@lang
         return self._node.getparent().attrib.get("lang").strip()
 
     @cached_property
     def pdlang(self) -> str:
+        """Product, docset, and language"""
         return f"{self.productid}/{self.docsetid}/{self.lang}"
 
     @cached_property
     def lang_is_default(self) -> bool:
+        """Checks if the language is the default language"""
         # ../language/@default
         content = self._node.getparent().attrib.get("default").strip()
         map = {"1": True, "0": False,
@@ -214,10 +219,12 @@ class Deliverable:
 
     @cached_property
     def docsuite(self) -> str:
+        """Returns the product, docset, language and the DC filename"""
         return f"{self.pdlang}:{self.dcfile}"
 
     @cached_property
     def branch(self) -> str|None:
+        """Returns the branch where to find the deliverable"""
         # preceding-sibling::branch
         node = self._node.getparent().find("branch")
         if node is not None:
@@ -225,6 +232,7 @@ class Deliverable:
 
     @cached_property
     def subdir(self) -> str:
+        """Returns the subdirectory inside the repository"""
         # precding-sibling::subdir
         node = self._node.getparent().find("subdir")
         if node is not None:
@@ -234,6 +242,7 @@ class Deliverable:
 
     @cached_property
     def git(self) -> str:
+        """Returns the git repository"""
         # ../preceding-sibling::git/@remote
         node = self._node.getparent().getparent().find("git")
         if node is not None:
@@ -242,19 +251,23 @@ class Deliverable:
 
     @cached_property
     def dcfile(self) -> str:
+        """Returns the DC filename"""
         # ./dc
         return self._node.find("dc", namespaces=None).text.strip()
 
     @cached_property
     def repo_path(self) -> Path:
+        """Returns the "slug" path of the repository"""
         return Path(self.git.translate(
             str.maketrans({":": "_", "/": "_", "-": "_", ".": "_"})
         ))
 
     @cached_property
     def format(self) -> dict[str, str]:
+        """Returns the formats of the deliverable"""
         # ./format
         dc = self.dcfile
+        # We need to look inside English deliverables for formats
         node = self._node.xpath(
             f"(format|../../language[@lang='en-us']/deliverable[dc[{dc!r} = .]]/format)[last()]"
         )
@@ -264,15 +277,18 @@ class Deliverable:
 
     @cached_property
     def node(self) -> etree._Element:
+        """Returns the node of the deliverable"""
         return self._node
 
     @cached_property
     def productname(self) -> str:
+        """Returns the product name"""
         # anecstor::product/name
         return self.product_node.find("name", namespaces=None).text.strip()
 
     @cached_property
     def acronym(self) -> str:
+        """Returns the product acronym"""
         # ancestor::product/acronym
         node = self.docset_node.find("acronym", namespaces=None)
         if node:
@@ -281,6 +297,7 @@ class Deliverable:
 
     @cached_property
     def version(self) -> str:
+        """Returns the version of the docset"""
         # ancestor::docset/version
         return (
             self._node.getparent()
@@ -293,12 +310,14 @@ class Deliverable:
 
     @cached_property
     def lifecycle(self) -> str:
+        """Returns the lifecycle of the docset"""
         # ancestor::docset/@lifecycle
         return self.docset_node.attrib.get("lifecycle")
 
     # --- Node handling
     @cached_property
     def product_node(self) -> etree._Element:
+        """Returns the product node of the deliverable"""
         # There is always a <product> node
         return cast(
             etree._Element, self._node.getparent().getparent().getparent().getparent()
@@ -306,23 +325,28 @@ class Deliverable:
 
     @cached_property
     def docset_node(self) -> etree._Element:
+        """Returns the docset node of the deliverable"""
         # There is always a <docset> node
         return cast(etree._Element, self._node.getparent().getparent().getparent())
 
     @property
     def metafile(self) -> str|None:
+        """Returns the metadata file"""
         return self._metafile
 
     @metafile.setter
     def metafile(self, value: str):
+        """Sets the metadata file"""
         self._metafile = value
 
     @property
     def meta(self) -> Metadata|None:
+        """Returns the metadata object of the deliverable"""
         return self._meta
 
     @meta.setter
     def meta(self, value: Metadata):
+        """Sets the metadata content of the deliverable"""
         if not isinstance(value, Metadata):
             raise TypeError(f"Expected type Metadata, but got {type(value)}")
         self._meta = value
@@ -1166,8 +1190,6 @@ async def render_and_write_html(
 
     workdata = create_workdata(deliverable.node.getroottree(), hometmpl, indextmpl)
     # print(workdata)
-
-
 
     # async with aiofiles.open(output, "w") as fh:
     #     content = await template.render_async(

@@ -29,7 +29,7 @@ import logging.handlers
 from pathlib import Path
 import os
 import tempfile
-from typing import cast, Any, ClassVar, Dict, Generator, Optional, Sequence
+from typing import cast, Any, ClassVar, Dict, Generator, Optional, Self, Sequence
 import queue
 import re
 import shutil
@@ -126,7 +126,7 @@ class Metadata:
     #
     _match: ClassVar[re.Pattern] = re.compile(r"productname=\[(.*?)\](.*)")
 
-    def read(self, metafile: Path):
+    def read(self, metafile: Path) -> Self:
         """
         Read the metadata from a file
         """
@@ -152,7 +152,7 @@ class Metadata:
                 case "tasks":
                     self.tasks = [task.strip() for task in value.split(";")]
                 case "productname":
-                    if mtch := self._match.match(value)
+                    if mtch := self._match.match(value):
                         self.products = [{"name": mtch.group(1), "url": mtch.group(2)}]
                 case "rootid":
                     if value:
@@ -160,6 +160,7 @@ class Metadata:
                 case "series":
                     if value:
                         self.series = value
+        return self
 
 
 @dataclass
@@ -307,6 +308,8 @@ class Deliverable:
 
     @meta.setter
     def meta(self, value: Metadata):
+        if not isinstance(value, Metadata):
+            raise TypeError(f"Expected type Metadata, but got {type(value)}")
         self._meta = value
 
     def __hash__(self) -> int:

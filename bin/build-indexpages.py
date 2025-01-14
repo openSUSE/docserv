@@ -486,11 +486,8 @@ def setup_logging(cliverbosity: int,
     git_logger.propagate = False
 
     # Ensure the listener is stopped properly when the application ends
-    def stop_listener():
-        listener.stop()
-
     import atexit
-    atexit.register(stop_listener)
+    atexit.register(listener.stop)
 
     # This is a stale log, so roll it
     if needRoll:

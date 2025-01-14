@@ -39,7 +39,7 @@ import logging.handlers
 from pathlib import Path
 import os
 import tempfile
-from typing import cast, Any, ClassVar, Dict, Generator, Optional, Self, Sequence
+from typing import cast, Any, ClassVar, Generator, Optional, Self, Sequence
 import queue
 import re
 import shutil
@@ -137,11 +137,11 @@ class Metadata:
     #
     _match: ClassVar[re.Pattern] = re.compile(r"productname=\[(.*?)\](.*)")
 
-    def read(self, metafile: Path) -> Self:
+    def read(self, metafile: Path|str) -> Self:
         """
         Read the metadata from a file
         """
-        lines = metafile.open().readlines()
+        lines = Path(metafile).open().readlines()
         for line in lines:
             if line.lstrip().startswith("#"):
                 continue

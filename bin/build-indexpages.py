@@ -701,6 +701,7 @@ def parsecli(cliargs=None):
     return args
 
 
+# --- Jinja filters
 def jinja_path_exists(env, path: str) -> bool:
     """Check if a path exists"""
     for f in env.loader.searchpath:
@@ -1100,7 +1101,7 @@ async def process_doc_unit(args: argparse.Namespace,
     deliverable.metafile = metafile
 
     command = f"daps -d {deliverable.dcfile} metadata --output {metafile}"
-    log.debug("Running Daps command %r in %s", command, tmpdir)
+    gitlog.debug("Running Daps command %r in %s", command, tmpdir)
     process = await asyncio.create_subprocess_shell(
         command,
         cwd=tmpdir,
@@ -1119,9 +1120,7 @@ async def process_doc_unit(args: argparse.Namespace,
         # FIXME: Should we raise an exception here?
         return process.returncode
 
-    log.debug("Daps output: %s", stdout)
-
-    # Render Jinja templates
+    gitlog.debug("Daps output: %s", stdout)
 
     return process.returncode
 
@@ -1227,7 +1226,7 @@ async def update_git_repo(repo: str|Path|None) -> tuple[int|None, str]:
 
     :param repo: The repo URL or path.
     """
-    log.info(f"Updating {repo}")
+    gitlog.info(f"Updating {repo}")
     command = "fetch --progress --prune"
     result, output = await run_git(command, repo)
     if result:
@@ -1250,7 +1249,7 @@ async def clone_git_repo(
     :param branch: The branch to clone
     """
     command = "clone --progress --quiet "
-    log.info(f"Cloning {repo} => {repopath}")
+    gitlog.info(f"Cloning {repo} => {repopath}")
     if branch:
         command += (
             # TODO:

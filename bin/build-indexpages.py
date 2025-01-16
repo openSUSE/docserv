@@ -839,6 +839,17 @@ def parsecli(cliargs=None):
             df = "File" if obj.is_dir() else "Dir"
             parser.error(f"{df} {obj} does not exist")
 
+    # Convert the include_product_docset argument into a list of strings
+    # that follows the syntax "productid/docsetid/lang".
+    # It's the same as Deliverable.pdlang and makes comparison easier.
+    args.pdlangs = []
+    for item in args.include_product_docset:
+        product, docset, lang = item["product"], item["docset"], item["lang"]
+        if lang is None:
+            # Fallback to the default language
+            lang = "en-us"
+        args.pdlangs.append(f"{product}/{docset}/{lang}")
+
     # Setup main logging and the log level according to the "-v" option
     setup_logging(args.verbose)
 

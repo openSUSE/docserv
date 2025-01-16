@@ -291,7 +291,7 @@ class Deliverable:
         )
         if not node:
             raise ValueError(f"No format found for {self.productid}/{self.docsetid}/{self.lang}/{self.dcfile}")
-        return node[0].attrib
+        return dict(node[0].attrib)
 
     @cached_property
     def node(self) -> etree._Element:

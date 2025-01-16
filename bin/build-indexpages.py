@@ -37,9 +37,10 @@ import logging
 import logging.handlers
 # from logging.config import dictConfig
 from pathlib import Path
+from operator import attrgetter
 import os
 import tempfile
-from typing import cast, Any, ClassVar, Generator, Optional, Self, Sequence
+from typing import cast, Any, ClassVar, Iterator, Generator, Optional, Self, Sequence
 import queue
 import re
 import shutil
@@ -1312,7 +1313,7 @@ async def render_and_write_html(
     #     await fh.write(content)
 
 
-async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict:
+async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict[Deliverable, bool]:
     """
     Async worker that processes documentation units from the queue.
 
@@ -1443,9 +1444,9 @@ async def process_github_repos(tree: etree._Element|etree._ElementTree,
     return deliverable_queue
 
 
-async def process_retrieve_metadata(deliverables: list[Deliverable],
-                                    args: argparse.Namespace
-) -> list[asyncio.Task]:
+async def process_retrieve_metadata(
+    deliverables: list[Deliverable], args: argparse.Namespace
+) -> list[asyncio.Task[Any]]:
     """
     Retrieve metadata from the DAPS command
     """

@@ -72,13 +72,13 @@ __author__ = "Tom Schraitle"
 
 
 # --- Constants
-DEFAULT_LIFECYCLES = ("supported", "beta")
-POSSIBLE_LIFECYCLES = (
+DEFAULT_LIFECYCLES = frozenset(("supported", "beta"))
+POSSIBLE_LIFECYCLES = frozenset((
     "supported",
     "beta",
     "unsupported",
     "unpublished",
-)
+))
 DEFAULT_LANGS = ("en-us",)
 #: All languages supported by the documentation portal
 ALL_LANGUAGES = frozenset(

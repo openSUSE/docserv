@@ -8,11 +8,25 @@
 #     "lxml",
 # ]
 # ///
+#
+# Prepare your environment:
+
+# 1. Install uv from gh://astral/uv if you don't have Python 3.11
+#    See more information at https://docs.astral.sh/uv/getting-started/installation/
+# 2. Copy the file `.env.example` from the repo to `.env`.
+#    If you are on Docserv, this should be fine. You need to adjust either DOCSERV_STITCHFILE or pass it with the option --docserv-stitch-file/-S
+
+# To create index files for all products and docset:
+
+#   $ uv run --python 3.11 bin/build-indexpages.py -o out/
+#   [...]
+
+#   You can also specify a higher Python version if you wish.
 
 """
 Script to generate index and homepage pages for the documentation portal
 
-For example:
+Example output:
 
   en-us/
      index.html    <- homepage
@@ -21,7 +35,6 @@ For example:
            index.html  <- index page
 
 Requires Python >=3.11
-
 """
 
 import argparse

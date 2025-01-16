@@ -1330,6 +1330,7 @@ async def render_and_write_html(
     error404tmp = env.get_template("404.html.jinja")
 
     log.debug("Metafile: %s", deliverable.metafile)
+    log.debug("Meta: %s", deliverable.meta)
 
     workdata = create_workdata(deliverable.node.getroottree(), hometmpl, indextmpl)
     # print(workdata)
@@ -1401,6 +1402,7 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict[Del
         # Add the metadata to the deliverable object
         deliverable.meta = meta
 
+        # TODO: Need to move it elsewhere
         await render_and_write_html(deliverable, args)
 
         # Remove the temporary directory
@@ -1487,7 +1489,12 @@ async def process_retrieve_metadata(
     async with asyncio.TaskGroup() as tg:
         for deliverable in deliverables:
             task = tg.create_task(worker(deliverable, args),
-                                    name="worker")
+                                  name="worker")
+            process_results.append(task)
+
+    return process_results
+
+
             process_results.append(task)
 
     return process_results

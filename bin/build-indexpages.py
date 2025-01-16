@@ -1500,6 +1500,147 @@ async def create_archive():
     raise NotImplementedError("create_archive not implemented yet")
 
 
+async def worker_collect_metadata(
+    tree: etree._Element | etree._ElementTree,
+    group: str,
+    deliverables: list[Deliverable], # type: ignore
+    args: argparse.Namespace,
+):
+    """
+    Worker function to collect metadata
+
+    :param tree: The XML tree from the stitched Docserv config
+    :param group: The group of deliverables to process
+    :param deliverables: The deliverables belonging to the same product, docset, and language to process
+    :param args: The command-line arguments namespace
+    """
+    deliverables: list[Deliverable] = list(deliverables)
+    product, docset, lang = group.split("/")
+    log.debug("Found %d deliverables for %s", len(deliverables), group)
+
+    json_base_cache_dir = args.docserv_cache_dir / "json"
+
+    product_node = tree.xpath(f"/*/product[@productid={product!r}]")[0]
+    docset_node = product_node.xpath(f"docset[@setid={docset!r}]")[0]
+
+    version = docset_node.find("listingversion") or docset_node.find("version")
+    if version is None:
+        version = "???"
+    else:
+        version = version.text
+
+    result = {}
+    resultdict = {
+        "productname": product_node.find("name").text,
+        "acronym": product_node.find("acronym").text,
+        "version": version,
+        "hide-productname": False,
+        "lifecycle": docset_node.attrib.get("lifecycle"),
+        "descriptions": [],
+        "archives": [],
+        "documents": [],
+    }
+
+    productid = deliverables[0].productid
+    for desc in tree.xpath(f"/*/product[@productid={productid!r}]/desc"):
+        lang = desc.get("lang", "en-us")
+        is_default = convert2bool(desc.get("default", "0"))
+
+        # Collect the content of <desc>, excluding <title>
+        description_parts = []
+        for element in desc.iterchildren():
+            if element.tag != "title":
+                description_parts.append(etree.tostring(element, encoding="unicode"))
+
+        resultdict["descriptions"].append(
+            {
+                "lang": lang,
+                "default": is_default,
+                "description": "\n".join(description_parts),
+            }
+        )
+
+    log.info("Processing group %s...", group)
+
+    for deli in deliverables:
+        log.info("Processing %s...", deli.docsuite)
+
+        json_cache_dir = json_base_cache_dir / deli.lang / deli.productid / deli.docsetid
+        json_cache_dir.mkdir(parents=True, exist_ok=True)
+        jsonfile = json_cache_dir / f"{deli.dcfile}.json"
+
+        if deli.meta is None:
+            log.error("No metadata found for %s", deli.docsuite)
+            deli.meta = Metadata()
+
+        formats = {}
+        if deli.format.get("html", False):
+            formats["html"] = deli.html_path
+        if deli.format.get("pdf", False):
+            formats["pdf"] = deli.pdf_path
+        if deli.format.get("single-html", False):
+            formats["single-html"] = deli.singlehtml_path
+
+        document = {}
+        document.setdefault("docs", []).append(
+            {
+            "lang": deli.lang,
+            "default": deli.lang_is_default,
+            "title": deli.meta.title,
+            "subtitle": deli.meta.subtitle,
+            "description": deli.meta.seo_description,
+            "dcfile": deli.dcfile,
+            "formats": formats,
+            "dateModified": deli.meta.dateModified,
+        }
+        )
+        document.setdefault("tasks", deli.meta.tasks)
+        document.setdefault("products", [])
+        document.setdefault("docTypes", [])
+        document.setdefault("isGated", False)
+        document.setdefault("rank", "")
+
+        resultdict.setdefault("documents", []).append(document)
+
+    # log.debug("Result for %s: %s", group, resultdict)
+
+    try:
+        async with aiofiles.open(jsonfile, "w") as fh:
+            await fh.write(json.dumps(resultdict, indent=2))
+        log.debug("Wrote JSON file %s", jsonfile)
+        result[deli.docsuite] = True
+
+    except (IOError, TypeError) as err:
+        log.fatal("Error writing JSON file %s: %s", jsonfile, err)
+        result[deli.docsuite] = False
+
+    return result
+
+
+
+async def process_collect_metadata(tree: etree._Element|etree._ElementTree,
+                                   deliverables: list[Deliverable],
+                                   args: argparse.Namespace
+) -> list[asyncio.Task[Any]]:
+    """
+    """
+    # log.info("Collecting metadata...")
+    process_results = []
+
+    # We need to group all deliverables into the same product, docset, and language
+    # combination.
+    # Sort and group by pdlang
+    async with asyncio.TaskGroup() as tg:
+        for group, items in itertools.groupby(
+            sorted(deliverables, key=attrgetter('pdlang')),
+            key=attrgetter('pdlang')
+        ):
+            items = list(items)
+            task = tg.create_task(worker_collect_metadata(tree,
+                                                          group,
+                                                          items,
+                                                          args),
+                                  name="worker_collect_metadata")
             process_results.append(task)
 
     return process_results
@@ -1555,7 +1696,14 @@ async def main(cliargs=None):
             args.jinja_env = init_jinja_template(args.jinjatemplatedir.absolute())
 
             # Step 2: Process the deliverables with "daps metadata"
-            process_results = await process_retrieve_metadata(deliverables, args)
+            p = await process_retrieve_metadata(deliverables, args)
+            process_results.extend(p)
+
+            # Step 3: Collect metadata
+            p = await process_collect_metadata(tree, deliverables, args)
+            # process_results.extend(p)
+            process_output = [task.result() for task in p]
+            log.debug("Process output for metadata: %s", process_output)
 
             # process_output = [task.result() for task in process_results]
             successes = 0

@@ -126,15 +126,22 @@ class Metadata:
     A class to represent the metadata of a deliverable
     """
     title: str | None = field(default=None)
-    rootid: str | None = field(default=None)
-    description: str | None = field(default=None)
+    subtitle: str | None = field(default=None)
+    #
+    seo_title: str | None = field(default=None)
+    seo_description: str | None = field(default=None)
+    seo_social_descr: str | None = field(default=None)
+    #
     dateModified: str | None = field(default=None)
-    tasks: list[str] | None = field(default=None)
-    products: list[dict] | None = field(default=None)
-    docTypes: list[str] | None = field(default=None)
-    archives: list[str] | None = field(default=None)
+    tasks: list[str] = field(default_factory=list)
     series: str | None = field(default=None)
-    category: str | None = field(default=None)
+    rootid: str | None = field(default=None)
+    #
+    # description: str | None = field(default=None)
+    # products: list[dict] | None = field(default=None)
+    # docTypes: list[str] | None = field(default=None)
+    # archives: list[str] | None = field(default=None)
+    # category: str | None = field(default=None)
     #
     _match: ClassVar[re.Pattern] = re.compile(r"productname=\[(.*?)\](.*)")
 
@@ -153,14 +160,26 @@ class Metadata:
                 case "category":
                     if value:
                         self.category = value
-                case "seo-title":
+                case "title":
                     self.title = value
+                case "subtitle":
+                    if value:
+                        self.subtitle = value
+                case "seo-title":
+                    if value:
+                        self.seo_title = value
+                case "seo-social-descr":
+                    if value:
+                        self.seo_social_descr = value
                 case "seo-description":
-                    self.description = value
-                case "dateModified":
-                    self.dateModified = value
+                    if value:
+                        self.seo_description = value
+                case "date":
+                    if value:
+                        self.dateModified = value
                 case "rootid":
-                    self.rootid = value
+                    if value:
+                        self.rootid = value
                 case "tasks":
                     self.tasks = [task.strip() for task in value.split(";")]
                 case "productname":

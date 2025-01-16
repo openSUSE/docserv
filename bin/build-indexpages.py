@@ -198,9 +198,14 @@ class Deliverable:
 
     @cached_property
     def lang(self) -> str:
-        """Returns the language"""
+        """Returns the language and country code (e.g., 'en-us')"""
         # ../../builddocs/language/@lang
         return self._node.getparent().attrib.get("lang").strip()
+
+    @cached_property
+    def language(self) -> str:
+        """Returns only the language (e.g., 'en')"""
+        return re.split(r"[_-]", self.lang)[0]
 
     @cached_property
     def pdlang(self) -> str:
@@ -256,13 +261,6 @@ class Deliverable:
         return self._node.find("dc", namespaces=None).text.strip()
 
     @cached_property
-    def repo_path(self) -> Path:
-        """Returns the "slug" path of the repository"""
-        return Path(self.git.translate(
-            str.maketrans({":": "_", "/": "_", "-": "_", ".": "_"})
-        ))
-
-    @cached_property
     def format(self) -> dict[str, str]:
         """Returns the formats of the deliverable"""
         # ./format
@@ -314,6 +312,77 @@ class Deliverable:
         # ancestor::docset/@lifecycle
         return self.docset_node.attrib.get("lifecycle")
 
+    #--- Path properties
+    @cached_property
+    def relpath(self) -> str:
+        """Returns the relative path of the deliverable"""
+        return f"{self.lang}/{self.productid}/{self.docsetid}"
+
+    @cached_property
+    def repo_path(self) -> Path:
+        """Returns the "slug" path of the repository"""
+        return Path(self.git.translate(
+            str.maketrans({":": "_", "/": "_", "-": "_", ".": "_"})
+        ))
+
+    @cached_property
+    def zip_path(self) -> str:
+        """Returns the path to the ZIP file"""
+        return (
+            f"{self.lang}/{self.productid}/{self.docsetid}/"
+            f"{self.productid}-{self.docsetid}-{self.lang}.zip"
+        )
+
+    @cached_property
+    def html_path(self) -> str:
+        """
+        Returns the path to the HTML directory
+        """
+        fallback_rootid = self.dcfile.lstrip("DC-")
+        if self.meta is not None:
+            rootid = self.meta.rootid
+            if rootid is None:
+                # Derive rootid from the DC file
+                rootid = fallback_rootid
+        else:
+            rootid = fallback_rootid
+
+        return (
+            f"{self.lang}/{self.productid}/{self.docsetid}/html/"
+            f"{rootid}/"
+        )
+
+    @cached_property
+    def singlehtml_path(self) -> str:
+        """
+        Returns the path to the single HTML directory
+        """
+        fallback_rootid = self.dcfile.lstrip("DC-")
+        if self.meta is not None:
+            rootid = self.meta.rootid
+            if rootid is None:
+                # Derive rootid from the DC file
+                rootid = fallback_rootid
+        else:
+            rootid = fallback_rootid
+
+        return (
+            f"{self.lang}/{self.productid}/{self.docsetid}/single-html/"
+            f"{rootid}/"
+        )
+
+    @cached_property
+    def pdf_path(self) -> str:
+        """
+        Returns the path to the PDF file
+        """
+        draft = ""  # TODO
+        name = self.dcfile.lstrip("DC-")
+        return (
+            f"{self.lang}/{self.productid}/{self.docsetid}/pdf/"
+            f"{name}{draft}_{self.language}.pdf"
+        )
+
     # --- Node handling
     @cached_property
     def product_node(self) -> etree._Element:
@@ -361,6 +430,10 @@ class Deliverable:
             f"lang={self.lang!r}, "
             f"dcfile={self.dcfile!r})"
         )
+
+    def to_dict(self) -> dict:
+        """Return the deliverable as a JSON object"""
+        raise NotImplementedError("Not yet implemented")
 
 
 @contextmanager

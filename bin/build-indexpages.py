@@ -1495,6 +1495,11 @@ async def process_retrieve_metadata(
     return process_results
 
 
+async def create_archive():
+    pass
+    raise NotImplementedError("create_archive not implemented yet")
+
+
             process_results.append(task)
 
     return process_results

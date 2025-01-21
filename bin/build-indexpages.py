@@ -241,9 +241,15 @@ class Deliverable:
         return re.split(r"[_-]", self.lang)[0]
 
     @cached_property
+    def product_docset(self) -> str:
+        """Returns product and docset
+        """
+        return f"{self.productid}/{self.docsetid}"
+
+    @cached_property
     def pdlang(self) -> str:
         """Product, docset, and language"""
-        return f"{self.productid}/{self.docsetid}/{self.lang}"
+        return f"{self.product_docset}/{self.lang}"
 
     @cached_property
     def lang_is_default(self) -> bool:
@@ -349,7 +355,7 @@ class Deliverable:
     @cached_property
     def relpath(self) -> str:
         """Returns the relative path of the deliverable"""
-        return f"{self.lang}/{self.productid}/{self.docsetid}"
+        return f"{self.lang}/{self.product_docset}"
 
     @cached_property
     def repo_path(self) -> Path:
@@ -412,7 +418,7 @@ class Deliverable:
         draft = ""  # TODO
         name = self.dcfile.lstrip("DC-")
         return (
-            f"{self.lang}/{self.productid}/{self.docsetid}/pdf/"
+            f"{self.lang}/{self.product_docset}/pdf/"
             f"{name}{draft}_{self.language}.pdf"
         )
 

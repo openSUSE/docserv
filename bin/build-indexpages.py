@@ -1260,7 +1260,7 @@ def create_workdata(tree: etree._Element|etree._ElementTree,
     workdata[""] = {
         # targetconfig['jinjacontext_home'],
         "meta": "homepage.json",
-        "template": hometmpl,
+        # "template": hometmpl,
         "render_args": {},
     }
 
@@ -1269,23 +1269,23 @@ def create_workdata(tree: etree._Element|etree._ElementTree,
         if w == "smart":
             jinjacontext = {
                 "render_args": {"isSmartDocs": True},
-                "template": indextmpl,
+                # "template": indextmpl,
             }
         elif w == "trd":
             jinjacontext = {
                 "render_args": {"isTRD": True},
-                "template": indextmpl,
+                # "template": indextmpl,
                 "meta": "trd_metadata.json",
             }
         elif w == "sbp":
             jinjacontext = {
                 "render_args": {"isSBP": True},
-                "template": indextmpl,
+                # "template": indextmpl,
             }
         else:
             jinjacontext = {
                 "render_args": {"isProduct": True},
-                "template": indextmpl,
+                # "template": indextmpl,
             }
 
         workdata[w] = jinjacontext

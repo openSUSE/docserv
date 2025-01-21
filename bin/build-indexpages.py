@@ -1656,10 +1656,20 @@ async def worker_collect_metadata(
             await fh.write(json.dumps(resultdict, indent=2))
         log.debug("Wrote JSON file %s", jsonfile)
         result[deli.docsuite] = True
+        result["productid"] = deli.productid
+        result["lang"] = deli.lang
+        result["pdlang"] = deli.pdlang
+        result["relpath"] = deli.relpath
+        result['json'] = resultdict
 
     except (IOError, TypeError) as err:
         log.fatal("Error writing JSON file %s: %s", jsonfile, err)
         result[deli.docsuite] = False
+        result["productid"] = deli.productid
+        result["lang"] = deli.lang
+        result["pdlang"] = deli.pdlang
+        result["relpath"] = deli.relpath
+        result["json"] = None
 
     return result
 

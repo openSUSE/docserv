@@ -939,6 +939,7 @@ def init_jinja_template(path: str) -> Environment:
                       lstrip_blocks=True,
                       undefined=DebugUndefined,
                       extensions=['jinja2.ext.debug'],
+                      enable_async=True,
                       )
     env.filters['file_exists'] = lambda p: jinja_path_exists(env, p)
     env.filters['current_dir'] = jinja_current_dir

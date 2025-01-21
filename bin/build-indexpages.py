@@ -1244,8 +1244,9 @@ async def git_worker(
 
 
 def create_workdata(tree: etree._Element|etree._ElementTree,
-                    hometmpl: str,
-                    indextmpl: str) -> dict:
+                    #hometmpl: str,
+                    #indextmpl: str
+) -> dict:
     """
     Create the workdata dictionary for the products
 

@@ -1571,10 +1571,6 @@ async def worker_collect_metadata(
     for deli in deliverables:
         log.info("Processing %s...", deli.docsuite)
 
-        json_cache_dir = json_base_cache_dir / deli.lang / deli.productid / deli.docsetid
-        json_cache_dir.mkdir(parents=True, exist_ok=True)
-        jsonfile = json_cache_dir / f"{deli.dcfile}.json"
-
         if deli.meta is None:
             log.error("No metadata found for %s", deli.docsuite)
             deli.meta = Metadata()
@@ -1611,6 +1607,9 @@ async def worker_collect_metadata(
     # log.debug("Result for %s: %s", group, resultdict)
 
     try:
+        json_cache_dir = json_base_cache_dir / deli.lang / deli.productid
+        json_cache_dir.mkdir(parents=True, exist_ok=True)
+        jsonfile = json_cache_dir / f"{deli.docsetid}.json"
         async with aiofiles.open(jsonfile, "w") as fh:
             await fh.write(json.dumps(resultdict, indent=2))
         log.debug("Wrote JSON file %s", jsonfile)

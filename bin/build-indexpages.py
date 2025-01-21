@@ -647,6 +647,10 @@ def setup_logging(cliverbosity: int,
 
 
 # --- Exceptions
+class ConfigError(RuntimeError):
+    """A configuration error"""
+
+
 class GitError(RuntimeError):
     """A custom exception for Git errors"""
 
@@ -699,7 +703,7 @@ def read_ini_file(inifile: Path, target="doc-suse-com") -> dict[str, Optional[st
             log.debug("Found target %r in section %r", target, section)
             break
     else:
-        raise GitError(f"Target {target!r} not found in INI file {inifile}")
+        raise ConfigError(f"Target {target!r} not found in INI file {inifile}")
 
     server = dict(config.items("server"))
     result = dict(config.items(section))

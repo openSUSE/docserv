@@ -1343,7 +1343,8 @@ async def convert_metadata2json(deliverable: Deliverable) -> dict:
 
 
 async def render_and_write_html(
-    deliverable: Deliverable,
+    tree: etree._Element|etree._ElementTree,
+    taskresult: dict,
     args: argparse.Namespace,
 ):
     """
@@ -1435,7 +1436,7 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict[Del
         deliverable.meta = meta
 
         # TODO: Need to move it elsewhere
-        await render_and_write_html(deliverable, args)
+        # await render_and_write_html(deliverable, args)
 
         # Remove the temporary directory
         log.debug("Removing %s", orig_tmpdir)
@@ -1750,8 +1751,16 @@ async def main(cliargs=None):
             # Step 3: Collect metadata
             p = await process_collect_metadata(tree, deliverables, args)
             # process_results.extend(p)
-            process_output = [task.result() for task in p]
-            log.debug("Process output for metadata: %s", process_output)
+            # process_output = [task.result() for task in p]
+            # log.debug("Process output for metadata: %s", process_output)
+
+            for task in p:
+                result = task.result()
+                await render_and_write_html(
+                    tree,
+                    result,
+                    args,
+                )
 
             # process_output = [task.result() for task in process_results]
             successes = 0

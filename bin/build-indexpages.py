@@ -1473,7 +1473,8 @@ async def process_github_repos(tree: etree._Element|etree._ElementTree,
                 "permanent-full", deli.repo_path
             )
             tg.create_task(git_worker(deli.git, repopath), name="git_worker")
-            # tg.create_task(checkout_maintenance_branches(repopath), name="git-checkout")
+            tg.create_task(checkout_maintenance_branches(repopath),
+            name="git-checkout")
 
     return deliverable_queue
 

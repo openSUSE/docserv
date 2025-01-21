@@ -693,6 +693,10 @@ def convert2bool(value: str | bool) -> bool:
 def read_ini_file(inifile: Path, target="doc-suse-com") -> dict[str, Optional[str]]:
     """
     Read an INI file and return its content as a dictionary
+
+    :param inifile: The INI file to be read
+    :param target: The target server to focus on
+    :return: The configuration dictionary
     """
     config = configparser.ConfigParser()
     config.read(inifile)
@@ -718,14 +722,9 @@ def is_dir_empty(directory: Path) -> bool:
     """
     Check if the specified directory is empty.
 
-    Parameters:
-    directory (Path): The path to the directory to check.
-
-    Returns:
-    bool: True if the directory is empty, False otherwise.
-
-    Raises:
-    ValueError: If the provided path is not a directory.
+    :param directory: The path to the directory to check.
+    :returns: True if the directory is empty, False otherwise.
+    :raises ValueError: If the provided path is not a directory.
     """
     if not directory.is_dir():
         raise ValueError(f"The path {directory} is not a directory.")
@@ -903,8 +902,13 @@ def parsecli(cliargs=None):
 
 
 # --- Jinja filters
-def jinja_path_exists(env, path: str) -> bool:
-    """Check if a path exists"""
+def jinja_path_exists(env: Environment, path: str) -> bool:
+    """Check if a path exists
+
+    :param env: The Jinja environment
+    :param path: The path to check if it exists in template dir
+    :returns: True, if the path exists, False otherwise
+    """
     for f in env.loader.searchpath:
         jinjalog.debug("Checking if path %r exists in template dir(%r): %s",
                   path,
@@ -915,13 +919,20 @@ def jinja_path_exists(env, path: str) -> bool:
 
 
 def jinja_current_dir() -> str:
-    """Return the current directory"""
+    """Return the current directory
+
+    :return: The current directory
+    """
     jinjalog.debug("Current directory: %s", os.getcwd())
     return os.getcwd()
 
 
 def init_jinja_template(path: str) -> Environment:
-    """Initialize the Jinja templates"""
+    """Initialize the Jinja templates
+
+    :param path: The path to the Jinja templates
+    :return: the Jinja environment, including our own filters
+    """
     jinjalog.debug("Initializing Jinja2 templates from %s", path)
     env = Environment(loader=FileSystemLoader(path),
                       trim_blocks=True,
@@ -939,10 +950,11 @@ def list_all_deliverables(tree: etree._Element|etree._ElementTree,
                           lifecycle: Sequence|None=None,
                           docsuites:Sequence|None=None,
                           ) -> Generator[etree._Element, None, None]:
-    """List all deliverables from the stitched Docserv config
+    """Generator to list all deliverables from the stitched Docserv config
 
     :param tree: the XML tree from the stitched Docserv config
-    :param docsuite: a list of
+    :param lifecycle: The lifecycle(s) to taken care of
+    :param docsuite: a list of "docsuite" identifiers
     :yield: a string with the product ID
     """
     xpath_lifecycle = ""
@@ -989,6 +1001,9 @@ def list_all_deliverables(tree: etree._Element|etree._ElementTree,
 def load_json_from_file(jsonfile: Path) -> dict:
     """
     Load a JSON file and return the content
+
+    :param jsonfile: the file path to the JSON file to load
+    :return: the loaded JSON context
     """
     with open(jsonfile) as fh:
         content = json.load(fh)
@@ -1002,14 +1017,12 @@ async def process_doc_unit(args: argparse.Namespace,
     """
     Process a single doc deliverable asynchronously.
 
-    Args:
-        args (argparse.Namespace): The command-line arguments.
-        deliverable (Deliverable): The deliverable object containing metadata.
-        tmpdir (str | Path): The temporary directory path.
+    :param args: The command-line arguments.
+    :param deliverable: The deliverable object containing metadata.
+    :param tmpdir: The temporary directory path.
 
-    Returns:
-        int | None: The return code of the Daps command, or None if successful.
-        Metadata: The metadata object.
+    :returns: The return code of the Daps command and the Metadata object,
+              or None if unsuccessful.
     """
     tmpdir = Path(tmpdir)
 
@@ -1066,11 +1079,8 @@ async def run_command(
     """
     Runs a command asynchronously, streams output to logging, and returns the return code.
 
-    Args:
-        command: The shell command to run.
-
-    Returns:
-        The return code of the command.
+    :param command: The shell command to run.
+    :returns: The return code of the command.
     """
     if env is None:
         env = {"LANG": "C", "LC_ALL": "C", "PATH": os.environ["PATH"]}
@@ -1106,6 +1116,8 @@ async def run_command(
 sem = asyncio.Semaphore(1)
 
 async def log_output(stream: asyncio.StreamReader, repo_name: str | None = None):
+    """Log the stream line-by-line
+    """
     async with sem:
         result = []
         while True:
@@ -1124,9 +1136,9 @@ async def run_git(command: str, cwd: str|Path| None = None) -> tuple[int, str]:
     """
     Run a git command asynchronously in a specific directory
 
-    Args:
-        command: The git command to run.
-        cwd: The directory where the git command should be
+    :param command: The git command to run.
+    :param cwd: The directory where the git command should be executed
+    :returns: a tuple with the exit code and the result of the git command
     """
     command = f"git -c color.ui=never -c core.progress=1 {command}"
     gitlog.info("Running git command %r", command)
@@ -1155,6 +1167,7 @@ async def update_git_repo(repo: str|Path|None) -> tuple[int|None, str]:
     Update a Git repository asynchronously.
 
     :param repo: The repo URL or path.
+    :returns: a tuple with the exit code or None and the result of the git command
     """
     gitlog.info(f"Updating {repo}")
     command = "fetch --progress --prune"
@@ -1174,9 +1187,10 @@ async def clone_git_repo(
     """
     Clone a Git repository asynchronously.
 
-    :param repo: The repo URL or path.
-    :param repopath: where to store the cloned repository.
+    :param repo: The source repo URL or path.
+    :param repopath: The target path to clone to.
     :param branch: The branch to clone
+    :returns: a tuple with the exit code or None
     """
     command = "clone --progress --quiet "
     gitlog.info(f"Cloning {repo} => {repopath}")
@@ -1209,13 +1223,11 @@ async def git_worker(
     """
     Clone or update a Git repository asynchronously.
 
-    Args:
-        source (str | Path): The source repository URL or path.
-        target (Path): The target directory path where the repository will be cloned or updated.
-        branch (str | None, optional): The branch to checkout. Defaults to None.
-
-    Returns:
-        tuple[int | None, str]: A tuple containing the result code (or None) and a status message.
+    :param source: The source repository URL or path.
+    :param target: The target directory path where the repository will
+                   be cloned or updated.
+    :param branch: The branch to checkout. Defaults to None.
+    :returns: A tuple containing the result code (or None) and a status message.
     """
     gitlog.info("Cloning %s => %s...", source, target)
 
@@ -1236,6 +1248,9 @@ def create_workdata(tree: etree._Element|etree._ElementTree,
                     indextmpl: str) -> dict:
     """
     Create the workdata dictionary for the products
+
+    :param tree: The XML tree node
+    :returns: the dictionary of workdata with render arguments
     """
     # Create directories for all products
     workdata = {}
@@ -1279,6 +1294,9 @@ def create_workdata(tree: etree._Element|etree._ElementTree,
 async def convert_metadata2json(deliverable: Deliverable) -> dict:
     """
     Convert the DAPS metadata to JSON
+
+    :param: the deliverable which DAPS metadata needs to be converted
+    :returns: the dictionary of the converted metadata
     """
     jsoncontext = {}
     # set up the JSON context
@@ -1365,15 +1383,12 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict[Del
     """
     Async worker that processes documentation units from the queue.
 
-    Args:
-        deliverable (Deliverable): The deliverable object containing product, docset, branch, and language information.
-        args (argparse.Namespace): The command-line arguments namespace.
+    :param deliverable: The deliverable object containing product, docset, branch, and language information.
+    :param args: The command-line arguments namespace.
 
-    Returns:
-        dict: A dictionary with the deliverable as the key and a boolean indicating success or failure as the value.
+    :returns: A dictionary with the deliverable as the key and a boolean indicating success or failure as the value.
 
-    Raises:
-        FileNotFoundError: If the specified documentation file is not found in the temporary directory.
+    :raises FileNotFoundError: If the specified documentation file is not found in the temporary directory.
     """
     productid, docsetid, branch, lang = (deliverable.productid,
                                    deliverable.docsetid,
@@ -1434,6 +1449,9 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict[Del
 async def checkout_maintenance_branches(repopath: Path) -> int:
     """
     Checkout all maintenance branches asynchronously
+
+    :param repopath: The path to the local Git repo
+    :returns: the exit code
     """
     # Get default branch:
     exitcode, origin = await run_git("remote show")
@@ -1464,6 +1482,10 @@ async def process_github_repos(tree: etree._Element|etree._ElementTree,
 ) -> list[Deliverable]:
     """
     Process the cloning/updating of GitHub repositories asynchronously
+
+    :param tree: The XML tree of the Docserv configuration
+    :param args: The parsed CLI arguments
+    :returns: a list of deliverables
     """
     deliverable_queue = []
     repo_urls = set()
@@ -1499,6 +1521,10 @@ async def process_retrieve_metadata(
 ) -> list[asyncio.Task[Any]]:
     """
     Retrieve metadata from the DAPS command
+
+    :param deliverables: a list of deliverables to run "daps metadata" against
+    :param args: The parsed CLI argument
+    :returns: a list of future asyncio.Task objects
     """
     log.info("Processing deliverables...")
     process_results = []
@@ -1512,7 +1538,9 @@ async def process_retrieve_metadata(
 
 
 async def create_archive():
-    pass
+    """
+    Create ZIP archive (not implemented yet)
+    """
     raise NotImplementedError("create_archive not implemented yet")
 
 
@@ -1527,7 +1555,8 @@ async def worker_collect_metadata(
 
     :param tree: The XML tree from the stitched Docserv config
     :param group: The group of deliverables to process
-    :param deliverables: The deliverables belonging to the same product, docset, and language to process
+    :param deliverables: The deliverables belonging to the same product,
+                         docset, and  language to process
     :param args: The command-line arguments namespace
     """
     deliverables: list[Deliverable] = list(deliverables)
@@ -1637,7 +1666,12 @@ async def process_collect_metadata(tree: etree._Element|etree._ElementTree,
                                    deliverables: list[Deliverable],
                                    args: argparse.Namespace
 ) -> list[asyncio.Task[Any]]:
-    """
+    """Group all deliverables by their product ID, docset ID, and language
+       and collect the metadata
+
+    :param tree: the XML tree object from the Docserv configuration
+    :param deliverables: a list of deliverables to group
+    :param args: the parsed CLI object
     """
     # log.info("Collecting metadata...")
     process_results = []
@@ -1665,26 +1699,23 @@ async def main(cliargs=None):
     """
     Main function to process deliverables and clone/update GitHub repositories.
 
-    Args:
-        cliargs (list, optional): Command line arguments. Defaults to None.
+    :param cliargs: Optional command line arguments. Defaults to None.
 
-    Returns:
-        int: Exit code indicating the result of the execution.
-             0 - Success
-             5 - SystemExit
-             10 - Interrupted by user
-             20 - ValueError
-             50 - FileNotFoundError
-             100 - JSONDecodeError
-             200 - GitError
+    :returns: Exit code indicating the result of the execution.
+        0 - Success
+        5 - SystemExit
+        10 - Interrupted by user
+        20 - ValueError
+        50 - FileNotFoundError
+        100 - JSONDecodeError
+        200 - GitError
 
-    Raises:
-        GitError: If there is an error related to Git operations.
-        json.JSONDecodeError: If there is an error decoding a JSON file.
-        FileNotFoundError: If a required file is not found.
-        ValueError: If there is a value error.
-        KeyboardInterrupt: If the process is interrupted by the user.
-        SystemExit: If the system exits unexpectedly.
+    :raises GitError: If there is an error related to Git operations.
+    :raises json.JSONDecodeError: If there is an error decoding a JSON file.
+    :raises FileNotFoundError: If a required file is not found.
+    :raises ValueError: If there is a value error.
+    :raises KeyboardInterrupt: If the process is interrupted by the user.
+    :raises SystemExit: If the system exits unexpectedly.
     """
     process_results = []
     try:

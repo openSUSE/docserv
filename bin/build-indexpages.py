@@ -1174,10 +1174,15 @@ async def clone_git_repo(
         command += (
             # TODO:
             f"--single-branch --branch {branch} "
-            f"{str(repo)} {str(repopath)} && git -C {str(repopath)} checkout {branch}"
+            f"--reference {str(repo)} {str(repo)} {str(repopath)} && "
+            f"git -C {str(repopath)} checkout {branch}"
         )
     else:
-        command += f"--no-single-branch {str(repo)} {str(repopath)}"
+        command += (
+            f"--no-single-branch "
+            f"--reference {str(repo)} "
+            f"{str(repo)} {str(repopath)}"
+        )
 
     result, output = await run_git(command)
     if result:
@@ -1473,8 +1478,8 @@ async def process_github_repos(tree: etree._Element|etree._ElementTree,
                 "permanent-full", deli.repo_path
             )
             tg.create_task(git_worker(deli.git, repopath), name="git_worker")
-            tg.create_task(checkout_maintenance_branches(repopath),
-            name="git-checkout")
+            # tg.create_task(checkout_maintenance_branches(repopath),
+            # name="git-checkout")
 
     return deliverable_queue
 

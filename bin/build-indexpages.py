@@ -299,7 +299,7 @@ class Deliverable:
         return self._node.find("dc", namespaces=None).text.strip()
 
     @cached_property
-    def format(self) -> dict[str, str]:
+    def format(self) -> dict[str, bool]:
         """Returns the formats of the deliverable"""
         # ./format
         dc = self.dcfile
@@ -309,7 +309,8 @@ class Deliverable:
         )
         if not node:
             raise ValueError(f"No format found for {self.productid}/{self.docsetid}/{self.lang}/{self.dcfile}")
-        return dict(node[0].attrib)
+
+        return {key: convert2bool(value) for key, value in node[0].attrib.items()}
 
     @cached_property
     def node(self) -> etree._Element:

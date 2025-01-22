@@ -139,13 +139,13 @@ class Metadata:
     A class to represent the metadata of a deliverable
     """
     title: str | None = field(default=None)
-    subtitle: str | None = field(default=None)
+    subtitle: str = field(default="")
     #
     seo_title: str | None = field(default=None)
-    seo_description: str | None = field(default=None)
-    seo_social_descr: str | None = field(default=None)
+    seo_description: str = field(default="")
+    seo_social_descr: str = field(default="")
     #
-    dateModified: str | None = field(default=None)
+    dateModified: str = field(default="")
     tasks: list[str] = field(default_factory=list)
     series: str | None = field(default=None)
     rootid: str | None = field(default=None)
@@ -166,8 +166,9 @@ class Metadata:
         for line in lines:
             if line.lstrip().startswith("#"):
                 continue
-            key, value = line.split("=", 1)
-            key, value = key.strip(), value.strip()
+            # key, value = line.split("=", 1)
+            # key, value = key.strip(), value.strip()
+            key, value = map(str.strip, line.split("=", 1))
 
             match key:
                 case "category":
@@ -198,12 +199,10 @@ class Metadata:
                 case "productname":
                     if mtch := self._match.match(value):
                         self.products = [{"name": mtch.group(1), "url": mtch.group(2)}]
-                case "rootid":
-                    if value:
-                        self.rootid = value
                 case "series":
                     if value:
                         self.series = value
+
         return self
 
 

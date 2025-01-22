@@ -1572,6 +1572,7 @@ async def worker_collect_metadata(
     product_node = tree.xpath(f"/*/product[@productid={product!r}]")[0]
     docset_node = product_node.xpath(f"docset[@setid={docset!r}]")[0]
 
+    # TODO: FutureWarning: The behavior of this method will change in future versions. Use specific 'len(elem)' or 'elem is not None' test instead.
     version = docset_node.find("listingversion") or docset_node.find("version")
     if version is None:
         version = "???"

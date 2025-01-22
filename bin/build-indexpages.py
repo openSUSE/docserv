@@ -372,11 +372,10 @@ class Deliverable:
             f"{self.productid}-{self.docsetid}-{self.lang}.zip"
         )
 
-    @cached_property
-    def html_path(self) -> str:
+    def _base_format_path(self, fmt: str) -> str:
         """
-        Returns the path to the HTML directory
         """
+        path = "/"
         fallback_rootid = self.dcfile.lstrip("DC-")
         if self.meta is not None:
             rootid = self.meta.rootid
@@ -386,41 +385,43 @@ class Deliverable:
         else:
             rootid = fallback_rootid
 
-        return (
-            f"{self.lang}/{self.productid}/{self.docsetid}/html/"
-            f"{rootid}/"
-        )
+        # Suppress English
+        if self.lang != "en-us":
+            path += f"{self.lang}/"
+
+        path += f"{self.productid}/{self.docsetid}/{fmt}/{rootid}/"
+        return path
+
+    @cached_property
+    def html_path(self) -> str:
+        """
+        Returns the path to the HTML directory
+        """
+        return self._base_format_path("html")
 
     @cached_property
     def singlehtml_path(self) -> str:
         """
         Returns the path to the single HTML directory
         """
-        fallback_rootid = self.dcfile.lstrip("DC-")
-        if self.meta is not None:
-            rootid = self.meta.rootid
-            if rootid is None:
-                # Derive rootid from the DC file
-                rootid = fallback_rootid
-        else:
-            rootid = fallback_rootid
-
-        return (
-            f"{self.lang}/{self.productid}/{self.docsetid}/single-html/"
-            f"{rootid}/"
-        )
+        return self._base_format_path("single-html")
 
     @cached_property
     def pdf_path(self) -> str:
         """
         Returns the path to the PDF file
         """
+        path = "/"
         draft = ""  # TODO
         name = self.dcfile.lstrip("DC-")
-        return (
-            f"{self.lang}/{self.product_docset}/pdf/"
+        if self.lang != "en-us":
+            path += f"{self.lang}/"
+
+        path += (
+            f"{self.product_docset}/pdf/"
             f"{name}{draft}_{self.language}.pdf"
         )
+        return path
 
     # --- Node handling
     @cached_property

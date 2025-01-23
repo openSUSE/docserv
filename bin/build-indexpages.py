@@ -198,8 +198,18 @@ class Metadata:
                     # log.debug("### tasks %s", value)
                     self.tasks = [task.strip() for task in value.split(";")]
                 case "productname":
+                    productlist = [entry["name"] for entry in self.products]
                     if mtch := self._match.match(value):
-                        self.products = [{"name": mtch.group(1), "url": mtch.group(2)}]
+                        versions = mtch.group(1).strip().split(";")
+                        product = mtch.group(2).strip()
+                        if product in productlist:
+
+
+                        dct = {"name": product,
+                               "versions": versions,
+                               }
+                        self.products.append(dct)
+                    log.debug("products=%s", self.products)
                 case "series":
                     if value:
                         self.series = value

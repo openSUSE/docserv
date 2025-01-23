@@ -1294,55 +1294,6 @@ def create_workdata(tree: etree._Element|etree._ElementTree,
     return workdata
 
 
-async def convert_metadata2json(deliverable: Deliverable) -> dict:
-    """
-    Convert the DAPS metadata to JSON
-
-    :param: the deliverable which DAPS metadata needs to be converted
-    :returns: the dictionary of the converted metadata
-    """
-    jsoncontext = {}
-    # set up the JSON context
-    jsoncontext["productname"] = deliverable.productname
-    jsoncontext["acronym"] = deliverable.acronym
-    jsoncontext["version"] = deliverable.version
-    jsoncontext["lifecycle"] = deliverable.lifecycle
-    jsoncontext["hide-productname"] = True
-    # {"lang": "en-us", "default": True, "description": "..."}
-    jsoncontext["descriptions"] = []
-    # {"docs": [], "tasks": [], "products": [], "docTypes": [], "isGated": False, "rank": "" }
-    jsoncontext["documents"] = []
-    jsoncontext["archives"] = []
-
-    async with aiofiles.open(deliverable.metafile, "r") as fh:
-        content = await fh.read()
-
-    docs = {}
-    docs["lang"] = deliverable.lang
-    docs["default"] = deliverable.lang_is_default
-    # docs["title"] = deliverable.title
-    # docs["subtitle"] = deliverable.subtitle
-    # docs["description"] = deliverable.description
-    docs["dcfile"] = deliverable.dcfile
-    docs["formats"] = {}
-    docs["dateModified"] = ""
-
-    for line in content.splitlines():
-        if line.startswith("#"):
-            continue
-        key, value = line.split("=", 1)
-        if key == "seo-title":
-            docs["title"] = value
-        elif key == "seo-description":
-            docs["description"] = value
-        elif key == "date":
-            docs["dateModified"] = value
-        elif key == "task":
-            docs["tasks"] = value.split(";")
-
-    return docs
-
-
 async def render_and_write_html(
     tree: etree._Element|etree._ElementTree,
     taskresult: dict,

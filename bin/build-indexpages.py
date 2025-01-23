@@ -151,7 +151,7 @@ class Metadata:
     rootid: str | None = field(default=None)
     #
     # description: str | None = field(default=None)
-    # products: list[dict] | None = field(default=None)
+    products: list[dict] = field(default_factory=list)
     # docTypes: list[str] | None = field(default=None)
     # archives: list[str] | None = field(default=None)
     # category: str | None = field(default=None)

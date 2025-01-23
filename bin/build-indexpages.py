@@ -1592,7 +1592,7 @@ async def worker_collect_metadata(
         }
         )
         document.setdefault("tasks", deli.meta.tasks)
-        document.setdefault("products", [])
+        document.setdefault("products", deli.meta.products)
         document.setdefault("docTypes", [])
         document.setdefault("isGated", False)
         document.setdefault("rank", "")

@@ -1312,37 +1312,49 @@ async def render_and_write_html(
 ):
     """
     Render the Jinja template and write the HTML output to a file.
+
+    :param task: Contains the dictionary
+    :param args: The CLI context
     """
-    env = args.jinja_env
-    # products = deliverable.productid
-    #requesteddocsets = args.docsets
-    #requestedlangs = args.langs
-    lifecycle = args.lifecycle
+    product = taskresult["productid"]
+    jsoncontent = taskresult["json"]
+    relpath = taskresult["relpath"]
+    lang = taskresult["lang"]
+    pdlang = taskresult["pdlang"]
+    if jsoncontent is None:
+        log.fatal("Cannot render index.html for %s", str(relpath))
+        return None
+
+    # Define output paths and create structure
     outputdir = Path(args.output_dir)
-    #
-    # jsondir = args.jsondir
-    jinja_i18n_dir = args.jinja_i18n_dir
-    susepartsdir = args.susepartsdir
+    outputfile = outputdir / cast(str, relpath) / "index.html"
+    outputfile.parent.mkdir(parents=True, exist_ok=True)
+
+    # Define and read translation data
+    jinja_i18n_dir = (Path(args.docserv_config_dir) / "jinja-doc-suse-com" / "i18n").expanduser()
+    transdatafile = jinja_i18n_dir / f"{lang.replace('-', '_')}.json"
+    transdata = await (await aiofiles.open(transdatafile)).readline()
+
+    # Prepare Jinja Environment and templates
+    env = cast(Environment, args.jinja_env)
     indextmpl = env.get_template("index.html.jinja")
     hometmpl = env.get_template("home.html.jinja")
-    searchtmpl = env.get_template("search.html.jinja")
-    error404tmp = env.get_template("404.html.jinja")
+    #searchtmpl = env.get_template("search.html.jinja")
+    #error404tmp = env.get_template("404.html.jinja")
 
-    log.debug("Metafile: %s", deliverable.metafile)
-    log.debug("Meta: %s", deliverable.meta)
+    workdata = create_workdata(tree)
 
-    workdata = create_workdata(deliverable.node.getroottree(), hometmpl, indextmpl)
-    # print(workdata)
-
-    # async with aiofiles.open(output, "w") as fh:
-    #     content = await template.render_async(
-    #         data=context,
+    # TODO: Correct JSON or Jinja?
+    # async with aiofiles.open(outputfile, "w") as fh:
+    #     content = await indextmpl.render_async(
+    #         data=jsoncontent,
     #         # debug=True,
     #         translations=transdata,
-    #         lang=lang.replace("_", "-"),
-    #         **render_args,
+    #         lang=lang,
+    #         **workdata[product]["render_args"],
     #     )
     #     await fh.write(content)
+    log.info("Wrote %s", outputfile)
 
 
 async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict[Deliverable, bool]:
@@ -1636,7 +1648,6 @@ async def worker_collect_metadata(
         result["json"] = None
 
     return result
-
 
 
 async def process_collect_metadata(tree: etree._Element|etree._ElementTree,

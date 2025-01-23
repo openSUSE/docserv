@@ -156,7 +156,7 @@ class Metadata:
     # archives: list[str] | None = field(default=None)
     # category: str | None = field(default=None)
     #
-    _match: ClassVar[re.Pattern] = re.compile(r"productname=\[(.*?)\](.*)")
+    _match: ClassVar[re.Pattern] = re.compile(r"\[(.*?)\](.*)")
 
     def read(self, metafile: Path|str) -> Self:
         """

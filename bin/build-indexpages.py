@@ -194,7 +194,8 @@ class Metadata:
                 case "rootid":
                     if value:
                         self.rootid = value
-                case "tasks":
+                case "task":
+                    # log.debug("### tasks %s", value)
                     self.tasks = [task.strip() for task in value.split(";")]
                 case "productname":
                     if mtch := self._match.match(value):

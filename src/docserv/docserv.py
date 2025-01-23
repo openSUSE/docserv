@@ -2,21 +2,34 @@ from datetime import datetime
 import hashlib
 import json
 import logging
+from logging.config import fileConfig
 import multiprocessing
 import os
+import re
 import queue
-import shlex
-import subprocess
+
+
 import sys
 import threading
 import tempfile
 import time
 from configparser import ConfigParser as configparser
 
-from docserv.bih import BuildInstructionHandler
-from docserv.deliverable import Deliverable
-from docserv.functions import print_help
-from docserv.rest import RESTServer, ThreadedRESTServer
+from jinja2 import TemplateNotFound
+
+from .common import BIN_DIR, CACHE_DIR, CONF_DIR, DOCSERV_CODE_DIR, SHARE_DIR, PROJECT_DIR
+from .bih import BuildInstructionHandler
+from .deliverable import Deliverable
+from .functions import print_help
+from .rest import RESTServer, ThreadedRESTServer
+from .navigation import init_jinja_template
+from .util import run, replace_placeholders
+from . import __version__
+
+
+logger = logging.getLogger(__name__)
+
+SEPARATOR = re.compile(r"[,; ]")
 
 
 class DocservState:
@@ -211,7 +224,6 @@ class DocservState:
         Load status from JSON file.
         The JSON file usually resides in /var/cache/docserv/[SERVER_NAME].json
         """
-        logger.info("Reading previous state.")
         filepath = os.path.join(CACHE_DIR, self.config['server']['name'] + '.json')
         if os.path.isfile(filepath):
             file = open(filepath, "r")
@@ -225,6 +237,7 @@ class DocservState:
                 else:
                     self.past_builds[build_instruction['id']
                                      ] = build_instruction
+            logger.info("Read previous state %s", filepath)
             return True
         return False
 
@@ -253,34 +266,54 @@ class DocservConfig:
     Class for handling the .ini configuration file.
     """
 
-    def parse_config(self, argv):
+    def check_langs(self, langstr):
+        """
+        Check if the language string is valid.
+        """
+        langarray = SEPARATOR.split(langstr)
+        # Check if we have
+        unknown_langs =set(langarray) - set(self.config['server']['valid_languages'])
+        if len(unknown_langs):
+            raise ValueError("Unknown languages in %s: %s" % (langstr, unknown_langs))
+        return langarray
 
-        def join_conf_dir(path):
-            # Turn relative paths to absolute paths, depending on the
-            # location of the INI (or rather CONF_DIR which by its definition
-            # is the location of the INI).
-            return path if os.path.isabs(path) else os.path.join(CONF_DIR, path)
+
+    def parse_config(self, argv):
+        """Parsing Docserv config file"""
+        logger.debug("Parsing Docserv file")
+        #def join_conf_dir(path):
+        #    # Turn relative paths to absolute paths, depending on the
+        #    # location of the INI (or rather CONF_DIR which by its definition
+        #    # is the location of the INI).
+        #    return path if os.path.isabs(path) else os.path.join(CONF_DIR, path)
 
         config = configparser()
         if len(argv) == 1:
-            config_file = "my-site"
+            self.config_file = "my-site"
         else:
-            config_file = argv[1]
-        config_path=os.path.join(CONF_DIR, config_file + '.ini')
-        logger.info("Reading %s", config_path)
-        config.read(config_path)
+            self.config_file = argv[1]
+
+        self.config_path=os.path.join(CONF_DIR, self.config_file + '.ini')
+        logger.info("Reading Docserv INI %r...", self.config_path)
+        config.read(self.config_path)
         self.config = {}
         try:
             self.config['server'] = {}
-            self.config['server']['name'] = config_file
+            servername = self.config['server']['name'] = self.config_file
             self.config['server']['loglevel'] = int(
                 config['server']['loglevel'])
             self.config['server']['host'] = config['server']['host']
             self.config['server']['port'] = int(config['server']['port'])
             self.config['server']['enable_mail'] = config['server']['enable_mail']
-            self.config['server']['repo_dir'] = join_conf_dir(config['server']['repo_dir'])
-            self.config['server']['temp_repo_dir'] = join_conf_dir(config['server']['temp_repo_dir'])
-            self.config['server']['valid_languages'] = config['server']['valid_languages']
+            self.config['server']['repo_dir'] = replace_placeholders(
+                config['server']['repo_dir'],
+                "",
+                servername)
+            self.config['server']['temp_repo_dir'] = replace_placeholders(
+                config['server']['temp_repo_dir'],
+                "",
+                servername)
+            self.config['server']['valid_languages'] = SEPARATOR.split(config['server']['valid_languages'])
             if config['server']['max_threads'] == 'max':
                 self.config['server']['max_threads'] = multiprocessing.cpu_count()
             else:
@@ -293,20 +326,75 @@ class DocservConfig:
 
                 sec = config[section]
                 secname = sec['name']
+                logger.debug("Found target=%s", secname)
 
                 self.config['targets'][secname] = {}
                 self.config['targets'][secname]['name'] = sec
-                self.config['targets'][secname]['template_dir'] = join_conf_dir(sec['template_dir'])
+                self.config['targets'][secname]['template_dir'] = replace_placeholders(
+                    sec['template_dir'],
+                    secname,
+                    servername)
+                # Jinja directories
+                jinja_context_dir = replace_placeholders(
+                    sec['jinja_context_dir'],
+                    secname,
+                    servername)
+                self.config['targets'][secname]['jinja_context_dir'] = jinja_context_dir
+                jinja_template_dir = replace_placeholders(
+                    sec['jinja_template_dir'],
+                    secname,
+                    servername)
+                self.config['targets'][secname]['jinja_template_dir'] = jinja_template_dir
+                logger.debug("  For target=%s using jinja_template_dir=%s", secname, jinja_template_dir)
+                json_dir = replace_placeholders(
+                    sec['json_dir'],
+                    secname,
+                    servername)
+                self.config['targets'][secname]['json_dir'] = json_dir
+                json_i18n_dir = replace_placeholders(
+                    sec['json_i18n_dir'],
+                    secname,
+                    servername)
+                self.config['targets'][secname]['json_i18n_dir'] = json_i18n_dir
+                self.config['targets'][secname]['json_langs'] = self.check_langs(sec['json_langs'])
+
+
+                self.config['targets'][secname]['jinja_env'] = init_jinja_template(
+                    self.config['targets'][secname]['jinja_template_dir']
+                )
+                self.config['targets'][secname]['jinjacontext_home'] = replace_placeholders(
+                    sec['jinjacontext_home'],
+                    secname,
+                    servername)
+                # Jinja Templates
+                self.config['targets'][secname]['jinja_template_home'] = replace_placeholders(
+                    sec['jinja_template_home'],
+                    secname,
+                    servername)
+                self.config['targets'][secname]['jinja_template_index'] = sec['jinja_template_index']
+                self.config['targets'][secname]['jinja_template_trd'] = sec['jinja_template_trd']
+                #
                 self.config['targets'][secname]['active'] = sec['active']
                 self.config['targets'][secname]['draft'] = sec['draft']
                 self.config['targets'][secname]['remarks'] = sec['remarks']
                 self.config['targets'][secname]['meta'] = sec['meta']
-                self.config['targets'][secname]['default_xslt_params'] = join_conf_dir(sec['default_xslt_params'])
+                self.config['targets'][secname]['default_xslt_params'] = replace_placeholders(
+                    sec['default_xslt_params'],
+                    secname,
+                    servername)
                 self.config['targets'][secname]['enable_target_sync'] = sec['enable_target_sync']
                 if sec['enable_target_sync'] == 'yes':
                     self.config['targets'][secname]['target_path'] = sec['target_path']
-                self.config['targets'][secname]['backup_path'] = join_conf_dir(sec['backup_path'])
-                self.config['targets'][secname]['config_dir'] = join_conf_dir(sec['config_dir'])
+                self.config['targets'][secname]['backup_path'] = replace_placeholders(
+                    sec['backup_path'],
+                    secname,
+                    servername)
+                config_dir = replace_placeholders(
+                    sec['config_dir'],
+                    secname,
+                    servername)
+                self.config['targets'][secname]['config_dir'] = config_dir
+                logger.debug("  For target=%s using config_dir=%s", secname, config_dir)
                 self.config['targets'][secname]['languages'] = sec['languages']
                 self.config['targets'][secname]['default_lang'] = sec['default_lang']
                 self.config['targets'][secname]['omit_default_lang_path'] = sec['omit_default_lang_path']
@@ -314,12 +402,24 @@ class DocservConfig:
                 self.config['targets'][secname]['zip_formats'] = sec['zip_formats']
                 self.config['targets'][secname]['server_base_path'] = sec['server_base_path']
                 self.config['targets'][secname]['canonical_url_domain'] = sec['canonical_url_domain']
-                self.config['targets'][secname]['server_root_files'] = join_conf_dir(sec['server_root_files'])
+                srfiles = replace_placeholders(
+                    sec['server_root_files'],
+                    secname,
+                    servername)
+                self.config['targets'][secname]['server_root_files'] = srfiles
+                logger.debug("  For target=%s using server-root-files=%s", secname, srfiles)
+
 
                 self.config['targets'][secname]['enable_ssi_fragments'] = sec['enable_ssi_fragments']
                 if sec['enable_ssi_fragments'] == 'yes':
-                    self.config['targets'][secname]['fragment_dir'] = join_conf_dir(sec['fragment_dir'])
-                    self.config['targets'][secname]['fragment_l10n_dir'] = join_conf_dir(sec['fragment_l10n_dir'])
+                    self.config['targets'][secname]['fragment_dir'] = replace_placeholders(
+                        sec['fragment_dir'],
+                        secname,
+                        servername)
+                    self.config['targets'][secname]['fragment_l10n_dir'] = replace_placeholders(
+                        sec['fragment_l10n_dir'],
+                        secname,
+                        servername)
                 # FIXME: I guess this is not the prettiest way to handle
                 # optional values (but it works for now)
                 self.config['targets'][secname]['build_container'] = False
@@ -333,6 +433,8 @@ class DocservConfig:
             logger.warning(
                 "Invalid configuration file, missing configuration key %s. Exiting.", error)
             sys.exit(1)
+
+        logger.debug("Successfully finished processing Docserv INI")
 
 
 class Docserv(DocservState, DocservConfig):
@@ -359,6 +461,20 @@ class Docserv(DocservState, DocservConfig):
             self.config['server']['max_threads'] = multiprocessing.cpu_count()
             logger.info("Reducing number of build threads to avoid using more threads than there are cores.")
 
+        logger.info("Docserv version %s", __version__)
+        logger.info("Using these configuration settings:")
+        for target in self.config['targets']:
+            for item in ('json_dir',
+                         'jinja_context_dir',
+                         'jinja_template_dir',
+                         'config_dir',
+                         'json_i18n_dir',
+                         'json_langs'):
+                logger.info(f" {item}(%s)=%s",
+                        target,
+                        self.config['targets'][target].get(item, 'n/a')
+            )
+
         logger.info("Will use %i build threads.", self.config['server']['max_threads'])
 
         try:
@@ -370,9 +486,24 @@ class Docserv(DocservState, DocservConfig):
             self.stitch_tmp_dir = f"/tmp/docserv_stitch_{current_date}"
             os.makedirs(self.stitch_tmp_dir, exist_ok=True)
 
+
             # Notably, the config dir can be different for different targets.
             # So, stitch for each.
             for target in self.config['targets']:
+                sec = self.config['targets'][target]
+                # Create directories if they don't exist
+                for item in ('jinja_context_dir',
+                             'jinja_template_dir',
+                             ):
+                    thisdir = sec.get(item)
+                    if thisdir is not None:
+                        # Could possible throw PermissionError:
+                        # [Errno 13] Permission denied
+                        os.makedirs(thisdir, exist_ok=True)
+                        logger.debug("Created directory %r", thisdir)
+                    else:
+                        logger.warning("Key %r not found", item)
+
                 stitch_tmp_file = os.path.join(self.stitch_tmp_dir,
                     ('productconfig_simplified_%s.xml' % target))
                 # Largely copypasta from bih.py cuz I dunno how to share stuff
@@ -385,24 +516,20 @@ class Docserv(DocservState, DocservConfig):
                        '--valid-site-sections="%s" '
                        '%s %s') % (
                     os.path.join(BIN_DIR, 'docserv-stitch'),
-                    self.config['server']['valid_languages'],
+                    " ".join(self.config['server']['valid_languages']),
                     self.config['targets'][target]['site_sections'],
                     self.config["targets"][target]['config_dir'],
                     stitch_tmp_file)
                 logger.debug("Stitching command: %s", cmd)
-                cmd = shlex.split(cmd)
-                s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE)
-                self.out, self.err = s.communicate()
-                rc = int(s.returncode)
+                rc, self.out, self.err = run(cmd)
                 if rc == 0:
                     logger.debug("Stitching of %s successful",
                                  self.config['targets'][target]['config_dir'])
                 else:
                     logger.warning("Stitching of %s failed!",
                                    self.config['targets'][target]['config_dir'])
-                    logger.warning("Stitching STDOUT: %s", self.out.decode('utf-8'))
-                    logger.warning("Stitching STDERR: %s", self.err.decode('utf-8'))
+                    logger.warning("Stitching STDOUT: %s", self.out)
+                    logger.warning("Stitching STDERR: %s", self.err)
                 # End copypasta
 
             thread_receive = threading.Thread(target=self.listen)
@@ -460,28 +587,56 @@ class Docserv(DocservState, DocservConfig):
         return True
 
 
-logger = logging.getLogger('docserv')
-logger.setLevel(logging.INFO)
-
-ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-ch.setFormatter(formatter)
-logger.addHandler(ch)
-
-BIN_DIR = os.getenv('DOCSERV_BIN_DIR', "/usr/bin/")
-CONF_DIR = os.getenv('DOCSERV_CONFIG_DIR', "/etc/docserv/")
-SHARE_DIR = os.getenv('DOCSERV_SHARE_DIR', "/usr/share/docserv/")
-CACHE_DIR = os.getenv('DOCSERV_CACHE_DIR', "/var/cache/docserv/")
+def read_logging(inifile: str):
+    "Read log INI file"
+    fileConfig(inifile, disable_existing_loggers=True)
 
 
 def main():
+    """Entry point for Docserv"""
     if "--help" in sys.argv or "-h" in sys.argv:
         print_help()
-    else:
+        return 1
+
+    # First read/configure default logger
+    # If the user provides a different logging config, it will
+    # overwrite the default logger config
+    read_logging(os.path.join(DOCSERV_CODE_DIR, "logging.ini"))
+
+    # Try to extract the user logger config file (INI format)
+    loginifile = sys.argv[2:]
+    loginifile = None if not loginifile else loginifile[0]
+
+    if loginifile:
+        try:
+            read_logging(loginifile)
+            sys.argv.pop()
+
+        except FileNotFoundError as err:
+            # Used for Python >=3.12, we raise it again
+            raise
+
+        except KeyError:
+            # For Python <3.12, only KeyError is raised with
+            # KeyError: 'formatters'.
+            # Ignore the error and provide the correct message
+            raise FileNotFoundError(f"Could not find {loginifile}.")
+
+    logger.info("Starting Docserv...")
+    try:
         docserv = Docserv(sys.argv)
         docserv.start()
-        sys.exit(0)
+    except FileNotFoundError as err:
+        logger.exception("Some resource couldn't be find %s", err)
+        return 100
+    except TemplateNotFound as err:
+        logger.exception("Jinja template error %s", err)
+        return 200
+    except KeyboardInterrupt:
+        logger.info("Docserv interrupted by user.")
+        # docserv.exit()
+
+    return 0
 
 
-main()
+# sys.exit(main())

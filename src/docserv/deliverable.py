@@ -2,13 +2,16 @@ import hashlib
 import logging
 import os
 import shlex
+import shutil
 import subprocess
 import tempfile
 import time
 from lxml import etree
 
-from docserv.functions import feedback_message, parse_d2d_filelist, resource_to_filename
-from docserv.repolock import RepoLock
+from .functions import feedback_message, parse_d2d_filelist
+from .repolock import RepoLock
+from .common import META_FILE_EXT
+from .util import run
 
 logger = logging.getLogger('docserv')
 
@@ -207,6 +210,13 @@ class Deliverable:
             self.build_format,
             self.dc_file
         )
+        # Define .meta file
+        self.metafile = os.path.join(tmp_dir_docker,
+                                      f"{self.dc_file.rstrip('/')}{META_FILE_EXT}"
+                                      )
+        logger.debug("Preparing metafile from DC file=%s => %s",
+                      self.dc_file, self.metafile)
+
 
         # Create correct directory structure
         self.deliverable_relative_path = os.path.join(
@@ -226,6 +236,11 @@ class Deliverable:
         commands[n] = {}
         commands[n]['cmd'] = "/usr/bin/mkdir -p %s" % (tmp_build_full_path)
 
+        n += 1
+        commands[n] = {}
+        # commands[n]['cmd'] =
+        commands[n]['post_cmd_hook'] = 'move_meta_file'
+
         # Copy wanted files to temp build instruction directory
         n += 1
         commands[n] = {}
@@ -240,6 +255,13 @@ class Deliverable:
             self.docset_relative_path,
             self.build_format,
         )
+        self.meta_cache_dir = os.path.join(
+            self.parent.deliverable_cache_base_dir,
+            self.parent.build_instruction['target'],
+            self.docset_relative_path,
+            "meta",
+        )
+
         n += 1
         commands[n] = {}
         commands[n]['cmd'] = "mkdir -p %s" % self.deliverable_cache_dir
@@ -252,17 +274,17 @@ class Deliverable:
         # remove daps parameter file
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "echo rm %s" % (daps_params_file[1])
+        commands[n]['cmd'] = "rm %s" % (daps_params_file[1])
 
         # remove xslt parameter file
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "echo rm %s" % (xslt_params_file[1])
+        commands[n]['cmd'] = "rm %s" % (xslt_params_file[1])
 
         # remove docker output directory
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "echo rm -rf %s" % (tmp_dir_docker)
+        commands[n]['cmd'] = "rm -rf %s" % (tmp_dir_docker)
 
         #
         # Now iterate through all commands and execute them
@@ -295,22 +317,12 @@ class Deliverable:
         """
         Execute single commands and check return value.
         """
-        cmd = shlex.split(command['cmd'])
-        logger.debug("Thread %i: %s" % (thread_id, command))
-        s = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        self.out, self.err = s.communicate()
+        if 'cmd' not in command:
+            return True
+        returncode, self.out, self.err = run(command['cmd'])
 
-        logging.debug("Command executed: %s => %s || %s", cmd, self.out, self.err)
-
-        if int(s.returncode) != 0:
+        if returncode != 0:
             self.failed_command = command['cmd']
-            logger.warning("Thread %i: Build failed! Unexpected return value %i for '%s'",
-                           thread_id, s.returncode, command['cmd'])
-            logger.warning("Thread %i STDOUT: %s", thread_id,
-                           self.out.decode('utf-8'))
-            logger.warning("Thread %i STDERR: %s", thread_id,
-                           self.err.decode('utf-8'))
             self.mail()
             return False
         return True
@@ -378,8 +390,8 @@ These are the details:
             self.dc_file,
             self.build_format,
             self.failed_command,
-            self.out.decode('utf-8'),
-            self.err.decode('utf-8'),
+            self.out,
+            self.err,
         )
         to = ', '.join(self.parent.maintainers)
         subject = "[docserv²] Failed to build %s (%s, %s/%s, %s)" % (
@@ -392,7 +404,6 @@ These are the details:
         if self.parent.config['server']['enable_mail'] == 'yes':
             send_mail = True
         feedback_message(msg, subject, to, send_mail)
-
 
     def get_output_name_from_filelist(self, command, thread_id):
         """
@@ -459,7 +470,7 @@ These are the details:
         if len(tree.xpath(xpath)) > 0:
             self.title = tree.xpath('normalize-space(string(%s))' % xpath)
         else:
-            logger.warning("Could not extract a title via xpath: %s", xpath)
+            # logger.warning("Could not extract a title via xpath: %s", xpath)
             return False
 
         xpath = ("({XPS}/*[contains(local-name(.),'info')]/*[local-name(.)='subtitle'] |"
@@ -467,8 +478,8 @@ These are the details:
                  ).format(XPS=xpathstart)
         if len(tree.xpath(xpath)) > 0:
             self.subtitle = tree.xpath('normalize-space(string(%s))' % xpath)
-        else:
-            logger.debug("Could not extract a subtitle via xpath: %s", xpath)
+        # else:
+        #     logger.debug("Could not extract a subtitle via xpath: %s", xpath)
 
         productname = ''
         productnumber = ''
@@ -494,7 +505,7 @@ These are the details:
         result = self.execute(dchash, thread_id)
         if not result:
             return False
-        self.dc_hash = self.out.decode('utf-8')
+        self.dc_hash = self.out
 
         self.subdeliverable_info = {}
         for subdeliverable in self.subdeliverables:
@@ -545,7 +556,7 @@ These are the details:
             result = self.execute(dchash, thread_id)
             if not result:
                 return False
-            self.subdeliverable_info[subdeliverable] = {'hash': self.out.decode('utf-8'),
+            self.subdeliverable_info[subdeliverable] = {'hash': self.out,
                                                         'title': subdeliverable_title,
                                                         'subtitle': subdeliverable_subtitle,
                                                         'product_from_document': subdeliverable_product_from_document}
@@ -554,25 +565,98 @@ These are the details:
             self.parent.deliverables[self.id]['path'] = self.path
         return command
 
+    def move_meta_file(self, command, thread_id):
+        """
+        Move the .meta file to the correct location.
+        """
+        logger.debug("Metafile: Moving %s to %s",
+                     self.metafile,
+                     os.path.join(self.meta_cache_dir, f"{self.dc_file}.meta"))
+
+        target = os.path.join(self.meta_cache_dir, f"{self.dc_file}.meta")
+
+        if not os.path.exists(self.metafile):
+            logger.error("Metafile %s does not exist", self.metafile)
+            return False
+        else:
+            # Maybe the meta data is overwritten by the next build.
+            # If html was built and pdf is built next, the meta data is overwritten.
+            # It should not do any harm unless all builds are from the same build.
+            os.makedirs(self.meta_cache_dir, exist_ok=True)
+            shutil.move(self.metafile, target)
+            return True
+
+    def loadmeta(self) -> dict:
+        """Load a .meta file and return it as a dictionary
+
+        :return: The .meta file as a dictionary
+        """
+        metafile = os.path.join(self.meta_cache_dir, f"{self.dc_file}.meta")
+        metadata = {}
+
+        # Enrich the metadata from the path
+        # We split the path into parts and take the last four parts
+        # It contains these parts:
+        #  0        1       2         3
+        # ('en-us', 'sles', '15-SP6', 'DC-SLES-modules.meta')
+        # parts = metafile.parts[-4:]
+        #metadata["lang"] = parts[0]
+        #metadata["product"] = parts[1]
+        #metadata["docset"] = parts[2]
+        #metadata["dcfile"] = parts[3]
+
+        if not os.path.exists(metafile):
+            logger.warning("Metadata file %r does not exist", metafile)
+            return None
+
+        data = ""
+        with open(metafile, 'r') as fh:
+            data = fh.readlines()
+
+        if not data[0].startswith("# Metadata"):
+            raise ValueError(f"Invalid metadata file: {metafile}")
+        # Remove the comment line
+        data.pop(0)
+        for m in data:
+            try:
+                key, value = m.split("=")
+                value = value.strip()
+                if key == "productname":
+                    metadata.setdefault("productname", []).append(value)
+                else:
+                    metadata[key] = value
+            except ValueError as err:
+                logger.error("In %s:%s => %s", metafile, m, err)
+                continue
+
+        if "task" in metadata:
+            metadata["task"] = metadata["task"].split(";")
+        return metadata
+
     def write_deliverable_cache(self, command, thread_id):
         """
         Create an XML file that contains the deliverable information
         including path and title. This is required for the
         'docserv-build-navigation' command.
         """
-
         # If the product is unsupported, we don't copy the output files as
         # such, we only copy a zip archive of the output files, thus we don't
         # need to worry about the document titles
         if self.parent.lifecycle == "unsupported":
             return command
 
+        # Add the tags <date>, <seo-title>, <seo-description>, <tasks>, and <series>
+        metadata = self.loadmeta()
+
         root = etree.Element('document',
                               lang=self.parent.build_instruction['lang'],
                               productid=self.parent.build_instruction['product'],
                               setid=self.parent.build_instruction['docset'],
                               dc=self.dc_file,
-                              cachedate=str(int(time.time())))
+                              cachedate=str(int(time.time())),
+                              nsmap=None,
+                              attrib=None,
+                              )
 
         etree.SubElement(root, "commit").text = self.parent.deliverables[self.id]['last_build_attempt_commit']
         etree.SubElement(root, "path", format=self.build_format).text = self.path
@@ -585,6 +669,31 @@ These are the details:
             title.attrib['subtitle'] = self.subtitle
         if self.product_from_document is not None:
             title.attrib['product-from-document'] = self.product_from_document
+
+        # Metadata from the .meta file
+        if metadata is not None:
+            logger.debug("Add metadata to deliverable cache: %s", metadata)
+            d = metadata.get("seo-title", "")
+            if d:
+                etree.SubElement(root, "seo-title").text = d
+
+            d = metadata.get("seo-description", "")
+            if d:
+                etree.SubElement(root, "seo-description").text = d
+
+            d = metadata.get("date", "")
+            if d:
+                 etree.SubElement(root, "date").text = d
+
+            d = metadata.get("tasks", [])
+            if d:
+                tasks = etree.SubElement(root, "tasks")
+                for task in d:
+                    etree.SubElement(tasks, "task").text = task
+
+            d = metadata.get("series", "")
+            if d:
+                etree.SubElement(root, "series").text = d
 
         for subdeliverable in self.subdeliverables:
             title = etree.SubElement(root, "title", hash=self.subdeliverable_info[subdeliverable]['hash'],

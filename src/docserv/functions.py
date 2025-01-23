@@ -83,10 +83,10 @@ def parse_d2d_filelist(directory, format):
         return False
 
 def print_help():
-    print("""This is a daemon. Invoke it with either of the following commands:
+    print(f"""This is a daemon. Invoke it with either of the following commands:
 
 > systemctl start docserv@CONFIG_FILE
 or
-> docserv CONFIG_FILE
+> docserv CONFIG_FILE [LOGGING_INI]
 
-The CONFIG_FILE must reside in /etc/docserv/ and end with .ini.""")
+The CONFIG_FILE must reside in {CONF_DIR} and end with .ini.""")

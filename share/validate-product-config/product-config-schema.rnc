@@ -1,10 +1,15 @@
 # RELAX NG Schema for Docserv² product configuration
 namespace a = "http://relaxng.org/ns/compatibility/annotations/1.0"
+namespace xi = "http://www.w3.org/2001/XInclude"
+namespace xlink = "http://www.w3.org/1999/xlink"
+namespace local = ""
+
+
 
 # BASICS
 
 default namespace = ""
-start = ds.product
+start = ds.product | ds.categories
 
 
 # CONSTANTS
@@ -128,6 +133,46 @@ ds.false.enum =
 ds.true.enum =
   ## Boolean true value
   "1" | "true"
+
+
+# XInclude
+div {
+  _any.attribute =
+    ## Any attribute, including any attribute in any namespace
+    attribute * { text }
+  _any.other.attribute =
+    ## Any attribute in any other explicit namespace
+    attribute * - local:* { text }
+
+  _any =
+    ## Any element from almost any namespace
+    element * { (_any.attribute | text | _any)* }
+
+  xi.include.attlist =
+    attribute href {
+      xsd:anyURI { pattern = "[^#]+" }
+    }?,
+    [ a:defaultValue = "xml" ] attribute parse { "xml" | "text" }?,
+    attribute xpointer { text }?,
+    attribute fragid { text }?,
+    attribute set-xml-id { text }?,
+    attribute encoding { text }?,
+    attribute accept { text }?,
+    attribute accept-language { text }?,
+    _any.other.attribute*
+
+  xi.include =
+    ## An XInclude
+    element xi:include {
+      xi.include.attlist,
+      xi.fallback?
+    }
+
+  xi.fallback =
+    ## An XInclude fallback
+    element xi:fallback { _any* }
+}
+
 
 # TAG/ATTRIBUTE SETS
 
@@ -281,7 +326,7 @@ ds.product =
     ds.sortname?,
     ds.acronym?,
     ds.maintainers,
-    ds.category*,
+    (ds.category* | (ds.categories | xi.include)? ),
     ds.desc_default,
     ds.desc_translation*,
     ds.docset+
@@ -373,6 +418,14 @@ ds.categorylanguage_translation =
     ds.title.attr,
     ds.htmlblock*
   }
+
+
+ds.categories =
+   ## Wrapper for category elements
+   element categories {
+      attribute xml:base { xsd:anyURI }?,
+      ds.category+
+   }
 
 
 # DOCSETS

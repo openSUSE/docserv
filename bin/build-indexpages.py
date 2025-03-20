@@ -150,7 +150,7 @@ class LangsAction(argparse.Action):
         if values.lower() == "all":
             languages = ALL_LANGUAGES
         elif values.lower() == "all-en":
-            languages = tuple(x for x in ALL_LANGUAGES if x != 'en-us')
+            languages = tuple(ALL_LANGUAGES - set(["en-us"]))
         elif cls.LANG_REGEX.match(values):
             languages = SEPARATOR.split(values)
         else:

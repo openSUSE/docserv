@@ -101,7 +101,7 @@ DEFAULT_LOGGING_DICT = {
 
 #: All languages supported by the documentation portal
 ALL_LANGUAGES = frozenset(
-    "de-de en-us es-es fr-fr ja-jp ko-kr zh-cn".split(" ")
+    "de-de en-us es-es fr-fr ja-jp ko-kr pt-br zh-cn".split(" ")
 )
 
 # in order for all messages to be delegated.

@@ -114,27 +114,22 @@ xpathlog = logging.getLogger(XPATHLOGGERNAME)
 
 class LifecycleAction(argparse.Action):
     CHOICES = set(("supported", "beta", "unsupported", "unpublished", "all"))
+    CHOICES_PATTERN = re.compile("|".join(CHOICES))
     seen = False
 
     def __call__(self, parser, namespace, values, option_string=None):
-        if self.seen:
-            parser.error(f"Option {option_string} can only be specified once. "
-                         "Use a comma or semicolon to separate multiple values."
-                         )
-        self.seen = True
-        lifecycles = set([l for l in SEPARATOR.split(values)])
-
-        invalid_lifecycles = lifecycles - self.CHOICES
-        if invalid_lifecycles:
-            parser.error(f"Invalid lifecycle(s): {invalid_lifecycles}")
-
-        lifecycles = list(lifecycles)
+        cls = type(self)
+        lifecycles = {v.lower() for v in SEPARATOR.split(values) }
         if "all" in lifecycles:
-            setattr(namespace, self.dest, ["all"])
-        else:
-            if not hasattr(namespace, self.dest):
-                setattr(namespace, self.dest, [])
-            setattr(namespace, self.dest, lifecycles)
+            lifecycles = cls.CHOICES - set(["all"])
+        invalid_lifecycles = lifecycles - cls.CHOICES
+        if invalid_lifecycles:
+            parser.error(
+                f"Invalid lifecycle(s): {', '.join(invalid_lifecycles)!r} "
+                f"(choose from {', '.join(sorted(cls.CHOICES))})"
+            )
+        print(">>> lifecycles:", lifecycles)
+        setattr(namespace, self.dest, lifecycles)
 
 
 class LangsAction(argparse.Action):
@@ -159,7 +154,7 @@ class LangsAction(argparse.Action):
                 "Each languages must to be in the format '[a-z]{2}-[a-z]{2}'. "
                 "More than one language need to be separated by commas."
             )
-        print(">>> languages:", languages)
+
         invalid_langs = set(languages) - set(ALL_LANGUAGES)
         if invalid_langs:
             parser.error(
@@ -167,6 +162,7 @@ class LangsAction(argparse.Action):
                 f"(choose from {', '.join(sorted(ALL_LANGUAGES))})"
             )
 
+        print(">>> languages:", languages)
         setattr(namespace, self.dest, languages)
         return
 
@@ -231,7 +227,11 @@ def parsecli(cliargs=None):
     parser.add_argument("-c", "--lifecycle",
                         default=["supported"],
                         action=LifecycleAction,
-                        help=("Lifecycle to process (defaults to %(default)r)")
+                        help=("Lifecycle to process (defaults to %(default)r). "
+                              "Use comma or semicolon-separated list for multiple lifecycles. "
+                              f"Use {', '.join(LifecycleAction.CHOICES)}. "
+                              "The value 'all' includes all the other."
+                              )
                         )
     # Positional arguments
     parser.add_argument("-o", "--output-dir",

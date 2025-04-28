@@ -92,6 +92,7 @@
       <xsl:text>&#10;}</xsl:text>
 
     </exsl:document>
+    <xsl:message>Wrote file <xsl:value-of select="$filename"/></xsl:message>
   </xsl:template>
 
 

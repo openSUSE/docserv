@@ -307,7 +307,7 @@ fi
 # ------------------------
 debug "Start\n"
 debug "Validate with $schema_file\n"
-env_parallel ${JOBS:+-j$JOBS} --halt-on-error=soon,fail=3 validate_config ::: $input_dir/*.xml
+env_parallel ${JOBS:+-j$JOBS} --halt-on-error=soon,fail=3 validate_config ::: $input_dir/[a-z]*.xml
 [[ $? -eq 0 ]] || out "ERROR: Some config files are not valid."
 
 debug "Config validation was fine."
@@ -328,7 +328,8 @@ cat << EOF > "$tmpoutfile"
 EOF
 
 # We want to exit when the first job fails.
-env_parallel ${JOBS:+-j$JOBS} --halt-on-error=soon,fail=1  check_config ::: $input_dir/*.xml ::: $checks_dir/check-*.{sh,xsl}
+# Use [a-z]*.xml here to exclude _categories.xml
+env_parallel ${JOBS:+-j$JOBS} --halt-on-error=soon,fail=1  check_config ::: $input_dir/[a-z]*.xml ::: $checks_dir/check-*.{sh,xsl}
 [[ $? -eq 0 ]] || out "ERROR: There was one or more problems."
 
 debug "Config checks were fine."

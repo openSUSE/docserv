@@ -297,7 +297,7 @@ issuelist=''
 # irrelevant.
 #
 # parallel -j 30 md5sum ::: *.xml sort | sed -r 's/\s*[^ ]+$//' | tr '\n' '!'
-hashsums=$(md5sum *.xml | sort | sed -r 's/\s*[^ ]+$//' | tr '\n' '!')
+hashsums=$(md5sum [a-z]*.xml | sort | sed -r 's/\s*[^ ]+$//' | tr '\n' '!')
 
 if [[ "$revalidate" == '1' ]] && [[ -f $output_file ]]; then
   comparisonhashsums=$(xmlstarlet sel -t -v "(//hashes)[1]" $output_file)
@@ -306,8 +306,22 @@ fi
 
 # ------------------------
 debug "Start\n"
-debug "Validate with $schema_file\n"
-env_parallel ${JOBS:+-j$JOBS} --halt-on-error=soon,fail=3 validate_config ::: $input_dir/[a-z]*.xml
+debug " Validate with $schema_file"
+# debug " checks_dir=$checks_dir\n"
+
+# TMPCONFIGDIR=$(mktemp -d --tmpdir=/tmp docserv-stitch-tmpdir-XXXX)
+TMPCONFIGDIR="/tmp/docserv-stitch-tmpdir-$DATE"
+mkdir /tmp/docserv-stitch-tmpdir-$DATE 2>/dev/null
+
+cp $input_dir/_categories.xml $TMPCONFIGDIR
+
+# Resolve any XIncludes and store them in the tmp directory
+parallel ${JOBS:+-j$JOBS} --halt-on-error=now,fail=1 \
+  "xmllint --xinclude {} --output $TMPCONFIGDIR/{/}" \
+  ::: $input_dir/[a-z]*.xml
+[[ $? -eq 0 ]] || out "ERROR: Problems with resolving XInclude"
+
+env_parallel ${JOBS:+-j$JOBS} --halt-on-error=soon,fail=3 validate_config ::: $TMPCONFIGDIR/[a-z]*.xml
 [[ $? -eq 0 ]] || out "ERROR: Some config files are not valid."
 
 debug "Config validation was fine."
@@ -316,9 +330,6 @@ debug "Checking each config file..."
 
 # tmpoutfile=$(mktemp --tmpdir=/tmp $tmpoutfile)
 tmpoutfile="/tmp/$tmpoutfile"
-# TMPCONFIGDIR=$(mktemp -d --tmpdir=/tmp docserv-stitch-tmpdir-XXXX)
-TMPCONFIGDIR="/tmp/docserv-stitch-tmpdir-$DATE"
-mkdir /tmp/docserv-stitch-tmpdir-$DATE 2>/dev/null
 
 cat << EOF > "$tmpoutfile"
 <?xml version="1.0" encoding="UTF-8"?>
@@ -327,17 +338,29 @@ cat << EOF > "$tmpoutfile"
 
 EOF
 
+# Copy content from all categories into result, but only the
+# root element and its descendants. Will not copy any XML declaration.
+# MAY BE REDUDANT as we already have the same inside each <product>
+xmllint --xpath "/*" $TMPCONFIGDIR/_categories.xml >> "$tmpoutfile"
+
+
 # We want to exit when the first job fails.
 # Use [a-z]*.xml here to exclude _categories.xml
-env_parallel ${JOBS:+-j$JOBS} --halt-on-error=soon,fail=1  check_config ::: $input_dir/[a-z]*.xml ::: $checks_dir/check-*.{sh,xsl}
+env_parallel ${JOBS:+-j$JOBS} --halt-on-error=soon,fail=1  check_config ::: $TMPCONFIGDIR/[a-z]*.xml ::: $checks_dir/check-*.{sh,xsl}
 [[ $? -eq 0 ]] || out "ERROR: There was one or more problems."
 
 debug "Config checks were fine."
 
-parallel ${JOBS:+-j$JOBS} --halt-on-error=now,fail=1 "xmlstarlet sel -t -c \"/*\" {} > $TMPCONFIGDIR/{/}" ::: $input_dir/*.xml
-[[ $? -eq 0 ]] || out "ERROR: Problems with one config check"
+# xmlstarlet may NOT be redundant. If the XML file contains processing instructions,
+# the "/*" will remove them
+#parallel ${JOBS:+-j$JOBS} --halt-on-error=now,fail=1 \
+#  'xmlstarlet sel -t -c "/*" > $TMPCONFIGDIR/{/}' \
+#  ::: $input_dir/[a-z]*.xml
+# [[ $? -eq 0 ]] || out "ERROR: Problems with one config check"
 
-cat $TMPCONFIGDIR/*.xml >> "$tmpoutfile"
+# The XML files may have XML declarations, the --xpath "/*" ensures
+# we are only interested in the root element and its descendants
+xmllint --xpath "/*" $TMPCONFIGDIR/[a-z]*.xml >> "$tmpoutfile"
 printf "</docservconfig>\n" >> "$tmpoutfile"
 
 debug "written $tmpoutfile"

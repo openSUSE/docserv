@@ -9,7 +9,7 @@ namespace local = ""
 # BASICS
 
 default namespace = ""
-start = ds.product | ds.categories
+start = ds.product | ds.categories | ds.docservconfig
 
 
 # CONSTANTS
@@ -303,6 +303,14 @@ ds.href.attr =
   attribute href { xsd:anyURI }
 
 # --- ROOT ---
+ds.docservconfig =
+  ## Root element when stitching complete
+  element docservconfig {
+    ds.hashes,
+    ds.categories,
+    ds.product+
+  }
+
 
 ds.product =
   ## Product (or top-level category, root element)
@@ -330,6 +338,13 @@ ds.product =
     ds.desc_default,
     ds.desc_translation*,
     ds.docset+
+  }
+
+
+ds.hashes =
+  ## hashes of all XML files, separated by !
+  element hashes {
+    text
   }
 
 
@@ -393,6 +408,7 @@ ds.shortdesc =
     ds.shortdesc_text
   }
 
+# CATEGORIES DESCRIPTION
 ds.category =
   ## Definition of category displayed on product detail navigational page (third-level category)
   element category {

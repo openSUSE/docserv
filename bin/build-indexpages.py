@@ -53,7 +53,7 @@ from pathlib import Path
 from operator import attrgetter
 import os
 import tempfile
-from typing import cast, Any, ClassVar, Iterator, Generator, Optional, Self, Sequence
+from typing import (cast, Any, ClassVar, Iterator, Generator, Mapping, Optional, Self, Sequence)
 import queue
 import re
 import shutil
@@ -702,7 +702,7 @@ def convert2bool(value: str | bool) -> bool:
     raise ValueError(f"Invalid boolean value: {value}")
 
 
-def read_ini_file(inifile: Path, target="doc-suse-com") -> dict[str, Optional[str]]:
+def read_ini_file(inifile: Path, target="doc-suse-com") -> Mapping[str, str | None]:
     """
     Read an INI file and return its content as a dictionary
 
@@ -711,7 +711,8 @@ def read_ini_file(inifile: Path, target="doc-suse-com") -> dict[str, Optional[st
     :return: The configuration dictionary
     """
     config = configparser.ConfigParser()
-    config.read(inifile)
+    log.debug("Trying to read INI file %s...", inifile)
+    config.read(inifile.expanduser())
 
     for section in config.sections():
         name = config.get(section, "name", fallback="")
@@ -726,7 +727,7 @@ def read_ini_file(inifile: Path, target="doc-suse-com") -> dict[str, Optional[st
     result.update(repo_dir=server.get("repo_dir", None))
     result.update(temp_repo_dir=server.get("temp_repo_dir", None))
 
-    log.debug("Read INI configuration file %r", str(inifile))
+    log.debug("Successfully read INI configuration file %r", str(inifile))
     return result
 
 

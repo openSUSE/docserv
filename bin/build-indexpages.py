@@ -889,7 +889,7 @@ def parsecli(cliargs:Sequence[str]|None=None):
         args.susepartsdir,
         args.docserv_repo_base_dir,
     ):
-        if not obj.exists():
+        if not Path(obj).expanduser().exists():
             df = "File" if obj.is_dir() else "Dir"
             parser.error(f"{df} {obj} does not exist")
 

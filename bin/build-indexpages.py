@@ -744,7 +744,7 @@ def is_dir_empty(directory: Path) -> bool:
     return not any(directory.iterdir())
 
 
-def parsecli(cliargs=None):
+def parsecli(cliargs:Sequence[str]|None=None):
     """Parse CLI with :class:`argparse.ArgumentParser` and return parsed result
 
     :param cliargs: Arguments to parse or None (=use sys.argv)

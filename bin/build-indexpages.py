@@ -1390,6 +1390,7 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict[Del
             "temporary-branches",
         )
         tmpbasedir.mkdir(parents=True, exist_ok=True)
+        gitlog.debug("Created path %s", str(tmpbasedir))
         tmpdir = Path(tempfile.mkdtemp(
             dir=tmpbasedir,
             prefix=f"{productid}-{docsetid}-{lang}_")
@@ -1397,6 +1398,8 @@ async def worker(deliverable: Deliverable, args: argparse.Namespace) -> dict[Del
         repopath = Path(args.docserv_repo_base_dir).joinpath(
                         "permanent-full", deliverable.repo_path
         )
+        repopath.mkdir(parents=True, exist_ok=True)
+        gitlog.debug("Created path %s", str(repopath))
 
         # TODO: Check return value?
         await git_worker(repopath, tmpdir, branch)

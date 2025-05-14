@@ -203,7 +203,8 @@ class Metadata:
                         versions = mtch.group(1).strip().split(";")
                         product = mtch.group(2).strip()
                         if product in productlist:
-
+                            # TODO: What is this here?
+                            log.debug("Found %s in productlist", product)
 
                         dct = {"name": product,
                                "versions": versions,

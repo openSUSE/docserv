@@ -1769,6 +1769,10 @@ async def main(cliargs=None):
 
         log.info("Elapsed time: %0.3f seconds", t.elapsed_time)
 
+    except ConfigError as e:
+        log.critical(e)
+        return 300
+
     except GitError as e:
         log.critical(e)
         return 200

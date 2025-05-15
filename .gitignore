@@ -116,3 +116,6 @@ server.conf
 
 # Temporary dirs caused by . dev-mode.sh usage
 cache
+
+### ----
+/out/

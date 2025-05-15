@@ -1,0 +1,29 @@
+# Git config
+# Used in Python script to ensure a controlled environment
+
+[core]
+    # Ensure no unexpected GPG signing
+    # gpgSign = false
+
+    # Recommended for consistent behavior across environments if dealing with file content
+    # autocrlf = input
+    # eol = lf
+
+    # To ensure https URLs are used as https, simply DO NOT include any
+    # [url "git@github.com:"]
+    #   insteadOf = https://github.com/
+    # rules here. By providing this file as the sole global config (with NOSYSTEM),
+    # Git won't find any other url.*.insteadOf rules to apply from user/system.
+
+[advice]
+    # Suppress common informational messages that might be noisy in logs
+    detachedHead = false
+    skippedCherryPicks = false
+    # Add any other advice.* settings as needed
+
+# You can add any other specific configurations your script relies on.
+# For example, if your script needs a specific credential helper for HTTPS:
+# [credential]
+#   helper = cache --timeout=3600
+# (Ensure this helper is available in the script's environment or self-contained)
+

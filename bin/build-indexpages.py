@@ -10,7 +10,7 @@
 # ///
 #
 # Prepare your environment:
-
+#
 # 1. Install uv from gh://astral/uv if you don't have Python 3.11
 #    See more information at https://docs.astral.sh/uv/getting-started/installation/
 # 2. Copy the file `.env.example` from the repo to `.env`.
@@ -86,6 +86,10 @@ ALL_LANGUAGES = frozenset(
 )
 
 PYTHON_VERSION: str = f"{sys.version_info.major}.{sys.version_info.minor}"
+
+#: The controled Git config
+#: Needed to ensure a controlled environment
+GITCONFIG = Path(__file__).absolute().parent.parent / "etc" / "gitconfig"
 
 # --- Logging
 LOGGERNAME = "indexpages"
@@ -772,6 +776,13 @@ def parsecli(cliargs:Sequence[str]|None=None):
         help="shows the version of the script",
     )
 
+    parser.add_argument(
+        "--git-config",
+        default=env.path("DOCSERV_GIT_CONFIG", GITCONFIG),
+        help=("The controlled Git configuration file, "
+              "(default: '%(default)s')."),
+    )
+
     group_path = parser.add_argument_group("Docserv related configuration",
         description="Can also be set in the .env file"
     )
@@ -1156,7 +1167,11 @@ async def run_git(command: str, cwd: str|Path| None = None) -> tuple[int, str]:
     :returns: a tuple with the exit code and the result of the git command
     """
     command = f"git -c color.ui=never -c core.progress=1 {command}"
-    gitlog.info("Running git command %r", command)
+    # gitlog.info("Running git command %r", command)
+    gitlog.info(
+        "Running git command: %r %s", command, f"in cwd: {cwd}" if cwd else ""
+    )
+
     process = await asyncio.create_subprocess_shell(
         command,
         cwd=cwd,
@@ -1164,7 +1179,9 @@ async def run_git(command: str, cwd: str|Path| None = None) -> tuple[int, str]:
             "LANG": "C",
             "LC_ALL": "C",
             "GIT_TERMINAL_PROMPT": "0",
-            "GIT_PROGRESS_FORCE": "1",
+            # "GIT_PROGRESS_FORCE": "1", # Already handled by -c core.progress=1
+            "GIT_CONFIG_NOSYSTEM": "1",  # Ignore system-wide config
+            "GIT_CONFIG_GLOBAL": str(GITCONFIG),  # Use our file as global
         },
         # Setting this doesn't work; the command isn't called
         # text="True",

@@ -36,8 +36,9 @@ out() {
   exit 1
 }
 
-source $(which env_parallel.bash) || out "Package 'gnu_parallel' is missing"
-# env_parallel --session
+rpm -q gnu_parallel >/dev/null || out "Package 'gnu_parallel' is missing"
+
+source /usr/bin/env_parallel.bash
 
 me=$(test -L $(realpath $0) && readlink $(realpath $0) || echo $(realpath $0))
 PROG=${me##*/}

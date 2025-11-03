@@ -8,18 +8,19 @@ import string
 import subprocess
 import tempfile
 import threading
+
 from lxml import etree
 
-from docserv.deliverable import Deliverable
-from docserv.functions import feedback_message, resource_to_filename
-from docserv.repolock import RepoLock
+# Variables
+from .common import BIN_DIR, CACHE_DIR, CONF_DIR, SHARE_DIR
+from .deliverable import Deliverable
+from .functions import feedback_message, resource_to_filename
+# from .log import logger
+from .repolock import RepoLock
+from .navigation import render_and_save
+from .util import run
 
-BIN_DIR = os.getenv('DOCSERV_BIN_DIR', "/usr/bin/")
-CONF_DIR = os.getenv('DOCSERV_CONFIG_DIR', "/etc/docserv/")
-SHARE_DIR = os.getenv('DOCSERV_SHARE_DIR', "/usr/share/docserv/")
-CACHE_DIR = os.getenv('DOCSERV_CACHE_DIR', "/var/cache/docserv/")
-
-logger = logging.getLogger('docserv')
+logger = logging.getLogger(__name__)
 
 
 class BuildInstructionHandler:
@@ -48,6 +49,9 @@ class BuildInstructionHandler:
         # running daps for them.
         self.deliverables_building = []
         self.deliverables_building_lock = threading.Lock()
+        # A dict taken from the JSON file passed to the Jinja
+        # template
+        self.context = {}  # NOT USED CURRENTLY!
 
         self.cleanup_done = False
         self.cleanup_lock = threading.Lock()
@@ -111,6 +115,7 @@ class BuildInstructionHandler:
             for deliverable in self.deliverables.keys():
                 if self.deliverables[deliverable]['status'] == 'fail':
                     bi_overall_status = 'fail'
+                    item = self.deliverables[deliverable]
                     logger.debug("Deliverable failed: %s => %s",
                                  deliverable, item
                                  )
@@ -121,8 +126,9 @@ class BuildInstructionHandler:
         commands = {}
         n = 0
 
+        target = self.build_instruction['target']
         if bi_overall_status == 'success':
-            backup_path = self.config['targets'][self.build_instruction['target']]['backup_path']
+            backup_path = self.config['targets'][target]['backup_path']
             backup_docset_relative_path = os.path.join(backup_path, self.docset_relative_path)
 
             if hasattr(self, 'tmp_bi_path') and os.listdir(self.tmp_bi_path):
@@ -131,13 +137,13 @@ class BuildInstructionHandler:
                 n += 1
                 commands[n] = {}
                 zip_name = "{}-{}-{}.zip".format(self.product, self.docset, self.lang)
-                zip_formats = self.config['targets'][self.build_instruction['target']]['zip_formats'].replace(" ",",")
+                zip_formats = self.config['targets'][target]['zip_formats'].replace(" ",",")
                 create_archive_cmd = '%s --input-path %s --output-path %s --zip-formats %s --cache-path %s --relative-output-path %s --product %s --docset %s --language %s' % (
                     os.path.join(BIN_DIR, 'docserv-create-archive'),
                     self.tmp_bi_path,
                     os.path.join(self.tmp_bi_path, zip_name),
                     zip_formats,
-                    os.path.join(self.deliverable_cache_base_dir, self.build_instruction['target']),
+                    os.path.join(self.deliverable_cache_base_dir, target),
                     os.path.join(self.docset_relative_path, zip_name),
                     self.product,
                     self.docset,
@@ -149,46 +155,89 @@ class BuildInstructionHandler:
                 # (re-)generate navigation page
                 n += 1
                 commands[n] = {}
+                """
                 commands[n]['cmd'] = (# The space after each line is important:
                                       "docserv-build-navigation "
+                                      # 1
                                       "%s "
+                                      # 2
                                       "--product=\"%s\" "
+                                      # 3
                                       "--docset=\"%s\" "
+                                      # 4
                                       "--stitched-config=\"%s\" "
+                                      # 5
                                       "--ui-languages=\"%s\" "
+                                      # 6
                                       "--site-sections=\"%s\" "
+                                      # 7
                                       "--default-site-section=\"%s\" "
+                                      # 8
                                       "--default-ui-language=\"%s\" "
+                                      # 9
                                       "%s "
+                                      # 10
                                       "--cache-dir=\"%s\" "
+                                      # 11
                                       "--template-dir=\"%s\" "
+                                      # 12
+                                      "--jinja-template-dir=\"%s\" "
+                                      # 13
                                       "--output-dir=\"%s\" "
+                                      # 14
                                       "--base-path=\"%s\" %s"
                                       ) % (
-                    "--internal-mode" if self.config['targets'][self.build_instruction['target']]['internal'] == "yes" else "",
+                    # 1
+                    "--internal-mode" if self.config['targets'][target]['internal'] == "yes" else "",
+                    # 2
                     self.build_instruction['product'],
+                    # 3
                     self.build_instruction['docset'],
+                    # 4
                     self.stitch_tmp_file,
-                    self.config['targets'][self.build_instruction['target']]['languages'],
-                    self.config['targets'][self.build_instruction['target']]['site_sections'],
-                    self.config['targets'][self.build_instruction['target']]['default_site_section'],
-                    self.config['targets'][self.build_instruction['target']]['default_lang'],
-                    "--omit-lang-path=\"%s\"" % self.config['targets'][self.build_instruction['target']]['default_lang'] if
-                                self.config['targets'][self.build_instruction['target']]['omit_default_lang_path'] == "yes" else "",
-                    os.path.join(self.deliverable_cache_base_dir, self.build_instruction['target']),
-                    self.config['targets'][self.build_instruction['target']]['template_dir'],
+                    # 5
+                    self.config['targets'][target]['languages'],
+                    # 6
+                    self.config['targets'][target]['site_sections'],
+                    # 7
+                    self.config['targets'][target]['default_site_section'],
+                    # 8
+                    self.config['targets'][target]['default_lang'],
+                    # 9
+                    "--omit-lang-path=\"%s\"" % self.config['targets'][target]['default_lang'] if
+                                self.config['targets'][target]['omit_default_lang_path'] == "yes" else "",
+                    # 10
+                    os.path.join(self.deliverable_cache_base_dir, target),
+                    # 11
+                    self.config['targets'][target]['template_dir'],
+                    # 12
+                    self.config['targets'][target]['jinja_template_dir'],
+                    # 13
                     tmp_dir_nav,
-                    self.config['targets'][self.build_instruction['target']]['server_base_path'],
+                    # 14
+                    self.config['targets'][target]['server_base_path'],
                     "--fragment-dir=\"%s\" --fragment-l10n-dir=\"%s\"" % (
-                            self.config['targets'][self.build_instruction['target']]['fragment_dir'],
-                            self.config['targets'][self.build_instruction['target']]['fragment_l10n_dir']) if
-                        self.config['targets'][self.build_instruction['target']]['enable_ssi_fragments'] == "yes" else "",
+                            self.config['targets'][target]['fragment_dir'],
+                            self.config['targets'][target]['fragment_l10n_dir']) if
+                        self.config['targets'][target]['enable_ssi_fragments'] == "yes" else "",
                 )
+                """
+                cfg = self.config['targets'][target]
+                commands[n]['cmd'] = render_and_save  # (env, template, output, context)
+                commands[n]['args'] = (
+                    # env
+                    cfg['jinja_env'],
+                    # output dir
+                    tmp_dir_nav,
+                    # context:
+                    self,
+                )
+
 
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "rsync -r %s/ %s" % (
-              self.config['targets'][self.build_instruction['target']]['server_root_files'], tmp_dir_nav)
+              self.config['targets'][target]['server_root_files'], tmp_dir_nav)
 
             # remove contents of backup path for current build instruction
             n += 1
@@ -237,13 +286,13 @@ class BuildInstructionHandler:
             # build target directory
             n += 1
             commands[n] = {}
-            commands[n]['cmd'] = "echo rm -rf %s" % self.local_repo_build_dir
+            commands[n]['cmd'] = "rm -rf %s" % self.local_repo_build_dir
             commands[n]['execute_after_error'] = True
 
         # rsync local backup path with web server target path
         if (bi_overall_status == 'success' and
-            self.config['targets'][self.build_instruction['target']]['enable_target_sync'] == 'yes'):
-            target_path = self.config['targets'][self.build_instruction['target']]['target_path']
+            self.config['targets'][target]['enable_target_sync'] == 'yes'):
+            target_path = self.config['targets'][target]['target_path']
             n += 1
             commands[n] = {}
             commands[n]['cmd'] = "rsync --exclude-from '%s' --delete-after -lr %s/ %s" % (
@@ -252,7 +301,6 @@ class BuildInstructionHandler:
                 target_path,
             )
 
-
         if not commands:
             self.cleanup_done = True
             self.cleanup_lock.release()
@@ -260,24 +308,33 @@ class BuildInstructionHandler:
 
         previous_error = False
         for i in range(1, n + 1):
-            cmd = shlex.split(commands[i]['cmd'])
-            try:
-                execute_after_error = commands[i]['execute_after_error']
-            except KeyError:
-                execute_after_error = False
-            if execute_after_error or not previous_error:
-                logger.debug("Cleaning up %s, %s",
-                    self.build_instruction['id'], commands[i]['cmd'])
-                s = subprocess.Popen(
-                    cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                out, err = s.communicate()
-                if int(s.returncode) != 0:
-                    logger.warning("Cleanup failed! Unexpected return value %i for '%s'",
-                        s.returncode, commands[i]['cmd'])
-                    self.mail(commands[i]['cmd'], out, err)
-                    previous_error = True
+            # Distinguish between a shell call and a function call
+            cmd = commands[i]['cmd']
+            execute_after_error = commands[i].get('execute_after_error', False)
+
+            if callable(cmd):
+                # cmd is a function
+                args = commands[i].get('args', tuple())
+                previous_error = cmd(*args)
+            else:
+                previous_error = self.call_command(cmd, execute_after_error)
+
         self.cleanup_done = True
         self.cleanup_lock.release()
+
+    def call_command(self, cmd: str, execute_after_error: bool=False) -> bool:
+        logger.debug("Cleaning up %s, %s", self.build_instruction['id'], cmd)
+
+        rc, out, err = run(cmd)
+        previous_error = False
+        if rc:
+            logger.warning("Cleanup failed! Unexpected return value %i for '%s'",
+                           rc, cmd)
+            self.mail(cmd, out, err)
+            previous_error = True
+
+        return previous_error
+
 
     def __del__(self):
         if not self.cleanup_done:
@@ -385,13 +442,8 @@ These are the details:
             self.stitch_tmp_file,
             )
         logger.debug("Stitching command: %s", cmd)
-        cmd = shlex.split(cmd)
-        s = subprocess.Popen(cmd,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        self.out, self.err = s.communicate()
-        rc = int(s.returncode)
-        if rc == 0:
+        rc, self.out, self.err = run(cmd)
+        if not rc:
             logger.debug("Stitching of %s successful",
                          self.config['targets'][target]['config_dir'])
         else:

@@ -344,11 +344,6 @@ class BuildInstructionHandler:
 
         return previous_error
 
-
-    def __del__(self):
-        if not self.cleanup_done:
-            self.cleanup()
-
     def __str__(self):
         return json.dumps(self.build_instruction)
 

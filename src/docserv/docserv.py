@@ -251,6 +251,7 @@ class DocservState:
                 self.stitch_tmp_dir, self.gitLocks, self.gitLocksLock, thread_id)
             # If the initialization failed, immediately delete the BuildInstructionHandler
             if myBIH.initialized == False:
+                myBIH.cleanup()
                 self.abort_build_instruction(build_instruction['id'])
                 return
             if myBIH.build_docs:

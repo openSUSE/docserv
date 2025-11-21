@@ -244,7 +244,7 @@ class Deliverable:
         # Copy wanted files to temp build instruction directory
         n += 1
         commands[n] = {}
-        commands[n]['cmd'] = "rsync -lr __FILELIST__  %s" % (tmp_build_full_path)
+        commands[n]['cmd'] = "rsync -lvr __FILELIST__  %s" % (tmp_build_full_path)
         commands[n]['pre_cmd_hook'] = 'get_output_name_from_filelist'
         commands[n]['tmp_dir_docker'] = tmp_dir_docker
 
@@ -298,16 +298,19 @@ class Deliverable:
         """
         for i in range(0, n + 1):
             if 'pre_cmd_hook' in commands[i]:
+                logger.debug("pre_cmd_hook command %i: %s", i, commands[i]['pre_cmd_hook'] )
                 commands[i] = getattr(self, commands[i]['pre_cmd_hook'])(
                     commands[i], thread_id)
                 if commands[i] == False:
                     return self.finish(False)
 
+            logger.debug("command %i: %s", i, commands[i])
             result = self.execute(commands[i], thread_id)
             if not result:  # abort if one command failed
                 return self.finish(False)
 
             if 'post_cmd_hook' in commands[i]:
+                logger.debug("post_cmd_hook command %i: %s", i, commands[i]['post_cmd_hook'])
                 if not getattr(self, commands[i]['post_cmd_hook'])(commands[i], thread_id):
                     return self.finish(False)
 
@@ -319,7 +322,9 @@ class Deliverable:
         """
         if 'cmd' not in command:
             return True
+        logger.debug("Runnnig cmd: %s", command['cmd'])
         returncode, self.out, self.err = run(command['cmd'])
+        logger.debug("cmd returend: %i", returncode)
 
         if returncode != 0:
             self.failed_command = command['cmd']

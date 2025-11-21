@@ -238,7 +238,7 @@ class BuildInstructionHandler:
 
             n += 1
             commands[n] = {}
-            commands[n]['cmd'] = "rsync -r %s/ %s" % (
+            commands[n]['cmd'] = "rsync -rv %s/ %s" % (
               self.config['targets'][target]['server_root_files'], tmp_dir_nav)
 
             # remove contents of backup path for current build instruction
@@ -256,7 +256,7 @@ class BuildInstructionHandler:
                 n += 1
                 commands[n] = {}
                 if self.lifecycle != 'unsupported':
-                    commands[n]['cmd'] = "rsync -lr %s/ %s" % (self.tmp_dir_bi, backup_path)
+                    commands[n]['cmd'] = "rsync -lvr %s/ %s" % (self.tmp_dir_bi, backup_path)
                 else:
                     # recreate directory
                     commands[n]['cmd'] = "mkdir -p %s" % (backup_docset_relative_path)
@@ -268,7 +268,7 @@ class BuildInstructionHandler:
             # rsync navigational pages dir to backup path
             n += 1
             commands[n] = {}
-            commands[n]['cmd'] = "rsync -lr %s/ %s" % (
+            commands[n]['cmd'] = "rsync -lvr %s/ %s" % (
                 tmp_dir_nav, backup_path)
 
             # remove temp directory for navigation page

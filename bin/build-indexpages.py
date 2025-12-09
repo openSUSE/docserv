@@ -550,8 +550,7 @@ products, requesteddocsets, lifecycle, requestedlangs, outputdir, jsondir, jinja
         releasenotescontext = json.load(fh)
 
     # Pass release notes context
-    homepagecontext["products-release-notes"] = releasenotescontext
-
+    homepagecontext["products-release-notes"] = releasenotescontext.get("products-release-notes", [])
 
     log.debug("Successfully loaded JSON context %r", homepagejsonfile)
     log.debug("Successfully loaded JSON context %r", releasenotesfile)

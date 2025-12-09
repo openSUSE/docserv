@@ -549,9 +549,6 @@ products, requesteddocsets, lifecycle, requestedlangs, outputdir, jsondir, jinja
     with open(releasenotesfile) as fh:
         releasenotescontext = json.load(fh)
 
-    # Pass release notes context
-    homepagecontext["products-release-notes"] = releasenotescontext.get("products-release-notes", [])
-
     log.debug("Successfully loaded JSON context %r", homepagejsonfile)
     log.debug("Successfully loaded JSON context %r", releasenotesfile)
 
@@ -586,6 +583,7 @@ products, requesteddocsets, lifecycle, requestedlangs, outputdir, jsondir, jinja
             with open(output, "w") as fh:
                 content = template.render(
                     data=homepagecontext,
+                    releasenotes_data=releasenotescontext,
                     translations=transdata,
                     lang=lang,
                     **render_args

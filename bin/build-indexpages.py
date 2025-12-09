@@ -54,6 +54,10 @@ LOGLEVELS = {
     3: logging.DEBUG,
 }
 
+#:
+
+releasenotespath = Path("releasenotes")
+
 #: The dictionary, passed to :class:`logging.config.dictConfig`,
 #: is used to setup your logging formatters, handlers, and loggers
 #: For details, see https://docs.python.org/3.4/library/logging.config.html#configuration-dictionary-schema
@@ -541,7 +545,7 @@ products, requesteddocsets, lifecycle, requestedlangs, outputdir, jsondir, jinja
     homepagejsonfile = jsondir / "homepage.json"
     with open(homepagejsonfile) as fh:
         homepagecontext = json.load(fh)
-    releasenotesfile = jsondir / "releasenotes.json"
+    releasenotesfile = jsondir / releasenotespath / "releasenotes.json"
     with open(releasenotesfile) as fh:
         releasenotescontext = json.load(fh)
 

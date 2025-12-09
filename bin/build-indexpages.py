@@ -541,7 +541,12 @@ products, requesteddocsets, lifecycle, requestedlangs, outputdir, jsondir, jinja
     homepagejsonfile = jsondir / "homepage.json"
     with open(homepagejsonfile) as fh:
         homepagecontext = json.load(fh)
+    releasenotesfile = jsondir / "releasenotes.json"
+    with open(releasenotesfile) as fh:
+        releasenotescontext = json.load(fh)
+
     log.debug("Successfully loaded JSON context %r", homepagejsonfile)
+    log.debug("Successfully loaded JSON context %r", releasenotesfile)
 
 
     for product, lang in itertools.product(products, requestedlangs):
@@ -573,7 +578,7 @@ products, requesteddocsets, lifecycle, requestedlangs, outputdir, jsondir, jinja
             render_args = firstleveldata[data]["render_args"]
             with open(output, "w") as fh:
                 content = template.render(
-                    data=homepagecontext,
+                    data={**homepagecontext, **releasenotescontext},
                     translations=transdata,
                     lang=lang,
                     **render_args

@@ -38,7 +38,7 @@ from jinja2 import Environment, FileSystemLoader, DebugUndefined
 from jinja2.exceptions import TemplateNotFound
 
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 __author__ = "Tom Schraitle"
 
 

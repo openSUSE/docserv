@@ -1,4 +1,12 @@
 #!/usr/bin/env -S uv run python3
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "jinja2>=3.1.6",
+#     "lxml>=6.0.2",
+# ]
+# ///
+
 """
 Script to generate index and homepage pages for the documentation portal
 
@@ -237,6 +245,14 @@ def parsecli(cliargs=None):
                               "The value 'all' includes all the other."
                               )
                         )
+    parser.add_argument("-R", "--with-releasenotes",
+                        dest="with_rnotes",
+                        default=False,
+                        action="store_true",
+                        help=(
+                            "Include processing of release notes (default %(default)s)"
+                        ),
+    )
     # Positional arguments
     parser.add_argument("-o", "--output-dir",
                         metavar="OUTPUT-DIR",
@@ -480,6 +496,9 @@ products, requesteddocsets, lifecycle, requestedlangs, outputdir, jsondir, jinja
                 "render_args": {"isSBP": True},
                 "template": indextmpl,
                 }
+        elif w == "releasenotes":
+            log.warning("Releasenotes aren't fully supported yet")
+            continue
         else:
             jinjacontext = {
                 "render_args": {"isProduct": True},

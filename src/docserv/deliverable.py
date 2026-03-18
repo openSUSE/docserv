@@ -1,6 +1,8 @@
+from contextlib import suppress
 import hashlib
 import logging
 import os
+import json
 import shlex
 import shutil
 import subprocess
@@ -614,6 +616,15 @@ These are the details:
             logger.warning("Metadata file %r does not exist", metafile)
             return None
 
+        # As daps has JSON as default, we try that first:
+        with suppress(json.decoder.JSONDecodeError):
+            with open(metafile, 'r', encoding='utf-8') as fh:
+                metadata = json.load(fh)
+
+        if metadata:
+            return metadata
+
+        # If JSON couldn't be loaded, try the old format
         data = ""
         with open(metafile, 'r') as fh:
             data = fh.readlines()

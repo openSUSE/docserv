@@ -22,23 +22,23 @@ For example:
 
 
 import argparse
-
-import json
+from datetime import datetime, timezone
+from functools import partial
 import itertools
+import json
 import logging
 from logging.config import dictConfig
 from pathlib import Path
 import os.path
-from typing import Any
 import re
 import sys
 
 from lxml import etree
 from jinja2 import Environment, FileSystemLoader, DebugUndefined
-from jinja2.exceptions import TemplateNotFound
 
 
-__version__ = "0.3.1"
+
+__version__ = "0.4.0"
 __author__ = "Tom Schraitle"
 
 
@@ -346,6 +346,7 @@ def init_jinja_template(path: str) -> Environment:
                       undefined=DebugUndefined,
                       extensions=['jinja2.ext.debug']
                       )
+    env.globals["now"] = partial(datetime.now, tz=timezone.utc)
     env.filters['file_exists'] = lambda p: jinja_path_exists(env, p)
     env.filters['current_dir'] = jinja_current_dir
     return env
